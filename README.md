@@ -40,7 +40,7 @@ Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and sho
 ## Usage
 
 The file gdspy-sample.py is a sample script to show the features provided by this module.
-The complete module reference can be found in the `doc` folder or [on-line](http://heitzmann.github.io/gdspy)
+The complete module reference can be found in the `doc` folder or [on-line](http://www.decom.fee.unicamp.br/~lucashg/gdspy/)
 
 
 ## History of changes
