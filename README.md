@@ -96,8 +96,7 @@ The complete module reference can be found in the `doc` folder or [on-line](http
 ### Version 0.3a (May 03, 2012)
 * Bug fix in the fracture method for `Polygon` and `PolygonSet`.
 
-### Version 0.3 (April 25, 2012) - Thanks to Gene Hilton for the
-contributions!
+### Version 0.3 (April 25, 2012)
 * Support for Python 3.2 and 2.7 
 * Further improvements to the `boolean` function via caching.  
 * Added methods `get_bounding_box` and `get_layers` to `Cell`.
@@ -107,6 +106,7 @@ contributions!
 * Layer -1 (referenced cells) sent to the bottom of the layer list by default in `LayoutViewer`
 * The text and background of the layer list in `LayoutViewer` now reflect the colors of the outlines and canvas backgroung.
 * Changed default background color in `LayoutViewer`
+* Thanks to Gene Hilton for the contributions!
 
 ### Version 0.2.9 (December 14, 2011)
 * Attribute `Cell.cell_list` changed to `Cell.cell_dict`.
