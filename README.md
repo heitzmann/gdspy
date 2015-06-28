@@ -34,8 +34,7 @@ If you have the source files:
 
 Windows users will need a development environment to compile the boolean extension module (automatically performed by the install command above).
 
-Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and should be preferable for most users.
-
+Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and should be preferable for most users: [download here](https://github.com/heitzmann/gdspy/releases).
 
 ## Usage
 
@@ -45,7 +44,7 @@ The complete module reference can be found in the `doc` folder or [on-line](http
 
 ## History of changes
 
-### Version 0.7.1 (July ?, 2015)
+### Version 0.7.1 (June 26, 2015)
 * Rebased to GitHub.
 * Changed source structure and documentation.
 
