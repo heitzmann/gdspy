@@ -1,7 +1,7 @@
 test.sh
 winbuild*.txt
 *.gds
-_*
+docs/_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
