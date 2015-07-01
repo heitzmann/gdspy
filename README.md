@@ -5,9 +5,9 @@ It includes a layout viewer for the geometries created, and it can also be used 
 
 _Note:_
 
-> As of version 0.5 gdspy is **NOT** backwards compatible with older versions.
+> As of version 0.5, gdspy is **NOT** backwards compatible with older versions.
 > The main incompatibility is that the `layer` argument in all applicable classes and functions has been moved to a position just before `datatype` in the argument list.
-> The `LayoutViewer` has also been extensively improved.
+> `LayoutViewer` has also been extensively improved.
 > See the history of changes for all compatibility changes.
 
 ## Installation
@@ -24,13 +24,11 @@ Installation from source is as simple as:
 python setup.py install
 ```
 
-Gdspy can also be installed with _pip_:
+Gdspy can also be installed with [pip](https://docs.python.org/3/installing/):
 
 ```sh
 pip install gdspy
 ```
-
-If you have the source files:
 
 Windows users will need a development environment to compile the boolean extension module (automatically performed by the install command above).
 
@@ -39,7 +37,8 @@ Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and sho
 ## Usage
 
 The file gdspy-sample.py is a sample script to show the features provided by this module.
-The complete module reference can be found in the `doc` folder or [on-line](http://www.decom.fee.unicamp.br/~lucashg/gdspy/)
+The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
+It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
 
 
 ## History of changes
