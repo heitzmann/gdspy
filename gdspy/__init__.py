@@ -35,9 +35,9 @@ __version__ = '0.7.1'
 __doc__ = """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
-Many features of the GDSII format are implemented, such as cell references
-and arrays, but the support for fonts is quite limited.  Text is only
-available through polygonal objects.
+Many features of the GDSII format are implemented, such as cell
+references and arrays, but the support for fonts is quite limited.  Text
+is only available through polygonal objects.
 
 If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
@@ -94,7 +94,8 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
+    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) /\
+        72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
 
@@ -137,7 +138,8 @@ class Polygon:
         self.datatype = datatype
 
     def __str__(self):
-        return "Polygon ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+        return "Polygon ({} vertices, layer {}, datatype {})".format(
+            len(self.points), self.layer, self.datatype)
 
     def to_gds(self, multiplier):
         """
@@ -191,8 +193,8 @@ class Polygon:
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary
-            ``{(layer, datatype): area}``.
+            If ``True``, the return value is a dictionary ``{(layer, datatype):
+            area}``.
 
         Returns
         -------
@@ -209,14 +211,14 @@ class Polygon:
 
     def fracture(self, max_points=199):
         """
-        Slice this polygon in the horizontal and vertical directions so
-        that each resulting piece has at most ``max_points``.
+        Slice this polygon in the horizontal and vertical directions so that
+        each resulting piece has at most ``max_points``.
 
         Parameters
         ----------
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (must be greater
+            than 4).
 
         Returns
         -------
@@ -247,28 +249,28 @@ class Polygon:
 
     def fillet(self, radius, points_per_2pi=128, max_points=199):
         """
-        Round the corners of this polygon and fractures it into polygons
-        with less vertices if necessary.
+        Round the corners of this polygon and fractures it into polygons with
+        less vertices if necessary.
 
         Parameters
         ----------
         radius : number
             Radius of the corners.
         points_per_2pi : integer
-            Number of vertices used to approximate a full circle.  The
-            number of vertices in each corner of the polygon will be the
-            fraction of this number corresponding to the angle encompassed
-            by that corner with respect to 2 pi.
+            Number of vertices used to approximate a full circle.  The number of
+            vertices in each corner of the polygon will be the fraction of this
+            number corresponding to the angle encompassed by that corner with 
+            respect to 2 pi.
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (must be greater
+            than 4).
 
         Returns
         -------
         out : ``Polygon`` or ``PolygonSet``
             If no fracturing occurs, return this object; otherwise return a
-            ``PolygonSet`` with the fractured result (this object will have
-            more than ``max_points`` vertices).
+            ``PolygonSet`` with the fractured result (this object will have more
+            than ``max_points`` vertices).
         """
         two_pi = 2 * numpy.pi
         vec = self.points.astype(float) - numpy.roll(self.points, 1, 0)
@@ -334,8 +336,8 @@ class PolygonSet:
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
     verbose : bool
-        If False, warnings about the number of vertices of the polygons
-        will be suppressed.
+        If False, warnings about the number of vertices of the polygons will
+        be suppressed.
 
     Notes
     -----
@@ -413,8 +415,8 @@ class PolygonSet:
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary
-            ``{(layer, datatype): area}``.
+            If ``True``, the return value is a dictionary ``{(layer, datatype):
+            area}``.
 
         Returns
         -------
@@ -443,15 +445,15 @@ class PolygonSet:
 
     def fracture(self, max_points=199):
         """
-        Slice these polygons in the horizontal and vertical directions so
-        that each resulting piece has at most ``max_points``.  This
-        opertaion occur in place.
+        Slice these polygons in the horizontal and vertical directions so that
+        each resulting piece has at most ``max_points``.  This operation occurs
+        in place.
 
         Parameters
         ----------
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (must be greater
+            than 4).
 
         Returns
         -------
@@ -484,21 +486,21 @@ class PolygonSet:
 
     def fillet(self, radius, points_per_2pi=128, max_points=199):
         """
-        Round the corners of these polygons and fractures them into
-        polygons with less vertices if necessary.
+        Round the corners of these polygons and fractures them into polygons
+        with less vertices if necessary.
 
         Parameters
         ----------
         radius : number
             Radius of the corners.
         points_per_2pi : integer
-            Number of vertices used to approximate a full circle.  The
-            number of vertices in each corner of the polygon will be the
-            fraction of this number corresponding to the angle encompassed
-            by that corner with respect to 2 pi.
+            Number of vertices used to approximate a full circle.  The number of
+            vertices in each corner of the polygon will be the fraction of this
+            number corresponding to the angle encompassed by that corner with
+            respect to 2 pi.
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (must be greater
+            than 4).
 
         Returns
         -------
@@ -866,8 +868,8 @@ class Text(PolygonSet):
 
 class Path(PolygonSet):
     """
-    Series of geometric objects that form a path or a collection of
-    parallel paths.
+    Series of geometric objects that form a path or a collection of parallel
+    paths.
 
     Parameters
     ----------
@@ -956,8 +958,8 @@ class Path(PolygonSet):
         direction : {'+x', '-x', '+y', '-y'} or number
             Direction or angle (in *radians*) of rotation of the segment.
         final_width : number
-            If set, the paths of this segment will have their widths
-            linearly changed from their current value to this one.
+            If set, the paths of this segment will have their widths linearly
+            changed from their current value to this one.
         final_distance : number
             If set, the distance between paths is linearly change from its
             current value to this one along this segment.
@@ -965,13 +967,13 @@ class Path(PolygonSet):
             If set, the paths will be offset from their direction by this
             amount.
         layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
+            The GDSII layer numbers for the elements of each path. If the number
+            of layers in the list is less than the number of paths, the list is
+            repeated.
         datatype : integer, list
             The GDSII datatype for the elements of each path (between 0 and
-            255). If the number of datatypes in the list is less than the
-            number of paths, the list is repeated.
+            255). If the number of datatypes in the list is less than the number
+            of paths, the list is repeated.
 
         Returns
         -------
@@ -1044,22 +1046,22 @@ class Path(PolygonSet):
             approximation). If float: approximate curvature resolution. The
             actual number of points is automatically calculated.
         max_points : integer
-            if ``number_of_points > max_points``, the element will be
-            fractured in smaller polygons with at most ``max_points`` each.
+            if ``number_of_points > max_points``, the element will be fractured
+            in smaller polygons with at most ``max_points`` each.
         final_width : number
-            If set, the paths of this segment will have their widths
-            linearly changed from their current value to this one.
+            If set, the paths of this segment will have their widths linearly
+            changed from their current value to this one.
         final_distance : number
             If set, the distance between paths is linearly change from its
             current value to this one along this segment.
         layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
+            The GDSII layer numbers for the elements of each path. If the number
+            of layers in the list is less than the number of paths, the list is
+            repeated.
         datatype : integer, list
             The GDSII datatype for the elements of each path (between 0 and
-            255). If the number of datatypes in the list is less than the
-            number of paths, the list is repeated.
+            255). If the number of datatypes in the list is less than the number
+            of paths, the list is repeated.
 
         Returns
         -------
@@ -1068,8 +1070,8 @@ class Path(PolygonSet):
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The GDSII specification supports only a maximum of 199 vertices per
+        polygon.
         """
         warn = True
         cx = self.x - radius*numpy.cos(initial_angle)
@@ -1140,30 +1142,30 @@ class Path(PolygonSet):
         radius : number
             Central radius of the section.
         angle : {'r', 'l', 'rr', 'll'} or number
-            Angle (in *radians*) of rotation of the path. The values 'r'
-            and 'l' represent 90-degree turns cw and ccw, respectively; the
-            values 'rr' and 'll' represent analogous 180-degree turns.
+            Angle (in *radians*) of rotation of the path. The values 'r' and 'l'
+            represent 90-degree turns cw and ccw, respectively; the values 'rr'
+            and 'll' represent analogous 180-degree turns.
         number_of_points : integer or float
             If integer: number of vertices that form the object (polygonal
             approximation). If float: approximate curvature resolution. The
             actual number of points is automatically calculated.
         max_points : integer
-            if ``number_of_points > max_points``, the element will be
-            fractured in smaller polygons with at most ``max_points`` each.
+            if ``number_of_points > max_points``, the element will be fractured
+            in smaller polygons with at most ``max_points`` each.
         final_width : number
-            If set, the paths of this segment will have their widths
-            linearly changed from their current value to this one.
+            If set, the paths of this segment will have their widths linearly
+            changed from their current value to this one.
         final_distance : number
             If set, the distance between paths is linearly change from its
             current value to this one along this segment.
         layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
+            The GDSII layer numbers for the elements of each path. If the number
+            of layers in the list is less than the number of paths, the list is
+            repeated.
         datatype : integer, list
             The GDSII datatype for the elements of each path (between 0 and
-            255). If the number of datatypes in the list is less than the
-            number of paths, the list is repeated.
+            255). If the number of datatypes in the list is less than the number
+            of paths, the list is repeated.
 
         Returns
         -------
@@ -1172,8 +1174,8 @@ class Path(PolygonSet):
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The GDSII specification supports only a maximum of 199 vertices per
+        polygon.
         """
         exact = True
         if angle == 'r':
@@ -1218,39 +1220,38 @@ class Path(PolygonSet):
         Parameters
         ----------
         curve_function : function
-            Function that defines the curve. Must be a function of one
-            argument (that varies from 0 to 1) that returns a 2-element
-            list, tuple or array (x, y).
+            Function that defines the curve. Must be a function of one argument
+            (that varies from 0 to 1) that returns a 2-element list, tuple or
+            array (x, y).
         curve_derivative : function
-            If set, it should be the derivative of the curve function.
-            Must be a function of one argument (that varies from 0 to 1)
-            that returns a 2-element list, tuple or array (x,y). If
-            ``None``, the derivative will be calculated numerically.
+            If set, it should be the derivative of the curve function. Must be a
+            function of one argument (that varies from 0 to 1) that returns a
+            2-element list, tuple or array (x,y). If ``None``, the derivative
+            will be calculated numerically.
         number_of_evaluations : integer
-            Number of points where the curve function will be evaluated.
-            The final segment will have twice this number of points.
+            Number of points where the curve function will be evaluated. The
+            final segment will have twice this number of points.
         max_points : integer
-            if ``2 * number_of_evaluations > max_points``, the element will
-            be fractured in smaller polygons with at most ``max_points``
-            each.
+            If ``2 * number_of_evaluations > max_points``, the element will be
+            fractured in smaller polygons with at most ``max_points`` each.
         final_width : number or function
-            If set to a number, the paths of this segment will have their
-            widths linearly changed from their current value to this one.
-            If set to a function, it must be a function of one argument
-            (that varies from 0 to 1) and returns the width of the path.
+            If set to a number, the paths of this segment will have their widths
+            linearly changed from their current value to this one. If set to a
+            function, it must be a function of one argument (that varies from 0
+            to 1) and returns the width of the path.
         final_distance : number or function
-            If set to ta number, the distance between paths is linearly
-            change from its current value to this one.
-            If set to a function, it must be a function of one argument
-            (that varies from 0 to 1) and returns the width of the path.
+            If set to ta number, the distance between paths is linearly change
+            from its current value to this one. If set to a function, it must be
+            a function of one argument (that varies from 0 to 1) and returns the
+            width of the path.
         layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
+            The GDSII layer numbers for the elements of each path. If the number
+            of layers in the list is less than the number of paths, the list is
+            repeated.
         datatype : integer, list
             The GDSII datatype for the elements of each path (between 0 and
-            255). If the number of datatypes in the list is less than the
-            number of paths, the list is repeated.
+            255). If the number of datatypes in the list is less than the number
+            of paths, the list is repeated.
 
         Returns
         -------
@@ -1335,8 +1336,8 @@ class Path(PolygonSet):
 
 class L1Path(PolygonSet):
     """
-    Series of geometric objects that form a path or a collection of
-    parallel paths with Manhattan geometry.
+    Series of geometric objects that form a path or a collection of parallel
+    paths with Manhattan geometry.
 
     Parameters
     ----------
@@ -1358,13 +1359,13 @@ class L1Path(PolygonSet):
     distance : number
         Distance between the centers of adjacent paths.
     layer : integer, list
-        The GDSII layer numbers for the elements of each path. If the
-        number of layers in the list is less than the number of paths, the
-        list is repeated.
+        The GDSII layer numbers for the elements of each path. If the number
+        of layers in the list is less than the number of paths, the list is
+        repeated.
     datatype : integer, list
         The GDSII datatype for the elements of each path (between 0 and
-        255). If the number of datatypes in the list is less than the
-        number of paths, the list is repeated.
+        255). If the number of datatypes in the list is less than the number
+        of paths, the list is repeated.
 
     Returns
     -------
@@ -1557,7 +1558,7 @@ class PolyPath(PolygonSet):
     number_of_paths : positive integer
         Number of parallel paths to create simultaneously.
     distance : number or array-like[N]
-        Distance between the centers of adjacent paths. If na array is
+        Distance between the centers of adjacent paths. If an array is
         given, distance at each endpoint.
     corners : positive integer
         Type of joins: 0 - miter join, 1 - bevel join
@@ -1568,13 +1569,13 @@ class PolyPath(PolygonSet):
         The paths will be fractured in polygons with at most
         ``max_points``.
     layer : integer, list
-        The GDSII layer numbers for the elements of each path. If the
-        number of layers in the list is less than the number of paths, the
-        list is repeated.
+        The GDSII layer numbers for the elements of each path. If the number
+        of layers in the list is less than the number of paths, the list is
+        repeated.
     datatype : integer, list
         The GDSII datatype for the elements of each path (between 0 and
-        255). If the number of datatypes in the list is less than the
-        number of paths, the list is repeated.
+        255). If the number of datatypes in the list is less than the number
+        of paths, the list is repeated.
 
     Returns
     -------
@@ -1893,14 +1894,14 @@ class Cell:
 
     def area(self, by_spec=False):
         """
-        Calculate the total area of the elements on this cell, including
-        cell references and arrays.
+        Calculate the total area of the elements on this cell, including cell
+        references and arrays.
 
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas of
-            each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the areas of each
+            individual pair (layer, datatype).
 
         Returns
         -------
@@ -2027,20 +2028,18 @@ class Cell:
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the polygons of
+            each individual pair (layer, datatype).
         depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.      References below this level will result in
-            a bounding box. If ``by_spec`` is ``True`` the key wil be the
-            name of this cell
+            If not ``None``, defines from how many reference levels to retrieve
+            polygons. References below this level will result in a bounding box.
+            If ``by_spec`` is ``True`` the key wil be the name of this cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each polygon,
-            or dictionary with the list of polygons (if ``by_spec`` is
-            ``True``).
+            List containing the coordinates of the vertices of each polygon, or
+            dictionary with the list of polygons (if ``by_spec`` is ``True``).
         """
         if not depth is None and depth < 0:
             bb = self.get_bounding_box()
@@ -2101,8 +2100,8 @@ class Cell:
 
     def flatten(self, single_layer=None, single_datatype=None, verbose=True):
         """
-        Flatten all ``CellReference`` and ``CellArray`` elements in this
-        cell into real polygons, instead of references.
+        Flatten all ``CellReference`` and ``CellArray`` elements in this cell
+        into real polygons, instead of references.
 
         Parameters
         ----------
@@ -2215,14 +2214,14 @@ class CellReference:
 
     def area(self, by_spec=False):
         """
-        Calculate the total area of the referenced cell with the
-        magnification factor included.
+        Calculate the total area of the referenced cell with the magnification
+        factor included.
 
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas of
-            each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the areas of each
+            individual pair (layer, datatype).
 
         Returns
         -------
@@ -2248,20 +2247,19 @@ class CellReference:
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the polygons of
+            each individual pair (layer, datatype).
         depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.      References below this level will result in
-            a bounding box. If ``by_spec`` is ``True`` the key will be the
-            name of the referenced cell.
+            If not ``None``, defines from how many reference levels to retrieve
+            polygons. References below this level will result in a bounding box.
+            If ``by_spec`` is ``True`` the key will be the name of the
+            referenced cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons (if ``by_spec`` is
-            ``True``).
+            List containing the coordinates of the vertices of each polygon, or
+            dictionary with the list of polygons (if ``by_spec`` is ``True``).
         """
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
@@ -2437,14 +2435,14 @@ class CellArray:
 
     def area(self, by_spec=False):
         """
-        Calculate the total area of the cell array with the magnification
-        factor included.
+        Calculate the total area of the cell array with the magnification factor
+        included.
 
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas of
-            each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the areas of each
+            individual pair (layer, datatype).
 
         Returns
         -------
@@ -2470,20 +2468,19 @@ class CellArray:
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual pair (layer, datatype).
+            If ``True``, the return value is a dictionary with the polygons of
+            each individual pair (layer, datatype).
         depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.      References below this level will result in
-            a bounding box. If ``by_spec`` is ``True`` the key will be name
-            of the referenced cell.
+            If not ``None``, defines from how many reference levels to retrieve
+            polygons. References below this level will result in a bounding box.
+            If ``by_spec`` is ``True`` the key will be name of the referenced
+            cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons (if ``by_spec`` is
-            ``True``).
+            List containing the coordinates of the vertices of each polygon, or
+            dictionary with the list of polygons (if ``by_spec`` is ``True``).
         """
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
@@ -2591,8 +2588,8 @@ class GdsImport:
         Dictionary used to convert the layers in the imported cells. Keys
         and values must be integers.
     datatypes : dictionary
-        Dictionary used to convert the datatypes in the imported cells.
-        Keys and values must be integers.
+        Dictionary used to convert the datatypes in the imported cells. Keys
+        and values must be integers.
     texttypes : dictionary
         Dictionary used to convert the text types in the imported cells.
         Keys and values must be integers.
@@ -2607,8 +2604,8 @@ class GdsImport:
 
     Notes
     -----
-    Not all features from the GDSII specification are currently supported.
-    A warning will be produced if any unsuported features are found in the
+    Not all features from the GDSII specification are currently supported. A
+    warning will be produced if any unsuported features are found in the
     imported file.
 
     Examples
@@ -2837,8 +2834,8 @@ class GdsImport:
         Parameters
         ----------
         cell : ``Cell`` or string
-            Cell or name of the cell to be extracted from the imported
-            file. Referenced cells will be automatically extracted as well.
+            Cell or name of the cell to be extracted from the imported file.
+            Referenced cells will be automatically extracted as well.
 
         Returns
         -------
@@ -2855,8 +2852,8 @@ class GdsImport:
 
     def top_level(self):
         """
-        Output the top level cells from the GDSII data.  Top level cells
-        are those that are not referenced by any other cells.
+        Output the top level cells from the GDSII data.  Top level cells are
+        those that are not referenced by any other cells.
 
         Outputs
         ----------
@@ -2880,17 +2877,16 @@ def _chop(polygon, position, axis):
     polygon : array-like[N][2]
         Coordinates of the vertices of the polygon.
     position : number
-        Position to perform the slicing operation along the specified
-        axis.
+        Position to perform the slicing operation along the specified axis.
     axis : 0 or 1
         Axis along which the polygon will be sliced.
 
     Returns
     -------
     out : tuple[2]
-        Each element is a list of polygons (array-like[N][2]).  The first
-        list contains the polygons left before the slicing position, and
-        the second, the polygons left after that position.
+        Each element is a list of polygons (array-like[N][2]). The first
+        list contains the polygons left before the slicing position, and the
+        second, the polygons left after that position.
     """
     out_polygons = ([], [])
     polygon = list(polygon)
@@ -2965,12 +2961,11 @@ def slice(objects, position, axis, layer=0, datatype=0):
         must be a ``Polygon``, ``PolygonSet``, ``CellReference``,
         ``CellArray``, or an array-like[N][2] of vertices of a polygon.
     position : number or list of numbers
-        Positions to perform the slicing operation along the specified
-        axis.
+        Positions to perform the slicing operation along the specified axis.
     axis : 0 or 1
         Axis along which the polygon will be sliced.
     layer : integer, list
-        The GDSII layer numbers for the elements between each division.  If
+        The GDSII layer numbers for the elements between each division. If
         the number of layers in the list is less than the number of divided
         regions, the list is repeated.
     datatype : integer
@@ -2979,7 +2974,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     Returns
     -------
     out : list[N] of PolygonSet
-        Result of the slicing operation, with N = len(positions) + 1.  Each
+        Result of the slicing operation, with N = len(positions) + 1. Each
         PolygonSet comprises all polygons between 2 adjacent slicing
         positions, in crescent order.
 
@@ -3034,9 +3029,8 @@ def offset(object, distance, max_points=199, layer=0, datatype=0):
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
-        function, so this number should be as high as possible. For
-        example, it should be set to 199 for polygons being drawn in GDSII
-        files.
+        function, so this number should be as high as possible. For example,
+        it should be set to 199 for polygons being drawn in GDSII files.
     layer : integer
         The GDSII layer number for the resulting element.
     datatype : integer
@@ -3117,15 +3111,14 @@ def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
         be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
         or an array-like[N][2] of vertices of a polygon.
     operation : function
-        Function that accepts as input ``len(objects)`` integers.  Each
+        Function that accepts as input ``len(objects)`` integers. Each
         integer represents the incidence of the corresponding ``object``.
         The function must return a bool or integer (interpreted as bool).
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
-        function, so this number should be as high as possible. For
-        example, it should be set to 199 for polygons being drawn in GDSII
-        files.
+        function, so this number should be as high as possible. For example,
+        it should be set to 199 for polygons being drawn in GDSII files.
     layer : integer
         The GDSII layer number for the resulting element.
     datatype : integer
@@ -3145,9 +3138,9 @@ def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
     somewhat more general than boolean operations only. See the examples
     below.
 
-    Because of roundoff errors there are a few cases when this function
-    can cause segmentation faults. If that happens, increasing the value
-    of ``eps`` might help.
+    Because of roundoff errors there are a few cases when this function can
+    cause segmentation faults. If that happens, increasing the value of
+    ``eps`` might help.
 
     Examples
     --------
@@ -3193,12 +3186,11 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
     """
     Output a list of cells as a GDSII stream library.
 
-    The dimensions actually written on the GDSII file will be the
-    dimensions of the objects created times the ratio ``unit/precision``.
-    For example, if a circle with radius 1.5 is created and we set
-    ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
-    the circle will be 1.5 um and the GDSII file will contain the dimension
-    1500 nm.
+    The dimensions actually written on the GDSII file will be the dimensions
+    of the objects created times the ratio ``unit/precision``. For example,
+    if a circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um)
+    and ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um
+    and the GDSII file will contain the dimension 1500 nm.
 
     Parameters
     ----------
@@ -3250,12 +3242,11 @@ class GdsPrint:
     """
     GDSII strem library printer.
 
-    The dimensions actually written on the GDSII file will be the
-    dimensions of the objects created times the ratio ``unit/precision``.
-    For example, if a circle with radius 1.5 is created and we set
-    ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
-    the circle will be 1.5 um and the GDSII file will contain the dimension
-    1500 nm.
+    The dimensions actually written on the GDSII file will be the dimensions
+    of the objects created times the ratio ``unit/precision``. For example,
+    if a circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um)
+    and ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um
+    and the GDSII file will contain the dimension 1500 nm.
 
     Parameters
     ----------
@@ -3316,8 +3307,8 @@ class GdsPrint:
 
         Notes
         -----
-        Only the specified cell is written. Unlike in ``gds_print``,
-        cell dependencies are not automatically included.
+        Only the specified cell is written. Unlike in ``gds_print``, cell
+        dependencies are not automatically included.
 
         Returns
         -------

@@ -1499,20 +1499,20 @@ static PyMethodDef booleanMethods[] = {
 Parameters\n\
 ----------\n\
 polygons : list of array-like[N][2]\n\
-		List of polygons. Each polygon is an array-like[N][2] object\n\
-		with the coordinates of the vertices of the polygon.\n\
+        List of polygons. Each polygon is an array-like[N][2] object\n\
+        with the coordinates of the vertices of the polygon.\n\
 operation : function\n\
-		This function should accept N of variables as arguments and\n\
-		output an integer or boolean representing the desired operation\n\
-		to be performed on the polygons. Each input variable corresponds\n\
-		to one polygon of ``polygons``.\n\
+        This function should accept N of variables as arguments and\n\
+        output an integer or boolean representing the desired operation\n\
+        to be performed on the polygons. Each input variable\n\
+        corresponds to one polygon of ``polygons``.\n\
 eps : positive number\n\
-    Small number to be used as a tolerance for intersection and overlap\n\
-		calculations.\
+        Small number to be used as a tolerance for intersection and overlap\n\
+        calculations.\
 Returns\n\
 -------\n\
 out : list of array-like[N][2]\n\
-		List of polygons resulting from the boolean operation."},
+        List of polygons resulting from the boolean operation."},
 	{NULL, NULL, 0, NULL}
 };
 

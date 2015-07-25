@@ -76,22 +76,22 @@ class LayoutViewer(Tkinter.Frame):
 
     The view can be scrolled vertically with the mouse wheel, and
     horizontally by holding the shift key and using the mouse wheel.
-    Dragging the 2nd mouse button also scrolls the view, and if control
-    is held down, it scrolls 10 times faster.
+    Dragging the 2nd mouse button also scrolls the view, and if control is
+    held down, it scrolls 10 times faster.
 
     You can zoom in or out using control plus the mouse wheel, or drag a
     rectangle on the window with the 1st mouse button to zoom into that
     area.
 
-    A ruler is available by clicking the 1st mouse button anywhere on
-    the view and moving the mouse around.  The distance is shown in the
-    status area.
+    A ruler is available by clicking the 1st mouse button anywhere on the
+    view and moving the mouse around.  The distance is shown in the status
+    area.
 
     Double-clicking on any polygon gives some information about it.
 
-    Color and pattern for each layer/datatype specification can be
-    changed by left and right clicking on the icon in the layer/datatype
-    list.  Left and right clicking the text label changes the visibility.
+    Color and pattern for each layer/datatype specification can be changed
+    by left and right clicking on the icon in the layer/datatype list. Left
+    and right clicking the text label changes the visibility.
 
     Parameters
     ----------
@@ -103,13 +103,13 @@ class LayoutViewer(Tkinter.Frame):
     depth : integer
         Initial depth of referenced cells to be displayed.
     color : dictionary
-        Dictionary of colors for each tuple (layer, datatype).  The
-        colors must be strings in the format ``#rrggbb``.  A value with
-        key ``default`` will be used as default color.
+        Dictionary of colors for each tuple (layer, datatype).  The colors
+        must be strings in the format ``#rrggbb``.  A value with key
+        ``default`` will be used as default color.
     pattern : dictionary
         Dictionary of patterns for each tuple (layer, datatype).  The
-        patterns must be integers between 0 and 9, inclusive.  A value
-        with key ``default`` will be used as default pattern.
+        patterns must be integers between 0 and 9, inclusive.  A value with
+        key ``default`` will be used as default pattern.
     background : string
         Canvas background color in the format ``#rrggbb``.
     width : integer
