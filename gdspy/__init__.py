@@ -20,7 +20,7 @@
 ##                                                                    ##
 ########################################################################
 
-from __future__ import absolute_import
+
 
 import os
 import struct
@@ -30,6 +30,7 @@ import numpy
 
 from . import boolext
 from .viewer import LayoutViewer
+import collections
 
 __version__ = '0.7.1'
 __doc__ = """
@@ -67,14 +68,14 @@ def _eight_byte_real(value):
             byte1 = 0x80
             value = -value
         exponent = int(numpy.floor(numpy.log2(value) * 0.25))
-        mantissa = long(value * 16L**(14 - exponent))
-        while mantissa >= 72057594037927936L:
+        mantissa = int(value * 16**(14 - exponent))
+        while mantissa >= 72057594037927936:
             exponent += 1
-            mantissa = long(value * 16L**(14 - exponent))
+            mantissa = int(value * 16**(14 - exponent))
         byte1 += exponent + 64
-        byte2 = (mantissa // 281474976710656L)
-        short3 = (mantissa % 281474976710656L) // 4294967296L
-        long4 = mantissa % 4294967296L
+        byte2 = (mantissa // 281474976710656)
+        short3 = (mantissa % 281474976710656) // 4294967296
+        long4 = mantissa % 4294967296
     return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
 
 
@@ -94,9 +95,9 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) /\
-        72057594037927936.0
-    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 + long3) / \
+               72057594037927936.0
+    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16 ** (exponent - 64)
 
 
 class Polygon:
@@ -156,12 +157,14 @@ class Polygon:
         out : string
             The GDSII binary string that represents this object.
         """
+        data = []
         if len(self.points) > 4094:
             raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
-        data = struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003)
+        data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003))
         for point in self.points:
-            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-        return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
+            data.append(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))))
+        data.append(struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100))
+        return b''.join(data)
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -259,7 +262,7 @@ class Polygon:
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
             vertices in each corner of the polygon will be the fraction of this
-            number corresponding to the angle encompassed by that corner with 
+            number corresponding to the angle encompassed by that corner with
             respect to 2 pi.
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
@@ -398,15 +401,15 @@ class PolygonSet:
         out : string
             The GDSII binary string that represents this object.
         """
-        data = b''
+        data = []
         for ii in range(len(self.polygons)):
             if len(self.polygons[ii]) > 4094:
                 raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
-            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003)
+            data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
             for point in self.polygons[ii]:
-                data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-            data += struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100)
-        return data
+                data.append(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))))
+            data.append(struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100))
+        return b''.join(data)
 
     def area(self, by_spec=False):
         """
@@ -430,7 +433,7 @@ class PolygonSet:
                 for ii in range(1, len(self.polygons[jj]) - 1):
                     poly_area += (self.polygons[jj][0][0] - self.polygons[jj][ii + 1][0]) * (self.polygons[jj][ii][1] - self.polygons[jj][0][1]) - (self.polygons[jj][0][1] - self.polygons[jj][ii + 1][1]) * (self.polygons[jj][ii][0] - self.polygons[jj][0][0])
                 key = (self.layers[jj], self.datatypes[jj])
-                if path_area.has_key(key):
+                if key in path_area:
                     path_area[key] += 0.5 * abs(poly_area)
                 else:
                     path_area[key] = 0.5 * abs(poly_area)
@@ -847,7 +850,7 @@ class Text(PolygonSet):
                 else:
                     posY = posY - 11 - (posY - 22) % 44
             else:
-                if Text._font.has_key(text[jj]):
+                if text[jj] in Text._font:
                     for p in Text._font[text[jj]]:
                         polygon = p[:]
                         for ii in range(len(polygon)):
@@ -1278,12 +1281,12 @@ class Path(PolygonSet):
         pieces = int(numpy.ceil(2 * number_of_evaluations / float(max_points)))
         number_of_evaluations = number_of_evaluations // pieces
         boundaries = numpy.linspace(0, 1, pieces + 1)
-        if not callable(final_width):
+        if not isinstance(final_width, collections.Callable):
             old_w = self.w
             if not final_width is None:
                 self.w = final_width * 0.5
             final_width = lambda u: 2 * (old_w + u * (self.w - old_w))
-        if not callable(final_distance):
+        if not isinstance(final_distance, collections.Callable):
             old_distance = self.distance
             if not final_distance is None:
                 self.distance = final_distance
@@ -1514,7 +1517,7 @@ class L1Path(PolygonSet):
         self.datatypes += datatype
 
     def __str__(self):
-            return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -1680,7 +1683,7 @@ class PolyPath(PolygonSet):
         self.datatypes += (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
 
     def __str__(self):
-            return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
 class Label:
@@ -1732,7 +1735,7 @@ class Label:
         try:
             self.anchor = Label._anchor[anchor.lower()]
         except:
-            warnings.warn("[GDSPY] Label anchors must be one of: '" + "', '".join(Label._anchor.keys()) + "'.", stacklevel=2)
+            warnings.warn("[GDSPY] Label anchors must be one of: '" + "', '".join(list(Label._anchor.keys())) + "'.", stacklevel=2)
             self.anchor = 0
         self.rotation = rotation
         self.magnification = magnification
@@ -1757,10 +1760,11 @@ class Label:
         out : string
             The GDSII binary string that represents this label.
         """
+        data = []
         text = self.text
         if len(text)%2 != 0:
             text = text + '\0'
-        data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.texttype, 6, 0x1701, self.anchor)
+        data.append(struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.texttype, 6, 0x1701, self.anchor))
         if not (self.rotation is None) or not (self.magnification is None) or self.x_reflection:
             word = 0
             values = b''
@@ -1772,8 +1776,9 @@ class Label:
             if not (self.rotation is None):
                 word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
-        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
+            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
+        data.append(struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100))
+        return b''.join(data)
 
 
 class Cell:
@@ -1834,16 +1839,18 @@ class Cell:
         """
         now = datetime.datetime.today()
         name = self.name
+        data = []
         if len(name)%2 != 0:
             name = name + '\0'
-        data = struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii')
+        data.append(struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii'))
         for element in self.elements:
-            data += element.to_gds(multiplier)
+            data.append(element.to_gds(multiplier))
         for label in self.labels:
-            data += label.to_gds(multiplier)
-        return data + struct.pack('>2h', 4, 0x0700)
+            data.append(label.to_gds(multiplier))
+        data.append(struct.pack('>2h', 4, 0x0700))
+        return b''.join(data)
 
-    def copy(self, name, exclude_from_global=False):
+    def copy(self, name, exclude_from_global=False, layers_to_include=[], layers_to_exclude=[]):
         """
         Creates a copy of this cell.
 
@@ -1851,6 +1858,14 @@ class Cell:
         ----------
         name : string
             The name of the cell.
+        exclude_from_global : bool
+            If ``True``, the cell will not be included in the global list of
+            cells maintained by ``gdspy``.
+        layers_to_include :
+            List of the layers to be included in the returned cell. If empty,
+            include all layers.
+        layers_to_exclude :
+            List of the layers to be excluded in the returned cell.
 
 
         Returns
@@ -1858,11 +1873,40 @@ class Cell:
         out : ``Cell``
             The new copy of this cell.
         """
-        new_cell = Cell(name, exclude_from_global)
-        new_cell.elements = list(self.elements)
-        new_cell.labels = list(self.labels)
-        new_cell.bb_is_valid = False
+
+        if not layers_to_include and not layers_to_exclude:
+            new_cell = Cell(name, exclude_from_global)
+            new_cell.elements = list(self.elements)
+            new_cell.labels = list(self.labels)
+            new_cell.bb_is_valid = False
+        elif list(set(layers_to_include) & set(layers_to_exclude)):
+            raise ValueError("[GDSPY] Cannot both include and exclude the same layers " + str(list(set(layers_to_include) & set(layers_to_exclude))) + '.')
+        else:
+            if not layers_to_include:
+                layers_to_include = self.get_layers()
+            layers_to_include = list(set(layers_to_include) - set(layers_to_exclude))
+            new_cell = self.copy(name, exclude_from_global=True)
+            new_cell._include_layers(layers_to_include)
+
         return new_cell
+
+    def _include_layers(self, layers_to_include=[]):
+        elements_to_remove = list()
+
+        for element in self.elements:
+            if isinstance(element, Polygon):
+                if element.layer not in layers_to_include:
+                    elements_to_remove.append(element)
+            elif isinstance(element, PolygonSet):
+                if element.layers[0] not in layers_to_include:
+                    elements_to_remove.append(element)
+            elif isinstance(element, CellReference) or isinstance(element, CellArray):
+                element.ref_cell = element.ref_cell._include_layers(layers_to_include=layers_to_include)
+
+        if elements_to_remove:
+            [self.elements.remove(x) for x in elements_to_remove]
+
+        return self
 
     def add(self, element):
         """
@@ -1912,8 +1956,8 @@ class Cell:
             cell_area = {}
             for element in self.elements:
                 element_area = element.area(True)
-                for ll in element_area.iterkeys():
-                    if cell_area.has_key(ll):
+                for ll in element_area.keys():
+                    if ll in cell_area:
                         cell_area[ll] += element_area[ll]
                     else:
                         cell_area[ll] = element_area[ll]
@@ -2053,21 +2097,21 @@ class Cell:
                 for element in self.elements:
                     if isinstance(element, Polygon):
                         key = (element.layer, element.datatype)
-                        if polygons.has_key(key):
+                        if key in polygons:
                             polygons[key].append(numpy.array(element.points))
                         else:
                             polygons[key] = [numpy.array(element.points)]
                     elif isinstance(element, PolygonSet):
                         for ii in range(len(element.polygons)):
                             key = (element.layers[ii], element.datatypes[ii])
-                            if polygons.has_key(key):
+                            if key in polygons:
                                 polygons[key].append(numpy.array(element.polygons[ii]))
                             else:
                                 polygons[key] = [numpy.array(element.polygons[ii])]
                     else:
                         cell_polygons = element.get_polygons(True, None if depth is None else depth - 1)
-                        for kk in cell_polygons.iterkeys():
-                            if polygons.has_key(kk):
+                        for kk in cell_polygons.keys():
+                            if kk in polygons:
                                 polygons[kk] += cell_polygons[kk]
                             else:
                                 polygons[kk] = cell_polygons[kk]
@@ -2124,13 +2168,13 @@ class Cell:
             poly_dic = self.get_polygons(True)
             self.elements = []
             if single_layer is None and single_datatype is None:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], *ld, verbose=verbose))
             elif single_layer is None:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype, verbose=verbose))
             else:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], single_layer, ld[1], verbose=verbose))
         else:
             polygons = self.get_polygons()
@@ -2194,10 +2238,11 @@ class CellReference:
         out : string
             The GDSII binary string that represents this object.
         """
+        data = []
         name = self.ref_cell.name
         if len(name)%2 != 0:
             name = name + '\0'
-        data = struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii')
+        data.append(struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii'))
         if not (self.rotation is None) or not (self.magnification is None) or self.x_reflection:
             word = 0
             values = b''
@@ -2209,8 +2254,9 @@ class CellReference:
             if not (self.rotation is None):
                 word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
-        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), 4, 0x1100)
+            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
+        data.append(struct.pack('>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), 4, 0x1100))
+        return b''.join(data)
 
     def area(self, by_spec=False):
         """
@@ -2234,7 +2280,7 @@ class CellReference:
             if by_spec:
                 factor = self.magnification * self.magnification
                 cell_area = self.ref_cell.area(True)
-                for kk in cell_area.iterkeys():
+                for kk in cell_area.keys():
                     cell_area[kk] *= factor
                 return cell_area
             else:
@@ -2273,7 +2319,7 @@ class CellReference:
             orgn = numpy.array(self.origin)
         if by_spec:
             polygons = self.ref_cell.get_polygons(True, depth)
-            for kk in polygons.iterkeys():
+            for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
                     if self.x_reflection:
                         polygons[kk][ii] *= xrefl
@@ -2402,10 +2448,11 @@ class CellArray:
         out : string
             The GDSII binary string that represents this object.
         """
+        data = []
         name = self.ref_cell.name
         if len(name)%2 != 0:
             name = name + '\0'
-        data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
+        data.append(struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii'))
         x2 = self.origin[0] + self.columns * self.spacing[0]
         y2 = self.origin[1]
         x3 = self.origin[0]
@@ -2430,8 +2477,9 @@ class CellArray:
                 y3 = (x3 - self.origin[0]) * sa + (y3 - self.origin[1]) * ca + self.origin[1]
                 x3 = tmp
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
-        return data + struct.pack('>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100)
+            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
+        data.append(struct.pack('>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100))
+        return b''.join(data)
 
     def area(self, by_spec=False):
         """
@@ -2455,7 +2503,7 @@ class CellArray:
             factor = self.columns * self.rows * self.magnification * self.magnification
         if by_spec:
             cell_area = self.ref_cell.area(True)
-            for kk in cell_area.iterkeys():
+            for kk in cell_area.keys():
                 cell_area[kk] *= factor
             return cell_area
         else:
@@ -2495,7 +2543,7 @@ class CellArray:
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
-            for kk in cell_polygons.iterkeys():
+            for kk in cell_polygons.keys():
                 polygons[kk] = []
                 for ii in range(self.columns):
                     for jj in range(self.rows):
@@ -2844,9 +2892,9 @@ class GdsImport:
         """
         cell = self.cell_dict.get(cell, cell)
         for c in cell.get_dependencies():
-            if c not in Cell.cell_dict.values():
+            if c not in list(Cell.cell_dict.values()):
                 self.extract(c)
-        if cell not in Cell.cell_dict.values():
+        if cell not in list(Cell.cell_dict.values()):
             Cell.cell_dict[cell.name] = cell
         return cell
 
@@ -2860,8 +2908,8 @@ class GdsImport:
         out: List
             List of top level cells.
         """
-        top = list(self.cell_dict.itervalues())
-        for cell in self.cell_dict.itervalues():
+        top = list(self.cell_dict.values())
+        for cell in self.cell_dict.values():
             for dependency in cell.get_dependencies():
                 if dependency in top:
                     top.remove(dependency)
@@ -3218,7 +3266,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
     else:
         close = False
     if cells == None:
-        cells = Cell.cell_dict.itervalues()
+        cells = iter(Cell.cell_dict.values())
     else:
         cells = [Cell.cell_dict.get(c, c) for c in cells]
         i = 0
