@@ -342,9 +342,9 @@ class LayoutViewer(Tkinter.Frame):
                 fg = self.default_outline
             if isinstance(i, tuple):
                 lbl = (Tkinter.Label(self, bitmap=_icon_outline if self.pattern[i]==_invisible else _stipple[self.pattern[i]], bd=0, fg=self.color[i], bg=bg, anchor='c'),
-                        Tkinter.Label(self, text='{0[0]}/{0[1]}'.format(i), bd=0, fg=fg, bg=bg, height=1, anchor='c', padx=8),
-                        Tkinter.Label(self, bitmap=_icon_up, bd=0, fg=self.default_outline, bg=bg, anchor='c'),
-                        Tkinter.Label(self, bitmap=_icon_down, bd=0, fg=self.default_outline, bg=bg, anchor='c'))
+                       Tkinter.Label(self, text='{0[0]}/{0[1]}'.format(i), bd=0, fg=fg, bg=bg, height=1, anchor='c', padx=8),
+                       Tkinter.Label(self, bitmap=_icon_up, bd=0, fg=self.default_outline, bg=bg, anchor='c'),
+                       Tkinter.Label(self, bitmap=_icon_down, bd=0, fg=self.default_outline, bg=bg, anchor='c'))
                 lbl[0].bind('<Button-1>', self._change_color(lbl[0], i))
                 lbl[0].bind('<Button-2>', self._change_pattern(lbl[0], i))
                 lbl[0].bind('<Button-3>', self._change_pattern(lbl[0], i))
@@ -363,9 +363,9 @@ class LayoutViewer(Tkinter.Frame):
                     wid = lbl[1].winfo_reqwidth()
                     lbl[1].configure(text='{0[0]}/{0[1]}'.format(i))
                 ids = (self.l_canvas.create_window(0, pos, window=lbl[0], anchor='sw'),
-                        self.l_canvas.create_window(hei, pos, window=lbl[1], anchor='sw'),
-                        self.l_canvas.create_window(hei + wid, pos, window=lbl[2], anchor='sw'),
-                        self.l_canvas.create_window(2 * hei + wid, pos, window=lbl[3], anchor='sw'))
+                       self.l_canvas.create_window(hei, pos, window=lbl[1], anchor='sw'),
+                       self.l_canvas.create_window(hei + wid, pos, window=lbl[2], anchor='sw'),
+                       self.l_canvas.create_window(2 * hei + wid, pos, window=lbl[3], anchor='sw'))
                 self.l_canvas_info.append((i, ids, lbl))
                 pos -= hei
             if i in pol_dict:
