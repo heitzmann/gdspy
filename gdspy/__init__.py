@@ -94,8 +94,8 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) /\
-        72057594037927936.0
+    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L
+                + long3) / 72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
 
@@ -158,10 +158,7 @@ class Polygon:
         """
         if len(self.points) > 4094:
             raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
-        data = struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003)
-        for point in self.points:
-            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-        return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
+        return struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003) + b''.join(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))) for point in self.points) + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -259,7 +256,7 @@ class Polygon:
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
             vertices in each corner of the polygon will be the fraction of this
-            number corresponding to the angle encompassed by that corner with 
+            number corresponding to the angle encompassed by that corner with
             respect to 2 pi.
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
@@ -398,15 +395,14 @@ class PolygonSet:
         out : string
             The GDSII binary string that represents this object.
         """
-        data = b''
+        data = []
         for ii in range(len(self.polygons)):
             if len(self.polygons[ii]) > 4094:
                 raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
-            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003)
-            for point in self.polygons[ii]:
-                data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-            data += struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100)
-        return data
+            data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
+            data.extend(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))) for point in self.polygons[ii])
+            data.append(struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100))
+        return b''.join(data)
 
     def area(self, by_spec=False):
         """
@@ -1514,7 +1510,7 @@ class L1Path(PolygonSet):
         self.datatypes += datatype
 
     def __str__(self):
-            return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -1680,7 +1676,7 @@ class PolyPath(PolygonSet):
         self.datatypes += (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
 
     def __str__(self):
-            return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
 class Label:
@@ -1826,7 +1822,6 @@ class Cell:
             A number that multiplies all dimensions written in the GDSII
             structure.
 
-
         Returns
         -------
         out : string
@@ -1836,12 +1831,7 @@ class Cell:
         name = self.name
         if len(name)%2 != 0:
             name = name + '\0'
-        data = struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii')
-        for element in self.elements:
-            data += element.to_gds(multiplier)
-        for label in self.labels:
-            data += label.to_gds(multiplier)
-        return data + struct.pack('>2h', 4, 0x0700)
+        return struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii') + b''.join(element.to_gds(multiplier) for element in self.elements) + b''.join(label.to_gds(multiplier) for label in self.labels) + struct.pack('>2h', 4, 0x0700)
 
     def copy(self, name, exclude_from_global=False):
         """
@@ -1851,7 +1841,9 @@ class Cell:
         ----------
         name : string
             The name of the cell.
-
+        exclude_from_global : bool
+            If ``True``, the cell will not be included in the global list of
+            cells maintained by ``gdspy``.
 
         Returns
         -------
