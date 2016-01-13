@@ -27,6 +27,7 @@ import struct
 import datetime
 import warnings
 import numpy
+import copy
 
 from . import boolext
 from .viewer import LayoutViewer
@@ -1876,8 +1877,8 @@ class Cell:
 
         if not layers_to_include and not layers_to_exclude:
             new_cell = Cell(name, exclude_from_global)
-            new_cell.elements = list(self.elements)
-            new_cell.labels = list(self.labels)
+            new_cell.elements = copy.deepcopy(self.elements)
+            new_cell.labels = copy.deepcopy(self.labels)
             new_cell.bb_is_valid = False
         elif list(set(layers_to_include) & set(layers_to_exclude)):
             raise ValueError("[GDSPY] Cannot both include and exclude the same layers " + str(list(set(layers_to_include) & set(layers_to_exclude))) + '.')
