@@ -40,6 +40,14 @@ The file gdspy-sample.py is a sample script to show the features provided by thi
 The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
 It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
 
+## Support
+
+Help support Gdspy development by donating:
+
+<center><div><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ"> 
+<img src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" alt="[paypal]" />
+</a></div></center>
+
 ## History of changes
 
 ### Version 0.7.1 (June 26, 2015)
