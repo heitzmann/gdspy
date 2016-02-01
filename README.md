@@ -40,7 +40,6 @@ The file gdspy-sample.py is a sample script to show the features provided by thi
 The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
 It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
 
-```html
 <center>
 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
 <input type="hidden" name="cmd" value="_s-xclick">
@@ -49,7 +48,6 @@ It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
 <img alt="" border="0" src="https://www.paypalobjects.com/pt_BR/i/scr/pixel.gif" width="1" height="1">
 </form>
 </center>
-```
 
 ## History of changes
 
