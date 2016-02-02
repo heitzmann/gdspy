@@ -1,6 +1,6 @@
 ########################################################################
 ##                                                                    ##
-##  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     ##
+##  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     ##
 ##                                                                    ##
 ##  This file is part of gdspy.                                       ##
 ##                                                                    ##
@@ -3007,7 +3007,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(object, distance, max_points=199, layer=0, datatype=0):
+def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -3018,6 +3018,10 @@ def offset(object, distance, max_points=199, layer=0, datatype=0):
         Polygons to be offset.
     distance : number
         Offset distance. Positive to expand, negative to shrink.
+    number_of_points : integer or float
+        If integer: number of vertices per 360 degree of curvature
+        (polygonal approximation). If float: approximate curvature
+        resolution. The actual number of points is automatically calculated.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
@@ -3027,16 +3031,15 @@ def offset(object, distance, max_points=199, layer=0, datatype=0):
         The GDSII layer number for the resulting element.
     datatype : integer
         The GDSII datatype for the resulting element (between 0 and 255).
+    eps : positive number
+        Small number to be used as tolerance in intersection and overlap
+        calculations.
 
     Returns
     -------
     out : ``PolygonSet`` or ``None``
         Return the offset shape as a set of polygons.
     """
-    if distance > 0:
-        op = lambda a,b: a or b
-    else:
-        op = lambda a,b: a and not b
     if isinstance(object, Polygon):
         polygons = [object.points]
     elif isinstance(object, PolygonSet):
@@ -3046,49 +3049,36 @@ def offset(object, distance, max_points=199, layer=0, datatype=0):
     else:
         polygons = [object]
 
-    result = []
+    if distance > 0:
+        op = lambda *a: sum(a) > 0
+    else:
+        n = len(polygons)
+        op = lambda *a: (sum(a[:n]) > 0) and not (sum(a[n:]) > 0)
+        distance = -distance
+
+    if isinstance(number_of_points, float):
+        number_of_points = max(int(2 * distance * numpy.pi / number_of_points + 0.5) // 2, 2)
+    else:
+        number_of_points = max(number_of_points // 2, 2)
+
+    edges = []
+    theta = numpy.hstack((numpy.linspace(0, numpy.pi, number_of_points),
+                numpy.linspace(numpy.pi, 2*numpy.pi, number_of_points)))
+    ang = numpy.empty(len(theta))
     for points in polygons:
-        vec = points[1:,:] - points[0,:]
-        s = numpy.sign(numpy.sum(vec[:-1,0]*vec[1:,1] - vec[:-1,1]*vec[1:,0]))
-        if s == 0:
-            s = 1
-        vec = points.astype(float) - numpy.roll(points, 1, 0)
-        length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-        ii = numpy.flatnonzero(length)
-        if len(ii) < len(length):
-            points = points[ii]
-            vec = points - numpy.roll(points, 1, 0)
-            length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-        vec[:,0] /= length
-        vec[:,1] /= length
-        base = points + s * distance * numpy.array([1,-1]) * vec[:,::-1]
+        for i in range(len(points)):
+            p1 = points[i-1,:]
+            p2 = points[i,:]
+            v = p2 - p1
+            ang[:] = numpy.arctan2(v[0], -v[1]) + theta
+            circ = numpy.empty((2*number_of_points, 2))
+            circ[:,0] = distance * numpy.cos(ang)
+            circ[:,1] = distance * numpy.sin(ang)
+            circ[:number_of_points,:] = circ[:number_of_points,:] + p1
+            circ[number_of_points:,:] = circ[number_of_points:,:] + p2
+            edges.append(circ)
 
-        dbase = numpy.roll(base, -1, 0) - base
-        v1 = numpy.roll(vec, -1, 0)
-        den = vec[:,0] * v1[:,1] - vec[:,1] * v1[:,0]
-        ii = den == 0.0
-        den[ii] = 1.0
-        a = (dbase[:,0] * v1[:,1] - dbase[:,1] * v1[:,0]) / den
-        a[ii] = 0
-        pts = base + (a * vec.transpose()).transpose()
-        ii = numpy.sum(vec * (pts - numpy.roll(pts, 1, 0)), 1) > 0
-        while ii.sum() < a.size:
-            base = base[ii,:]
-            vec = vec[ii,:]
-            dbase = numpy.roll(base, -1, 0) - base
-            v1 = numpy.roll(vec, -1, 0)
-            den = vec[:,0] * v1[:,1] - vec[:,1] * v1[:,0]
-            ii = den == 0.0
-            den[ii] = 1.0
-            a = (dbase[:,0] * v1[:,1] - dbase[:,1] * v1[:,0]) / den
-            a[ii] = 0
-            pts = base + (a * vec.transpose()).transpose()
-            ii = numpy.sum(vec * (pts - numpy.roll(pts, 1, 0)), 1) > 0
-
-        edge = numpy.vstack((points, points[:1,:], pts[:1], pts[::-1]))
-        r = boolext.clip([points, edge], op, 1e-13)
-        if not (r is None):
-            result.extend(r)
+    result = boolext.clip(polygons + edges, op, eps)
     return None if len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
