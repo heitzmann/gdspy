@@ -43,6 +43,7 @@ If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
 
+_halfpi = 0.5 * numpy.pi
 
 def _eight_byte_real(value):
     """
@@ -1175,38 +1176,38 @@ class Path(PolygonSet):
         """
         exact = True
         if angle == 'r':
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = 0
         elif angle == 'rr':
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = -delta_i
         elif angle == 'l':
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = 0
         elif angle == 'll':
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = -delta_i
         elif angle < 0:
             exact = False
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = delta_i + angle
         else:
             exact = False
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = delta_i + angle
         if self.direction == '+x':
             self.direction = 0
         elif self.direction == '-x':
             self.direction = numpy.pi
         elif self.direction == '+y':
-            self.direction = 0.5 * numpy.pi
+            self.direction = _halfpi
         elif self.direction == '-y':
-            self.direction = -0.5 * numpy.pi
+            self.direction = -_halfpi
         elif exact:
             exact = False
         self.arc(radius, self.direction + delta_i, self.direction + delta_f, number_of_points, max_points, final_width, final_distance, layer, datatype)
         if exact:
-            self.direction = ['+x', '+y', '-x', '-y'][int(round(self.direction / (0.5 * numpy.pi))) % 4]
+            self.direction = ['+x', '+y', '-x', '-y'][int(round(self.direction / _halfpi)) % 4]
         return self
 
     def parametric(self, curve_function, curve_derivative=None, number_of_evaluations=99, max_points=199, final_width=None, final_distance=None, layer=0, datatype=0):
@@ -1609,11 +1610,11 @@ class PolyPath(PolygonSet):
             points[-1,:] = points[-1,:] + v * width[(points.shape[0] - 1) % len_w]
         elif ends == 1:
             v0 = points[1,:] - points[0,:]
-            angle0 = numpy.arctan2(v0[1], v0[0]) + 0.5 * numpy.pi
+            angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
             v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0 * v0))
             d0 = 0.5 * (number_of_paths - 1) * distance[0]
             v1 = points[-1,:] - points[-2,:]
-            angle1 = numpy.arctan2(v1[1], v1[0]) - 0.5 * numpy.pi
+            angle1 = numpy.arctan2(v1[1], v1[0]) - _halfpi
             v1 = numpy.array((-v1[1], v1[0])) / numpy.sqrt(numpy.sum(v1 * v1))
             j1w = (points.shape[0] - 1) % len_w
             j1d = (points.shape[0] - 1) % len_d
@@ -3039,6 +3040,12 @@ def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, dat
     -------
     out : ``PolygonSet`` or ``None``
         Return the offset shape as a set of polygons.
+
+    Notes
+    -----
+    Because of roundoff errors there are a few cases when this function can
+    cause segmentation faults. If that happens, increasing the value of
+    ``eps`` might help.
     """
     if isinstance(object, Polygon):
         polygons = [object.points]
@@ -3050,36 +3057,75 @@ def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, dat
         polygons = [object]
 
     if distance > 0:
-        op = lambda *a: sum(a) > 0
+        op = lambda *a: any(a)
     else:
         n = len(polygons)
-        op = lambda *a: (sum(a[:n]) > 0) and not (sum(a[n:]) > 0)
+        op = lambda *a: any(a[:n]) and not any(a[n:])
         distance = -distance
 
     if isinstance(number_of_points, float):
-        number_of_points = max(int(2 * distance * numpy.pi / number_of_points + 0.5) // 2, 2)
+        number_of_points = max(int(2 * distance * numpy.pi / number_of_points + 0.5), 4)
     else:
-        number_of_points = max(number_of_points // 2, 2)
+        number_of_points = max(number_of_points, 4)
+
+    theta = numpy.linspace(0, 2*numpy.pi, number_of_points+1)[:-1]
+    circle = numpy.empty((number_of_points, 2))
+    circle[:,0] = distance * numpy.cos(theta)
+    circle[:,1] = distance * numpy.sin(theta)
 
     edges = []
-    theta = numpy.hstack((numpy.linspace(0, numpy.pi, number_of_points),
-                numpy.linspace(numpy.pi, 2*numpy.pi, number_of_points)))
-    ang = numpy.empty(len(theta))
     for points in polygons:
-        for i in range(len(points)):
-            p1 = points[i-1,:]
-            p2 = points[i,:]
-            v = p2 - p1
-            ang[:] = numpy.arctan2(v[0], -v[1]) + theta
-            circ = numpy.empty((2*number_of_points, 2))
-            circ[:,0] = distance * numpy.cos(ang)
-            circ[:,1] = distance * numpy.sin(ang)
-            circ[:number_of_points,:] = circ[:number_of_points,:] + p1
-            circ[number_of_points:,:] = circ[number_of_points:,:] + p2
-            edges.append(circ)
+        lpts = points.shape[0]
+        vec = numpy.roll(points, -1, 0) - points
+        mag2 = numpy.sum(vec**2, 1)
+        ang = numpy.arctan2(vec[:,1], vec[:,0])
+        vec = distance * ((vec[:,::-1] * numpy.array((1,-1))).T / numpy.sqrt(mag2)).T
+        gamma = (ang - numpy.roll(ang, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+        cosg = numpy.cos(gamma)
+        tmp1 = 4 * distance**2 * (1 - cosg) / (1 + cosg)
+        endpts = numpy.nonzero((cosg < eps) + (mag2 - tmp1 < eps) + (numpy.roll(mag2, 1, 0) - tmp1 < eps))[0]
+
+        if len(endpts) == 0:
+            endpts = numpy.zero(1)
+        elif endpts[0] != 0:
+            points = numpy.roll(points, -endpts[0], 0)
+            vec = numpy.roll(vec, -endpts[0], 0)
+            ang = numpy.roll(ang, -endpts[0], 0)
+            gamma = numpy.roll(gamma, -endpts[0], 0)
+            cosg = numpy.roll(cosg, -endpts[0], 0)
+            endpts -= endpts[0]
+        tmp1 = distance / numpy.sqrt(0.5 + 0.5 * cosg)
+        tmp2 = ang + _halfpi * numpy.sign(gamma) - 0.5 * gamma
+        q = numpy.copy(points)
+        q[:,0] += tmp1 * numpy.cos(tmp2)
+        q[:,1] += tmp1 * numpy.sin(tmp2)
+
+        edges.extend((circle + points[i,:] for i in endpts))
+        stop = 0
+        for start in reversed(endpts):
+            # build from start to stop
+            edg0 = []
+            edg1 = []
+            for i in range(start + 1, lpts if stop == 0 else stop):
+                if gamma[i] > 0:
+                    t = ang[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
+                    curve = numpy.empty((len(t), 2))
+                    curve[:,0] = points[i,0] + distance * numpy.cos(t)
+                    curve[:,1] = points[i,1] + distance * numpy.sin(t)
+                    edg0.extend(curve)
+                    edg1.append(q[i,:])
+                elif gamma[i] < 0:
+                    t = ang[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
+                    curve = numpy.empty((len(t), 2))
+                    curve[:,0] = points[i,0] + distance * numpy.cos(t)
+                    curve[:,1] = points[i,1] + distance * numpy.sin(t)
+                    edg1.extend(curve)
+                    edg0.append(q[i,:])
+            edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
+            stop = start
 
     result = boolext.clip(polygons + edges, op, eps)
-    return None if len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
+    return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
 def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
