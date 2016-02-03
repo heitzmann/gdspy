@@ -1,6 +1,6 @@
 ########################################################################
 ##                                                                    ##
-##  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     ##
+##  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     ##
 ##                                                                    ##
 ##  This file is part of gdspy.                                       ##
 ##                                                                    ##
