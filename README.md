@@ -42,11 +42,7 @@ It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
 
 ## Support
 
-Help support Gdspy development by donating:
-
-<center><div><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ"> 
-<img src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" alt="[paypal]" />
-</a></div></center>
+Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
 ## History of changes
 
