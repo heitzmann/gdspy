@@ -28,7 +28,7 @@ import datetime
 import warnings
 import numpy
 
-from . import boolext
+from . import clipper
 from .viewer import LayoutViewer
 
 __version__ = '0.7.1'
@@ -3124,7 +3124,8 @@ def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, dat
             edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
             stop = start
 
-    result = boolext.clip(polygons + edges, op, eps)
+    Fail: check orientations!
+    result = clipper.clip(polygons + edges, op, eps)
     return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
@@ -3203,6 +3204,7 @@ def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
         else:
             polygons.append(obj)
             indices.append(indices[-1] + 1)
+    Fail: check orientations!
     if special_function:
         result = boolext.clip(polygons, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
     else:
