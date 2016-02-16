@@ -4629,7 +4629,7 @@ polygons : list of array-like[N][2]\n\
 		object with the coordinates of the vertices of the polygon.\n\
 distance : number\n\
 		Offset distance. Positive to expand, negative to shrink.\n\
-joint : {'bevel', 'miter', 'round'}\n\
+joint : {'miter', 'bevel', 'round'}\n\
 		Type of joint used to create the offset polygon.\n\
 tolerance : number\n\
 		For miter joints, this number represents the maximun distance in\n\
