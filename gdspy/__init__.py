@@ -31,7 +31,7 @@ import numpy
 from . import boolext
 from .viewer import LayoutViewer
 
-__version__ = '0.7.1'
+__version__ = '0.8.0'
 __doc__ = """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
@@ -3008,7 +3008,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, datatype=0, eps=1e-13):
+def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -3019,10 +3019,16 @@ def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, dat
         Polygons to be offset.
     distance : number
         Offset distance. Positive to expand, negative to shrink.
-    number_of_points : integer or float
-        If integer: number of vertices per 360 degree of curvature
-        (polygonal approximation). If float: approximate curvature
-        resolution. The actual number of points is automatically calculated.
+    joint : {'miter', 'bevel', 'round'}
+        Type of joint used to create the offset polygon.
+    tolerance : integer or float
+        For miter joints, this number represents the maximun distance in
+        multiples of offset betwen new vertices and their original position
+        before beveling to avoid spikes at acute joints. For round joints,
+        it has the same meaning as ``number_of_points`` in ``Round``, i.e.,
+        if integer, it represents the number of vertices per 360 degree of
+        curvature; if float, the approximate curvature resolution. The
+        actual number of points is automatically calculated.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
@@ -3063,66 +3069,73 @@ def offset(object, distance, number_of_points=0.01, max_points=199, layer=0, dat
         op = lambda *a: any(a[:n]) and not any(a[n:])
         distance = -distance
 
-    if isinstance(number_of_points, float):
-        number_of_points = max(int(2 * distance * numpy.pi / number_of_points + 0.5), 4)
+    if joint == 'miter':
+        raise NotImplementedError('Miter joint not implemented.')
+    elif joint == 'bevel':
+        raise NotImplementedError('Bevel joint not implemented.')
+    elif joint == 'round':
+        if isinstance(tolerance, float):
+            tolerance = max(int(2 * distance * numpy.pi / tolerance + 0.5), 4)
+        else:
+            tolerance = max(tolerance, 4)
+
+        theta = numpy.linspace(0, 2*numpy.pi, tolerance+1)[:-1]
+        circle = numpy.empty((tolerance, 2))
+        circle[:,0] = distance * numpy.cos(theta)
+        circle[:,1] = distance * numpy.sin(theta)
+
+        edges = []
+        for points in polygons:
+            lpts = points.shape[0]
+            vec = numpy.roll(points, -1, 0) - points
+            mag2 = numpy.sum(vec**2, 1)
+            ang = numpy.arctan2(vec[:,1], vec[:,0])
+            vec = distance * ((vec[:,::-1] * numpy.array((1,-1))).T / numpy.sqrt(mag2)).T
+            gamma = (ang - numpy.roll(ang, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+            cosg = numpy.cos(gamma)
+            tmp1 = 4 * distance**2 * (1 - cosg) / (1 + cosg)
+            endpts = numpy.nonzero((cosg < eps) + (mag2 - tmp1 < eps) + (numpy.roll(mag2, 1, 0) - tmp1 < eps))[0]
+
+            if len(endpts) == 0:
+                endpts = numpy.zero(1)
+            elif endpts[0] != 0:
+                points = numpy.roll(points, -endpts[0], 0)
+                vec = numpy.roll(vec, -endpts[0], 0)
+                ang = numpy.roll(ang, -endpts[0], 0)
+                gamma = numpy.roll(gamma, -endpts[0], 0)
+                cosg = numpy.roll(cosg, -endpts[0], 0)
+                endpts -= endpts[0]
+            tmp1 = distance / numpy.sqrt(0.5 + 0.5 * cosg)
+            tmp2 = ang + _halfpi * numpy.sign(gamma) - 0.5 * gamma
+            q = numpy.copy(points)
+            q[:,0] += tmp1 * numpy.cos(tmp2)
+            q[:,1] += tmp1 * numpy.sin(tmp2)
+
+            edges.extend((circle + points[i,:] for i in endpts))
+            stop = 0
+            for start in reversed(endpts):
+                # build from start to stop
+                edg0 = []
+                edg1 = []
+                for i in range(start + 1, lpts if stop == 0 else stop):
+                    if gamma[i] > 0:
+                        t = ang[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
+                        curve = numpy.empty((len(t), 2))
+                        curve[:,0] = points[i,0] + distance * numpy.cos(t)
+                        curve[:,1] = points[i,1] + distance * numpy.sin(t)
+                        edg0.extend(curve)
+                        edg1.append(q[i,:])
+                    elif gamma[i] < 0:
+                        t = ang[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
+                        curve = numpy.empty((len(t), 2))
+                        curve[:,0] = points[i,0] + distance * numpy.cos(t)
+                        curve[:,1] = points[i,1] + distance * numpy.sin(t)
+                        edg1.extend(curve)
+                        edg0.append(q[i,:])
+                edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
+                stop = start
     else:
-        number_of_points = max(number_of_points, 4)
-
-    theta = numpy.linspace(0, 2*numpy.pi, number_of_points+1)[:-1]
-    circle = numpy.empty((number_of_points, 2))
-    circle[:,0] = distance * numpy.cos(theta)
-    circle[:,1] = distance * numpy.sin(theta)
-
-    edges = []
-    for points in polygons:
-        lpts = points.shape[0]
-        vec = numpy.roll(points, -1, 0) - points
-        mag2 = numpy.sum(vec**2, 1)
-        ang = numpy.arctan2(vec[:,1], vec[:,0])
-        vec = distance * ((vec[:,::-1] * numpy.array((1,-1))).T / numpy.sqrt(mag2)).T
-        gamma = (ang - numpy.roll(ang, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
-        cosg = numpy.cos(gamma)
-        tmp1 = 4 * distance**2 * (1 - cosg) / (1 + cosg)
-        endpts = numpy.nonzero((cosg < eps) + (mag2 - tmp1 < eps) + (numpy.roll(mag2, 1, 0) - tmp1 < eps))[0]
-
-        if len(endpts) == 0:
-            endpts = numpy.zero(1)
-        elif endpts[0] != 0:
-            points = numpy.roll(points, -endpts[0], 0)
-            vec = numpy.roll(vec, -endpts[0], 0)
-            ang = numpy.roll(ang, -endpts[0], 0)
-            gamma = numpy.roll(gamma, -endpts[0], 0)
-            cosg = numpy.roll(cosg, -endpts[0], 0)
-            endpts -= endpts[0]
-        tmp1 = distance / numpy.sqrt(0.5 + 0.5 * cosg)
-        tmp2 = ang + _halfpi * numpy.sign(gamma) - 0.5 * gamma
-        q = numpy.copy(points)
-        q[:,0] += tmp1 * numpy.cos(tmp2)
-        q[:,1] += tmp1 * numpy.sin(tmp2)
-
-        edges.extend((circle + points[i,:] for i in endpts))
-        stop = 0
-        for start in reversed(endpts):
-            # build from start to stop
-            edg0 = []
-            edg1 = []
-            for i in range(start + 1, lpts if stop == 0 else stop):
-                if gamma[i] > 0:
-                    t = ang[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
-                    curve = numpy.empty((len(t), 2))
-                    curve[:,0] = points[i,0] + distance * numpy.cos(t)
-                    curve[:,1] = points[i,1] + distance * numpy.sin(t)
-                    edg0.extend(curve)
-                    edg1.append(q[i,:])
-                elif gamma[i] < 0:
-                    t = ang[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
-                    curve = numpy.empty((len(t), 2))
-                    curve[:,0] = points[i,0] + distance * numpy.cos(t)
-                    curve[:,1] = points[i,1] + distance * numpy.sin(t)
-                    edg1.extend(curve)
-                    edg0.append(q[i,:])
-            edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
-            stop = start
+        raise ValueError('Argument joint must be one of "miter", "bevel", or "round".')
 
     result = boolext.clip(polygons + edges, op, eps)
     return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
