@@ -3069,10 +3069,57 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
         op = lambda *a: any(a[:n]) and not any(a[n:])
         distance = -distance
 
+    edges = []
+    tolerance *= distance
+
     if joint == 'miter':
-        raise NotImplementedError('Miter joint not implemented.')
+        for points in polygons:
+            vec = numpy.roll(points, -1, 0) - points
+            vec = (vec.T / numpy.sqrt(numpy.sum(vec**2, 1))).T
+            alpha = numpy.arctan2(vec[:,1], vec[:,0])
+            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+            beta = 0.5 * (numpy.pi - gamma)
+            sinb = numpy.sin(beta)
+            cosb = numpy.cos(beta)
+            l = distance / sinb
+            h = tolerance / cosb + l * (cosb - 1/cosb)
+            right0 = numpy.copy(points)
+            right0[:,0] += l * numpy.cos(numpy.roll(alpha, 1, 0) - beta)
+            right0[:,1] += l * numpy.sin(numpy.roll(alpha, 1, 0) - beta)
+            left0 = numpy.copy(points)
+            left0[:,0] += l * numpy.cos(alpha + beta)
+            left0[:,1] += l * numpy.sin(alpha + beta)
+            right1 = points + (numpy.roll(vec, 1, 0).T * h).T
+            right1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) - _halfpi)
+            right1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) - _halfpi)
+            right2 = points - (vec.T * h).T
+            right2[:,0] += distance * numpy.cos(alpha - _halfpi)
+            right2[:,1] += distance * numpy.sin(alpha - _halfpi)
+            left1 = points - (numpy.roll(vec, 1, 0).T * h).T
+            left1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) + _halfpi)
+            left1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) + _halfpi)
+            left2 = points + (vec.T * h).T
+            left2[:,0] += distance * numpy.cos(alpha + _halfpi)
+            left2[:,1] += distance * numpy.sin(alpha + _halfpi)
+            edg = [[right0[-1,:], left0[-1,:]] if l[-1] <= tolerance else (
+                    [right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else
+                    [right0[-1,:], left2[-1,:]])]
+            for i in range(points.shape[0]):
+                if l[i] > tolerance:
+                    if gamma[i] > 0:
+                        edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
+                        edg.append([right1[i,:], right2[i,:], left0[i,:]])
+                    else:
+                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
+                        edg.append([left1[i,:], right0[i,:], left2[i,:]])
+                else:
+                    edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
+            edges.extend(edg[1:])
+        #return PolygonSet(edges, layer, datatype, False)
+
     elif joint == 'bevel':
-        raise NotImplementedError('Bevel joint not implemented.')
+        raise NotImplementedError('Miter joint not implemented.')
+
     elif joint == 'round':
         if isinstance(tolerance, float):
             tolerance = max(int(2 * distance * numpy.pi / tolerance + 0.5), 4)
@@ -3084,14 +3131,13 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
         circle[:,0] = distance * numpy.cos(theta)
         circle[:,1] = distance * numpy.sin(theta)
 
-        edges = []
         for points in polygons:
             lpts = points.shape[0]
             vec = numpy.roll(points, -1, 0) - points
             mag2 = numpy.sum(vec**2, 1)
-            ang = numpy.arctan2(vec[:,1], vec[:,0])
+            alpha = numpy.arctan2(vec[:,1], vec[:,0])
             vec = distance * ((vec[:,::-1] * numpy.array((1,-1))).T / numpy.sqrt(mag2)).T
-            gamma = (ang - numpy.roll(ang, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
             cosg = numpy.cos(gamma)
             tmp1 = 4 * distance**2 * (1 - cosg) / (1 + cosg)
             endpts = numpy.nonzero((cosg < eps) + (mag2 - tmp1 < eps) + (numpy.roll(mag2, 1, 0) - tmp1 < eps))[0]
@@ -3101,12 +3147,12 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
             elif endpts[0] != 0:
                 points = numpy.roll(points, -endpts[0], 0)
                 vec = numpy.roll(vec, -endpts[0], 0)
-                ang = numpy.roll(ang, -endpts[0], 0)
+                alpha = numpy.roll(alpha, -endpts[0], 0)
                 gamma = numpy.roll(gamma, -endpts[0], 0)
                 cosg = numpy.roll(cosg, -endpts[0], 0)
                 endpts -= endpts[0]
             tmp1 = distance / numpy.sqrt(0.5 + 0.5 * cosg)
-            tmp2 = ang + _halfpi * numpy.sign(gamma) - 0.5 * gamma
+            tmp2 = alpha + _halfpi * numpy.sign(gamma) - 0.5 * gamma
             q = numpy.copy(points)
             q[:,0] += tmp1 * numpy.cos(tmp2)
             q[:,1] += tmp1 * numpy.sin(tmp2)
@@ -3119,14 +3165,14 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                 edg1 = []
                 for i in range(start + 1, lpts if stop == 0 else stop):
                     if gamma[i] > 0:
-                        t = ang[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
+                        t = alpha[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
                         curve = numpy.empty((len(t), 2))
                         curve[:,0] = points[i,0] + distance * numpy.cos(t)
                         curve[:,1] = points[i,1] + distance * numpy.sin(t)
                         edg0.extend(curve)
                         edg1.append(q[i,:])
                     elif gamma[i] < 0:
-                        t = ang[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
+                        t = alpha[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
                         curve = numpy.empty((len(t), 2))
                         curve[:,0] = points[i,0] + distance * numpy.cos(t)
                         curve[:,1] = points[i,1] + distance * numpy.sin(t)
