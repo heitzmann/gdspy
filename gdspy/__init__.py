@@ -3153,7 +3153,6 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                     edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
                     edg.append([left1[i,:], right0[i,:], left2[i,:]])
             edges.extend(edg[1:])
-        return PolygonSet(edges, layer, datatype, False)
 
     elif joint == 'round':
         if isinstance(tolerance, float):
