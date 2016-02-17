@@ -3115,10 +3115,45 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                 else:
                     edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
             edges.extend(edg[1:])
-        #return PolygonSet(edges, layer, datatype, False)
 
     elif joint == 'bevel':
-        raise NotImplementedError('Miter joint not implemented.')
+        for points in polygons:
+            vec = numpy.roll(points, -1, 0) - points
+            vec = (vec.T / numpy.sqrt(numpy.sum(vec**2, 1))).T
+            alpha = numpy.arctan2(vec[:,1], vec[:,0])
+            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+            beta = 0.5 * (numpy.pi - gamma)
+            sinb = numpy.sin(beta)
+            cosb = numpy.cos(beta)
+            l = distance / sinb
+            right0 = numpy.copy(points)
+            right0[:,0] += l * numpy.cos(numpy.roll(alpha, 1, 0) - beta)
+            right0[:,1] += l * numpy.sin(numpy.roll(alpha, 1, 0) - beta)
+            left0 = numpy.copy(points)
+            left0[:,0] += l * numpy.cos(alpha + beta)
+            left0[:,1] += l * numpy.sin(alpha + beta)
+            right1 = numpy.copy(points)
+            right1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) - _halfpi)
+            right1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) - _halfpi)
+            right2 = numpy.copy(points)
+            right2[:,0] += distance * numpy.cos(alpha - _halfpi)
+            right2[:,1] += distance * numpy.sin(alpha - _halfpi)
+            left1 = numpy.copy(points)
+            left1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) + _halfpi)
+            left1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) + _halfpi)
+            left2 = numpy.copy(points)
+            left2[:,0] += distance * numpy.cos(alpha + _halfpi)
+            left2[:,1] += distance * numpy.sin(alpha + _halfpi)
+            edg = [[right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else [right0[-1,:], left2[-1,:]]]
+            for i in range(points.shape[0]):
+                if gamma[i] > 0:
+                    edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
+                    edg.append([right1[i,:], right2[i,:], left0[i,:]])
+                else:
+                    edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
+                    edg.append([left1[i,:], right0[i,:], left2[i,:]])
+            edges.extend(edg[1:])
+        return PolygonSet(edges, layer, datatype, False)
 
     elif joint == 'round':
         if isinstance(tolerance, float):
