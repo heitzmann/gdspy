@@ -22,7 +22,6 @@
 
 from __future__ import absolute_import
 
-import os
 import struct
 import datetime
 import warnings
@@ -3075,7 +3074,8 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
     if joint == 'miter':
         for points in polygons:
             vec = numpy.roll(points, -1, 0) - points
-            vec = (vec.T / numpy.sqrt(numpy.sum(vec**2, 1))).T
+            mag = numpy.sqrt(numpy.sum(vec**2, 1))
+            vec = (vec.T / mag).T
             alpha = numpy.arctan2(vec[:,1], vec[:,0])
             gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
             beta = 0.5 * (numpy.pi - gamma)
@@ -3101,25 +3101,40 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
             left2 = points + (vec.T * h).T
             left2[:,0] += distance * numpy.cos(alpha + _halfpi)
             left2[:,1] += distance * numpy.sin(alpha + _halfpi)
-            edg = [[right0[-1,:], left0[-1,:]] if l[-1] <= tolerance else (
-                    [right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else
-                    [right0[-1,:], left2[-1,:]])]
-            for i in range(points.shape[0]):
+            edg = [right0[-1,:], left0[-1,:]] if l[-1] <= tolerance \
+                  else ([right2[-1,:], left0[-1,:]] if gamma[-1] > 0 
+                          else [right0[-1,:], left2[-1,:]])
+            edg = [[edg[-1], edg[-2], right0[0,:], left0[0,:]]] if l[0] <= tolerance \
+                  else ([[edg[-1], edg[-2], right1[0,:], left0[0,:]],
+                          [right1[0,:], right2[0,:], left0[0,:]]] if gamma[0] > 0
+                          else [[edg[-1], edg[-2], right0[0,:], left1[0,:]],
+                          [left1[0,:], right0[0,:], left2[0,:]]])
+            for i in range(1, points.shape[0]):
                 if l[i] > tolerance:
                     if gamma[i] > 0:
-                        edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
-                        edg.append([right1[i,:], right2[i,:], left0[i,:]])
+                        if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
+                            edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right1[i,:], right2[i,:], left0[i,:]]
+                        else:
+                            edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
+                            edg.append([right1[i,:], right2[i,:], left0[i,:]])
                     else:
-                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
-                        edg.append([left1[i,:], right0[i,:], left2[i,:]])
+                        if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
+                            edg[-1] = [left1[i,:], edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left2[i,:]]
+                        else:
+                            edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
+                            edg.append([left1[i,:], right0[i,:], left2[i,:]])
                 else:
-                    edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
-            edges.extend(edg[1:])
+                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
+                        edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left0[i,:]]
+                    else:
+                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
+            edges.extend(edg)
 
     elif joint == 'bevel':
         for points in polygons:
             vec = numpy.roll(points, -1, 0) - points
-            vec = (vec.T / numpy.sqrt(numpy.sum(vec**2, 1))).T
+            mag = numpy.sqrt(numpy.sum(vec**2, 1))
+            vec = (vec.T / mag).T
             alpha = numpy.arctan2(vec[:,1], vec[:,0])
             gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
             beta = 0.5 * (numpy.pi - gamma)
@@ -3144,15 +3159,25 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
             left2 = numpy.copy(points)
             left2[:,0] += distance * numpy.cos(alpha + _halfpi)
             left2[:,1] += distance * numpy.sin(alpha + _halfpi)
-            edg = [[right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else [right0[-1,:], left2[-1,:]]]
-            for i in range(points.shape[0]):
+            edg = [right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else [right0[-1,:], left2[-1,:]]
+            edg = [[edg[-1], edg[-2], right1[0,:], left0[0,:]],
+                   [right1[0,:], right2[0,:], left0[0,:]]] if gamma[0] > 0 \
+                       else [[edg[-1], edg[-2], right0[0,:], left1[0,:]],
+                             [left1[0,:], right0[0,:], left2[0,:]]]
+            for i in range(1, points.shape[0]):
                 if gamma[i] > 0:
-                    edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
-                    edg.append([right1[i,:], right2[i,:], left0[i,:]])
+                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
+                        edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right1[i,:], right2[i,:], left0[i,:]]
+                    else:
+                        edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
+                        edg.append([right1[i,:], right2[i,:], left0[i,:]])
                 else:
-                    edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
-                    edg.append([left1[i,:], right0[i,:], left2[i,:]])
-            edges.extend(edg[1:])
+                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
+                        edg[-1] = [left1[i,:], edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left2[i,:]]
+                    else:
+                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
+                        edg.append([left1[i,:], right0[i,:], left2[i,:]])
+            edges.extend(edg)
 
     elif joint == 'round':
         if isinstance(tolerance, float):
