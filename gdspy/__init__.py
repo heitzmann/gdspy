@@ -1580,7 +1580,7 @@ class PolyPath(PolygonSet):
 
     Notes
     -----
-    The bevel joint will give  strange results if the number of paths is
+    The bevel join will give  strange results if the number of paths is
     greater than 1.
     """
     def __init__(self, points, width, number_of_paths=1, distance=0, corners=0, ends=0, max_points=199, layer=0, datatype=0):
@@ -3007,7 +3007,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
+def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -3018,8 +3018,8 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
         Polygons to be offset.
     distance : number
         Offset distance. Positive to expand, negative to shrink.
-    joint : {'miter', 'bevel', 'round'}
-        Type of joint used to create the offset polygon.
+    join : {'miter', 'bevel', 'round'}
+        Type of join used to create the offset polygon.
     tolerance : integer or float
         For miter joints, this number represents the maximun distance in
         multiples of offset betwen new vertices and their original position
@@ -3071,7 +3071,7 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
     edges = []
     tolerance *= distance
 
-    if joint == 'miter':
+    if join == 'miter':
         for points in polygons:
             vec = numpy.roll(points, -1, 0) - points
             mag = numpy.sqrt(numpy.sum(vec**2, 1))
@@ -3130,7 +3130,7 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                         edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
             edges.extend(edg)
 
-    elif joint == 'bevel':
+    elif join == 'bevel':
         for points in polygons:
             vec = numpy.roll(points, -1, 0) - points
             mag = numpy.sqrt(numpy.sum(vec**2, 1))
@@ -3179,7 +3179,7 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                         edg.append([left1[i,:], right0[i,:], left2[i,:]])
             edges.extend(edg)
 
-    elif joint == 'round':
+    elif join == 'round':
         if isinstance(tolerance, float):
             tolerance = max(int(2 * distance * numpy.pi / tolerance + 0.5), 4)
         else:
@@ -3240,7 +3240,7 @@ def offset(object, distance, joint='miter', tolerance=2, max_points=199, layer=0
                 edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
                 stop = start
     else:
-        raise ValueError('Argument joint must be one of "miter", "bevel", or "round".')
+        raise ValueError('Argument join must be one of "miter", "bevel", or "round".')
 
     result = boolext.clip(polygons + edges, op, eps)
     return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
