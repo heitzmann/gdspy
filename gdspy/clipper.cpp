@@ -4569,7 +4569,7 @@ void link_holes(PolyNode *node, Paths &out)
   int size = result.size();
 
   for (PolyNodes::iterator child = node->Childs.begin(); child != node->Childs.end(); ++child)
-    size += child.Contour.size();
+    size += child->Contour.size();
   result.reserve(size);
 
   // sort holes by smallest x-coordinate
@@ -4579,8 +4579,27 @@ void link_holes(PolyNode *node, Paths &out)
   for (Paths::iterator h = holes.begin(); h != holes.end(); ++h)
   {
     // holes are guaranteed to be oriented opposite to their parent
-    Path::iterator ph = min_element(*h, point_compare);
+    Path::iterator p = min_element(*h, point_compare);
+    Path::iterator p1 = result.end();
+    cInt xnew = 0;
+    for (Path::iterator pprev = --result.end(), Path::iterator pnext = result.begin(); pnext != result.end(); pprev = pnext++)
+    {
+      if ((pnext->Y <= p->Y && p->y < pprev->Y) || (pprev->Y < p->Y && p->y <= pnext->Y))
+      {
+        cInt x = pnext->X + ((pprev->X - pnext->X) * (p->Y - pnext->Y)) / (pprev->Y - pnext->Y);
+        if ((x > xnew || p1 == result.end()) && x < p->X)
+        {
+          xnew = x;
+          p1 = pnext;
+        }
+      }
+    }
 
+    IntPoint pnew(xnew, p->Y);
+    result.insert(p1, pnew);
+    result.insert(p1, p, holes.end());
+    result.insert(p1, holes.begin(), p+1);
+    if (pnew->X != p1->X || pnew->Y != p1->Y) result.insert(p1, pnew);
   }
 
   out.push_back(result);
