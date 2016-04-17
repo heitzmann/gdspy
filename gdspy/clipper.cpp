@@ -63,6 +63,8 @@
 *                                                                              *
 *******************************************************************************/
 
+#include <Python.h>
+
 #include "clipper.hpp"
 #include <cmath>
 #include <vector>
@@ -72,7 +74,6 @@
 #include <cstdlib>
 #include <ostream>
 #include <functional>
-#include <Python.h>
 
 static double const pi = 3.141592653589793238;
 static double const two_pi = pi *2;
@@ -4511,6 +4512,7 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
 
     /* Parse a complete polygon */
     long num_points = PySequence_Length(py_polygon);
+    cInt orientation = 0;
     paths[i].resize(num_points);
     for (long j = 0; j < num_points; ++j)
     {
@@ -4539,7 +4541,12 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
       Py_DECREF(py_point);
       paths[i][j].X = (cInt)(scaling * x);
       paths[i][j].Y = (cInt)(scaling * y);
+      if (j > 1)
+        orientation += (paths[i][0].X - paths[i][j].X) * (paths[i][j-1].Y - paths[i][0].Y) - (paths[i][0].Y - paths[i][j].Y) * (paths[i][j-1].X - paths[i][0].X);
     }
+    if (orientation < 0)
+      reverse(paths[i].begin(), paths[i].end());
+
     Py_DECREF(py_polygon);
   }
   return 0;
@@ -4597,7 +4604,7 @@ void link_holes(PolyNode *node, Paths &out)
       if ((pnext->Y <= p->Y && p->Y < pprev->Y) || (pprev->Y < p->Y && p->Y <= pnext->Y))
       {
         cInt x = pnext->X + ((pprev->X - pnext->X) * (p->Y - pnext->Y)) / (pprev->Y - pnext->Y);
-        if ((x > xnew || p1 == result.end()) && x < p->X)
+        if ((x > xnew || p1 == result.end()) && x <= p->X)
         {
           xnew = x;
           p1 = pnext;
@@ -4606,10 +4613,10 @@ void link_holes(PolyNode *node, Paths &out)
     }
 
     IntPoint pnew(xnew, p->Y);
-    result.insert(p1, pnew);
-    result.insert(p1, p, h->end());
-    result.insert(p1, h->begin(), p+1);
     if (pnew.X != p1->X || pnew.Y != p1->Y) result.insert(p1, pnew);
+    result.insert(p1, h->begin(), p+1);
+    result.insert(p1, p, h->end());
+    result.insert(p1, pnew);
   }
 
   out.push_back(result);
@@ -4640,7 +4647,7 @@ PyObject* build_polygon_tuple(Paths &polygons, double scaling)
   PyObject *result;
 
   if ((result = PyTuple_New(polygons.size())) == NULL) return NULL;
-  for (Paths::size_type i = 0; i <= polygons.size(); ++i)
+  for (Paths::size_type i = 0; i < polygons.size(); ++i)
   {
     Path poly = polygons[i];
     PyObject *polyt = PyTuple_New(poly.size());
@@ -4710,7 +4717,7 @@ static PyObject* clip(PyObject *self, PyObject *args)
 
   clpr.AddPaths(subj, ptSubject, true);
   clpr.AddPaths(clip, ptClip, true);
-  clpr.Execute(oper, solution);
+  clpr.Execute(oper, solution, pftNonZero, pftNonZero);
 
   tree2paths(solution, result);
   return build_polygon_tuple(result, scaling);
@@ -4810,7 +4817,7 @@ tolerance : number\n\
     multiples of offset betwen new vertices and their original\n\
     position before beveling to avoid spikes at acute joints. For\n\
     round joints it indicates the curvature resolution. In this case\n\
-    the number of point in a full circle would be\n\
+    the number of points in a full circle would be\n\
     pi / acos(1 - tolerance / |distance|).\n\
 scaling : float\n\
     Because *clipper* uses integer coordinates internally, it is\n\

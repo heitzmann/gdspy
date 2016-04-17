@@ -27,6 +27,7 @@ import datetime
 import warnings
 import numpy
 
+from . import boolext
 from . import clipper
 from .viewer import LayoutViewer
 
@@ -3007,13 +3008,13 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
+def old_offset(polygons, distance, join='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
     Shrink or expand a polygon or polygon set.
 
     Parameters
     ----------
-    object : ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
+    polygons : ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
         or array-like[N][2]
         Polygons to be offset.
     distance : number
@@ -3052,19 +3053,19 @@ def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0,
     cause segmentation faults. If that happens, increasing the value of
     ``eps`` might help.
     """
-    if isinstance(object, Polygon):
-        polygons = [object.points]
-    elif isinstance(object, PolygonSet):
-        polygons = object.polygons
-    elif isinstance(object, CellReference) or isinstance(object, CellArray):
-        polygons = object.get_polygons()
+    if isinstance(polygons, Polygon):
+        poly = [polygons.points]
+    elif isinstance(polygons, PolygonSet):
+        poly = polygons.polygons
+    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+        poly = polygons.get_polygons()
     else:
-        polygons = [object]
+        poly = [polygons]
 
     if distance > 0:
         op = lambda *a: any(a)
     else:
-        n = len(polygons)
+        n = len(poly)
         op = lambda *a: any(a[:n]) and not any(a[n:])
         distance = -distance
 
@@ -3072,7 +3073,7 @@ def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0,
     tolerance *= distance
 
     if join == 'miter':
-        for points in polygons:
+        for points in poly:
             vec = numpy.roll(points, -1, 0) - points
             mag = numpy.sqrt(numpy.sum(vec**2, 1))
             vec = (vec.T / mag).T
@@ -3131,7 +3132,7 @@ def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0,
             edges.extend(edg)
 
     elif join == 'bevel':
-        for points in polygons:
+        for points in poly:
             vec = numpy.roll(points, -1, 0) - points
             mag = numpy.sqrt(numpy.sum(vec**2, 1))
             vec = (vec.T / mag).T
@@ -3190,7 +3191,7 @@ def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0,
         circle[:,0] = distance * numpy.cos(theta)
         circle[:,1] = distance * numpy.sin(theta)
 
-        for points in polygons:
+        for points in poly:
             lpts = points.shape[0]
             vec = numpy.roll(points, -1, 0) - points
             mag2 = numpy.sum(vec**2, 1)
@@ -3242,24 +3243,83 @@ def offset(object, distance, join='miter', tolerance=2, max_points=199, layer=0,
     else:
         raise ValueError('Argument join must be one of "miter", "bevel", or "round".')
 
-    Fail: check orientations!
-    result = clipper.clip(polygons + edges, op, eps)
+    result = boolext.clip(poly + edges, op, eps)
     return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
-def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
+def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_points=199, layer=0, datatype=0):
     """
-    Execute any boolean operation on polygons and polygon sets.
+    Shrink or expand a polygon or polygon set.
 
     Parameters
     ----------
-    objects : array-like
+    polygons : polygon or array-like
+        Polygons to be offset. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    distance : number
+        Offset distance. Positive to expand, negative to shrink.
+    join : {'miter', 'bevel', 'round'}
+        Type of join used to create the offset polygon.
+    tolerance : integer or float
+        For miter joints, this number represents the maximun distance in
+        multiples of offset betwen new vertices and their original position
+        before beveling to avoid spikes at acute joints. For round joints,
+        it indicates the curvature resolution. In this case the number of
+        points in a full circle would be: pi/acos(1 - tolerance/|distance|).
+    precision : float
+        Desired precision for rounding vertice coordinates.
+    max_points : integer
+        If greater than 4, fracture the resulting polygons to ensure they
+        have at most ``max_points`` vertices. This is not a tessellating
+        function, so this number should be as high as possible. For example,
+        it should be set to 199 for polygons being drawn in GDSII files.
+    layer : integer
+        The GDSII layer number for the resulting element.
+    datatype : integer
+        The GDSII datatype for the resulting element (between 0 and 255).
+
+    Returns
+    -------
+    out : ``PolygonSet`` or ``None``
+        Return the offset shape as a set of polygons.
+    """
+    poly = []
+    if isinstance(polygons, Polygon):
+        poly.append(polygons.points)
+    elif isinstance(polygons, PolygonSet):
+        poly += polygons.polygons
+    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+        poly += polygons.get_polygons()
+    else:
+        for obj in polygons:
+            if isinstance(obj, Polygon):
+                poly.append(obj.points)
+            elif isinstance(obj, PolygonSet):
+                poly += obj.polygons
+            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+                poly += obj.get_polygons()
+            else:
+                poly.append(obj)
+    result = clipper.offset(poly, distance, join, tolerance, 1/precision)
+    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+
+
+
+def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
+    """
+    Execute any generalized boolean operation on polygons and polygon sets.
+
+    Parameters
+    ----------
+    polygons : array-like
         Operands of the boolean operation. Each element of this array must
         be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
         or an array-like[N][2] of vertices of a polygon.
     operation : function
-        Function that accepts as input ``len(objects)`` integers. Each
-        integer represents the incidence of the corresponding ``object``.
+        Function that accepts as input ``len(polygons)`` integers. Each
+        integer represents the incidence of the corresponding ``polygon``.
         The function must return a bool or integer (interpreted as bool).
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
@@ -3303,30 +3363,88 @@ def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
             lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
-    polygons = []
+    poly = []
     indices = [0]
     special_function = False
-    for obj in objects:
+    for obj in polygons:
         if isinstance(obj, Polygon):
-            polygons.append(obj.points)
+            poly.append(obj.points)
             indices.append(indices[-1] + 1)
         elif isinstance(obj, PolygonSet):
             special_function = True
-            polygons += obj.polygons
+            poly += obj.polygons
             indices.append(indices[-1] + len(obj.polygons))
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             special_function = True
             a = obj.get_polygons()
-            polygons += a
+            poly += a
             indices.append(indices[-1] + len(a))
         else:
-            polygons.append(obj)
+            poly.append(obj)
             indices.append(indices[-1] + 1)
-    Fail: check orientations!
     if special_function:
-        result = boolext.clip(polygons, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
+        result = boolext.clip(poly, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
     else:
-        result = boolext.clip(polygons, operation, eps)
+        result = boolext.clip(poly, operation, eps)
+    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+
+
+def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199, layer=0, datatype=0):
+    """
+    Execute any boolean operation between 2 polygons or polygon sets.
+
+    Parameters
+    ----------
+    operandA : polygon or array-like
+        First operand. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    operandB : polygon or array-like
+        First operand. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    operation : {'or', 'and', 'xor', 'not'}
+        Boolean operation to be executed. The 'not' operation returns
+        the difference ``operandA - operandB``.
+    precision : float
+        Desired precision for rounding vertice coordinates.
+    max_points : integer
+        If greater than 4, fracture the resulting polygons to ensure they
+        have at most ``max_points`` vertices. This is not a tessellating
+        function, so this number should be as high as possible. For example,
+        it should be set to 199 for polygons being drawn in GDSII files.
+    layer : integer
+        The GDSII layer number for the resulting element.
+    datatype : integer
+        The GDSII datatype for the resulting element (between 0 and 255).
+
+    Returns
+    -------
+    out : PolygonSet or ``None``
+        Result of the boolean operation.
+    """
+    polyA = []
+    polyB = []
+    for poly,obj in zip((polyA, polyB),(operandA, operandB)):
+        if isinstance(obj, Polygon):
+            poly.append(obj.points)
+        elif isinstance(obj, PolygonSet):
+            poly += obj.polygons
+        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+            poly += obj.get_polygons()
+        else:
+            for inobj in obj:
+                if isinstance(inobj, Polygon):
+                    poly.append(inobj.points)
+                elif isinstance(inobj, PolygonSet):
+                    poly += inobj.polygons
+                elif isinstance(inobj, CellReference) or isinstance(inobj, CellArray):
+                    poly += inobj.get_polygons()
+                else:
+                    poly.append(inobj)
+    result = clipper.clip(polyA, polyB, operation, 1/precision)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
