@@ -4547,8 +4547,61 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
 
 //------------------------------------------------------------------------------
 
-void link_holes(PolyTree &tree, Paths &out)
+bool point_compare(IntPoint &p1, IntPoint &p2)
 {
+  return p1.X < p2.X;
+}
+
+//------------------------------------------------------------------------------
+
+bool path_compare(Path &p1, Path &p2)
+{
+  return *min_element(p1, point_compare) < *min_element(p2, point_compare);
+}
+
+//------------------------------------------------------------------------------
+
+void link_holes(PolyNode *node, Paths &out)
+{
+  Path result = node->Contour;
+  Paths holes(node.ChildCount());
+
+  int size = result.size();
+
+  for (PolyNodes::iterator child = node->Childs.begin(); child != node->Childs.end(); ++child)
+    size += child.Contour.size();
+  result.reserve(size);
+
+  // sort holes by smallest x-coordinate
+  partial_sort_copy(node->Childs.begin(), node->Childs.end(), holes.begin(), holes.end(), path_compare);
+  
+  // insert holes in order
+  for (Paths::iterator h = holes.begin(); h != holes.end(); ++h)
+  {
+    // holes are guaranteed to be oriented opposite to their parent
+    Path::iterator ph = min_element(*h, point_compare);
+
+  }
+
+  out.push_back(result);
+}
+
+//------------------------------------------------------------------------------
+
+void tree2paths(PolyTree &tree, Paths &out)
+{
+  PolyNode *node = tree.GetFirst();
+  // Rough estimate for the number of polygons
+  out.reserve(tree.ChildCount());
+  while (node)
+  {
+    if (!node->IsHole())
+    {
+      if (node->ChildCount() > 0) link_holes(node, out);
+      else out.push_back(node->Contour);
+    }
+    node = node->GetNext();
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -4630,7 +4683,7 @@ static PyObject* clip(PyObject *self, PyObject *args)
   clpr.addPaths(clip, ptClip, true);
   clpr.Execute(oper, solution);
 
-  link_holes(solution, result);
+  tree2paths(solution, result);
   return build_polygon_tuple(result, scaling);
 }
 
@@ -4676,7 +4729,7 @@ static PyObject* offset(PyObject *self, PyObject *args)
   clprof.addPaths(subj, jt, etClosedPolygon);
   clprof.Execute(solution, distance * scaling);
 
-  link_holes(solution, result);
+  tree2paths(solution, result);
   return build_polygon_tuple(result, scaling);
 }
 
