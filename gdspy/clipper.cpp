@@ -4512,7 +4512,7 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
     /* Parse a complete polygon */
     long num_points = PySequence_Length(py_polygon);
     paths[i].resize(num_points);
-    for (j = 0; j < num_points; ++j)
+    for (long j = 0; j < num_points; ++j)
     {
       if ((py_point = PySequence_ITEM(py_polygon, j)) == NULL)
       {
@@ -4547,7 +4547,7 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
 
 //------------------------------------------------------------------------------
 
-bool point_compare(IntPoint &p1, IntPoint &p2)
+inline bool point_compare(IntPoint &p1, IntPoint &p2)
 {
   return p1.X < p2.X;
 }
@@ -4556,7 +4556,9 @@ bool point_compare(IntPoint &p1, IntPoint &p2)
 
 bool path_compare(Path &p1, Path &p2)
 {
-  return *min_element(p1, point_compare) < *min_element(p2, point_compare);
+  Path::iterator pt1 = min_element(p1.begin(), p1.end(), point_compare);
+  Path::iterator pt2 = min_element(p2.begin(), p2.end(), point_compare);
+  return point_compare(*pt1, *pt2);
 }
 
 //------------------------------------------------------------------------------
@@ -4564,27 +4566,35 @@ bool path_compare(Path &p1, Path &p2)
 void link_holes(PolyNode *node, Paths &out)
 {
   Path result = node->Contour;
-  Paths holes(node.ChildCount());
+  Paths holes(node->ChildCount());
+  Paths unsorted(0);
+
+  unsorted.reserve(node->ChildCount());
 
   int size = result.size();
 
   for (PolyNodes::iterator child = node->Childs.begin(); child != node->Childs.end(); ++child)
-    size += child->Contour.size();
+  {
+    size += (*child)->Contour.size() + 3;
+    unsorted.push_back((*child)->Contour);
+  }
   result.reserve(size);
 
   // sort holes by smallest x-coordinate
-  partial_sort_copy(node->Childs.begin(), node->Childs.end(), holes.begin(), holes.end(), path_compare);
+  partial_sort_copy(unsorted.begin(), unsorted.end(), holes.begin(), holes.end(), path_compare);
   
   // insert holes in order
   for (Paths::iterator h = holes.begin(); h != holes.end(); ++h)
   {
     // holes are guaranteed to be oriented opposite to their parent
-    Path::iterator p = min_element(*h, point_compare);
+    Path::iterator p = min_element(h->begin(), h->end(), point_compare);
     Path::iterator p1 = result.end();
+    Path::iterator pprev = --result.end();
+    Path::iterator pnext = result.begin();
     cInt xnew = 0;
-    for (Path::iterator pprev = --result.end(), Path::iterator pnext = result.begin(); pnext != result.end(); pprev = pnext++)
+    for (; pnext != result.end(); pprev = pnext++)
     {
-      if ((pnext->Y <= p->Y && p->y < pprev->Y) || (pprev->Y < p->Y && p->y <= pnext->Y))
+      if ((pnext->Y <= p->Y && p->Y < pprev->Y) || (pprev->Y < p->Y && p->Y <= pnext->Y))
       {
         cInt x = pnext->X + ((pprev->X - pnext->X) * (p->Y - pnext->Y)) / (pprev->Y - pnext->Y);
         if ((x > xnew || p1 == result.end()) && x < p->X)
@@ -4597,9 +4607,9 @@ void link_holes(PolyNode *node, Paths &out)
 
     IntPoint pnew(xnew, p->Y);
     result.insert(p1, pnew);
-    result.insert(p1, p, holes.end());
-    result.insert(p1, holes.begin(), p+1);
-    if (pnew->X != p1->X || pnew->Y != p1->Y) result.insert(p1, pnew);
+    result.insert(p1, p, h->end());
+    result.insert(p1, h->begin(), p+1);
+    if (pnew.X != p1->X || pnew.Y != p1->Y) result.insert(p1, pnew);
   }
 
   out.push_back(result);
@@ -4637,13 +4647,13 @@ PyObject* build_polygon_tuple(Paths &polygons, double scaling)
     if (polyt == NULL)
     {
       Py_DECREF(result);
-      return NULL
+      return NULL;
     }
     for (Path::size_type j = 0; j < poly.size(); ++j)
     {
       PyObject *pt = PyTuple_New(2);
-      PyObject *x = PyFloat_FromDouble(p[i].X / scaling)
-      PyObject *y = PyFloat_FromDouble(p[i].Y / scaling)
+      PyObject *x = PyFloat_FromDouble(poly[j].X / scaling);
+      PyObject *y = PyFloat_FromDouble(poly[j].Y / scaling);
       if (pt == NULL || x == NULL || y == NULL)
       {
         Py_DECREF(result);
@@ -4698,8 +4708,8 @@ static PyObject* clip(PyObject *self, PyObject *args)
   if (parse_polygon_set(polyA, subj, scaling) != 0) return NULL;
   if (parse_polygon_set(polyB, clip, scaling) != 0) return NULL;
 
-  clpr.addPaths(subj, ptSubject, true);
-  clpr.addPaths(clip, ptClip, true);
+  clpr.AddPaths(subj, ptSubject, true);
+  clpr.AddPaths(clip, ptClip, true);
   clpr.Execute(oper, solution);
 
   tree2paths(solution, result);
@@ -4731,6 +4741,7 @@ static PyObject* offset(PyObject *self, PyObject *args)
   {
     jt = jtRound;
     clprof.ArcTolerance = tolerance * scaling;
+  }
   else
   {
     PyErr_SetString(PyExc_TypeError, "Join must be one of 'miter', 'bevel', 'round'.");
@@ -4745,7 +4756,7 @@ static PyObject* offset(PyObject *self, PyObject *args)
 
   if (parse_polygon_set(polygons, subj, scaling) != 0) return NULL; 
 
-  clprof.addPaths(subj, jt, etClosedPolygon);
+  clprof.AddPaths(subj, jt, etClosedPolygon);
   clprof.Execute(solution, distance * scaling);
 
   tree2paths(solution, result);
@@ -4836,7 +4847,7 @@ PyMODINIT_FUNC initclipper(void)
 #endif
 
 /* Compiled with:
-gcc -O3 -fPIC -shared -I/usr/include/python2.7 -L/usr/lib -lpython2.7 -o clipper.so clipper.cpp
+g++ -O3 -fPIC -shared -I/usr/include/python2.7 -L/usr/lib -lpython2.7 -o clipper.so clipper.cpp
 */
 
 /* vim: set shiftwidth=2 softtabstop=2 tabstop=2 expandtab : */
