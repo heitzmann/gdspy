@@ -2785,7 +2785,7 @@ class GdsImport:
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
         return PolyPath(**kwargs)
 
-    def _create_label(self, xy, width=None, **kwargs):
+    def _create_label(self, xy, width=None, ends=None, **kwargs):
         kwargs['position'] = xy
         return Label(**kwargs)
 
