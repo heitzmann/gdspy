@@ -38,7 +38,7 @@ Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and sho
 
 The file gdspy-sample.py is a sample script to show the features provided by this module.
 The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
-It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
+It is also available [on-line](http://gdspy.readthedocs.io/en/latest/)
 
 ## Support
 
