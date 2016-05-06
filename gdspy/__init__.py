@@ -27,9 +27,9 @@ import datetime
 import warnings
 import numpy
 
-from . import boolext
-from . import clipper
-from .viewer import LayoutViewer
+from gdspy import boolext
+from gdspy import clipper
+from gdspy.viewer import LayoutViewer
 
 __version__ = '0.8.0'
 __doc__ = """

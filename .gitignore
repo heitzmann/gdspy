@@ -1,6 +1,7 @@
+MANIFEST
 test.sh
 debug.py
-winbuild*.txt
+winbuild*
 *.gds
 docs/_*
 .*.swp
