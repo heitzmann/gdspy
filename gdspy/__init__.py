@@ -3008,245 +3008,6 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def old_offset(polygons, distance, join='miter', tolerance=2, max_points=199, layer=0, datatype=0, eps=1e-13):
-    """
-    Shrink or expand a polygon or polygon set.
-
-    Parameters
-    ----------
-    polygons : ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
-        or array-like[N][2]
-        Polygons to be offset.
-    distance : number
-        Offset distance. Positive to expand, negative to shrink.
-    join : {'miter', 'bevel', 'round'}
-        Type of join used to create the offset polygon.
-    tolerance : integer or float
-        For miter joints, this number represents the maximun distance in
-        multiples of offset betwen new vertices and their original position
-        before beveling to avoid spikes at acute joints. For round joints,
-        it has the same meaning as ``number_of_points`` in ``Round``, i.e.,
-        if integer, it represents the number of vertices per 360 degree of
-        curvature; if float, the approximate curvature resolution. The
-        actual number of points is automatically calculated.
-    max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices. This is not a tessellating
-        function, so this number should be as high as possible. For example,
-        it should be set to 199 for polygons being drawn in GDSII files.
-    layer : integer
-        The GDSII layer number for the resulting element.
-    datatype : integer
-        The GDSII datatype for the resulting element (between 0 and 255).
-    eps : positive number
-        Small number to be used as tolerance in intersection and overlap
-        calculations.
-
-    Returns
-    -------
-    out : ``PolygonSet`` or ``None``
-        Return the offset shape as a set of polygons.
-
-    Notes
-    -----
-    Because of roundoff errors there are a few cases when this function can
-    cause segmentation faults. If that happens, increasing the value of
-    ``eps`` might help.
-    """
-    if isinstance(polygons, Polygon):
-        poly = [polygons.points]
-    elif isinstance(polygons, PolygonSet):
-        poly = polygons.polygons
-    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
-        poly = polygons.get_polygons()
-    else:
-        poly = [polygons]
-
-    if distance > 0:
-        op = lambda *a: any(a)
-    else:
-        n = len(poly)
-        op = lambda *a: any(a[:n]) and not any(a[n:])
-        distance = -distance
-
-    edges = []
-    tolerance *= distance
-
-    if join == 'miter':
-        for points in poly:
-            vec = numpy.roll(points, -1, 0) - points
-            mag = numpy.sqrt(numpy.sum(vec**2, 1))
-            vec = (vec.T / mag).T
-            alpha = numpy.arctan2(vec[:,1], vec[:,0])
-            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
-            beta = 0.5 * (numpy.pi - gamma)
-            sinb = numpy.sin(beta)
-            cosb = numpy.cos(beta)
-            l = distance / sinb
-            h = tolerance / cosb + l * (cosb - 1/cosb)
-            right0 = numpy.copy(points)
-            right0[:,0] += l * numpy.cos(numpy.roll(alpha, 1, 0) - beta)
-            right0[:,1] += l * numpy.sin(numpy.roll(alpha, 1, 0) - beta)
-            left0 = numpy.copy(points)
-            left0[:,0] += l * numpy.cos(alpha + beta)
-            left0[:,1] += l * numpy.sin(alpha + beta)
-            right1 = points + (numpy.roll(vec, 1, 0).T * h).T
-            right1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) - _halfpi)
-            right1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) - _halfpi)
-            right2 = points - (vec.T * h).T
-            right2[:,0] += distance * numpy.cos(alpha - _halfpi)
-            right2[:,1] += distance * numpy.sin(alpha - _halfpi)
-            left1 = points - (numpy.roll(vec, 1, 0).T * h).T
-            left1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) + _halfpi)
-            left1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) + _halfpi)
-            left2 = points + (vec.T * h).T
-            left2[:,0] += distance * numpy.cos(alpha + _halfpi)
-            left2[:,1] += distance * numpy.sin(alpha + _halfpi)
-            edg = [right0[-1,:], left0[-1,:]] if l[-1] <= tolerance \
-                  else ([right2[-1,:], left0[-1,:]] if gamma[-1] > 0 
-                          else [right0[-1,:], left2[-1,:]])
-            edg = [[edg[-1], edg[-2], right0[0,:], left0[0,:]]] if l[0] <= tolerance \
-                  else ([[edg[-1], edg[-2], right1[0,:], left0[0,:]],
-                          [right1[0,:], right2[0,:], left0[0,:]]] if gamma[0] > 0
-                          else [[edg[-1], edg[-2], right0[0,:], left1[0,:]],
-                          [left1[0,:], right0[0,:], left2[0,:]]])
-            for i in range(1, points.shape[0]):
-                if l[i] > tolerance:
-                    if gamma[i] > 0:
-                        if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
-                            edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right1[i,:], right2[i,:], left0[i,:]]
-                        else:
-                            edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
-                            edg.append([right1[i,:], right2[i,:], left0[i,:]])
-                    else:
-                        if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
-                            edg[-1] = [left1[i,:], edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left2[i,:]]
-                        else:
-                            edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
-                            edg.append([left1[i,:], right0[i,:], left2[i,:]])
-                else:
-                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
-                        edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left0[i,:]]
-                    else:
-                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left0[i,:]])
-            edges.extend(edg)
-
-    elif join == 'bevel':
-        for points in poly:
-            vec = numpy.roll(points, -1, 0) - points
-            mag = numpy.sqrt(numpy.sum(vec**2, 1))
-            vec = (vec.T / mag).T
-            alpha = numpy.arctan2(vec[:,1], vec[:,0])
-            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
-            beta = 0.5 * (numpy.pi - gamma)
-            sinb = numpy.sin(beta)
-            cosb = numpy.cos(beta)
-            l = distance / sinb
-            right0 = numpy.copy(points)
-            right0[:,0] += l * numpy.cos(numpy.roll(alpha, 1, 0) - beta)
-            right0[:,1] += l * numpy.sin(numpy.roll(alpha, 1, 0) - beta)
-            left0 = numpy.copy(points)
-            left0[:,0] += l * numpy.cos(alpha + beta)
-            left0[:,1] += l * numpy.sin(alpha + beta)
-            right1 = numpy.copy(points)
-            right1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) - _halfpi)
-            right1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) - _halfpi)
-            right2 = numpy.copy(points)
-            right2[:,0] += distance * numpy.cos(alpha - _halfpi)
-            right2[:,1] += distance * numpy.sin(alpha - _halfpi)
-            left1 = numpy.copy(points)
-            left1[:,0] += distance * numpy.cos(numpy.roll(alpha, 1, 0) + _halfpi)
-            left1[:,1] += distance * numpy.sin(numpy.roll(alpha, 1, 0) + _halfpi)
-            left2 = numpy.copy(points)
-            left2[:,0] += distance * numpy.cos(alpha + _halfpi)
-            left2[:,1] += distance * numpy.sin(alpha + _halfpi)
-            edg = [right2[-1,:], left0[-1,:]] if gamma[-1] > 0 else [right0[-1,:], left2[-1,:]]
-            edg = [[edg[-1], edg[-2], right1[0,:], left0[0,:]],
-                   [right1[0,:], right2[0,:], left0[0,:]]] if gamma[0] > 0 \
-                       else [[edg[-1], edg[-2], right0[0,:], left1[0,:]],
-                             [left1[0,:], right0[0,:], left2[0,:]]]
-            for i in range(1, points.shape[0]):
-                if gamma[i] > 0:
-                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
-                        edg[-1] = [edg[-1][-1]] + edg[-1][:-1] + [right1[i,:], right2[i,:], left0[i,:]]
-                    else:
-                        edg.append([edg[-1][-1], edg[-1][-2], right1[i,:], left0[i,:]])
-                        edg.append([right1[i,:], right2[i,:], left0[i,:]])
-                else:
-                    if abs(2 * l[i] * cosb[i]) < min(mag[i-1], mag[i]):
-                        edg[-1] = [left1[i,:], edg[-1][-1]] + edg[-1][:-1] + [right0[i,:], left2[i,:]]
-                    else:
-                        edg.append([edg[-1][-1], edg[-1][-2], right0[i,:], left1[i,:]])
-                        edg.append([left1[i,:], right0[i,:], left2[i,:]])
-            edges.extend(edg)
-
-    elif join == 'round':
-        if isinstance(tolerance, float):
-            tolerance = max(int(2 * distance * numpy.pi / tolerance + 0.5), 4)
-        else:
-            tolerance = max(tolerance, 4)
-
-        theta = numpy.linspace(0, 2*numpy.pi, tolerance+1)[:-1]
-        circle = numpy.empty((tolerance, 2))
-        circle[:,0] = distance * numpy.cos(theta)
-        circle[:,1] = distance * numpy.sin(theta)
-
-        for points in poly:
-            lpts = points.shape[0]
-            vec = numpy.roll(points, -1, 0) - points
-            mag2 = numpy.sum(vec**2, 1)
-            alpha = numpy.arctan2(vec[:,1], vec[:,0])
-            vec = distance * ((vec[:,::-1] * numpy.array((1,-1))).T / numpy.sqrt(mag2)).T
-            gamma = (alpha - numpy.roll(alpha, 1, 0) + numpy.pi) % (2 * numpy.pi) - numpy.pi
-            cosg = numpy.cos(gamma)
-            tmp1 = 4 * distance**2 * (1 - cosg) / (1 + cosg)
-            endpts = numpy.nonzero((cosg < eps) + (mag2 - tmp1 < eps) + (numpy.roll(mag2, 1, 0) - tmp1 < eps))[0]
-
-            if len(endpts) == 0:
-                endpts = numpy.zero(1)
-            elif endpts[0] != 0:
-                points = numpy.roll(points, -endpts[0], 0)
-                vec = numpy.roll(vec, -endpts[0], 0)
-                alpha = numpy.roll(alpha, -endpts[0], 0)
-                gamma = numpy.roll(gamma, -endpts[0], 0)
-                cosg = numpy.roll(cosg, -endpts[0], 0)
-                endpts -= endpts[0]
-            tmp1 = distance / numpy.sqrt(0.5 + 0.5 * cosg)
-            tmp2 = alpha + _halfpi * numpy.sign(gamma) - 0.5 * gamma
-            q = numpy.copy(points)
-            q[:,0] += tmp1 * numpy.cos(tmp2)
-            q[:,1] += tmp1 * numpy.sin(tmp2)
-
-            edges.extend((circle + points[i,:] for i in endpts))
-            stop = 0
-            for start in reversed(endpts):
-                # build from start to stop
-                edg0 = []
-                edg1 = []
-                for i in range(start + 1, lpts if stop == 0 else stop):
-                    if gamma[i] > 0:
-                        t = alpha[i-1] - _halfpi + numpy.linspace(0, gamma[i], max(2, int(gamma[i]/theta[1]+0.5)))
-                        curve = numpy.empty((len(t), 2))
-                        curve[:,0] = points[i,0] + distance * numpy.cos(t)
-                        curve[:,1] = points[i,1] + distance * numpy.sin(t)
-                        edg0.extend(curve)
-                        edg1.append(q[i,:])
-                    elif gamma[i] < 0:
-                        t = alpha[i-1] + _halfpi + numpy.linspace(0, gamma[i], max(2, int(-gamma[i]/theta[1]+0.5)))
-                        curve = numpy.empty((len(t), 2))
-                        curve[:,0] = points[i,0] + distance * numpy.cos(t)
-                        curve[:,1] = points[i,1] + distance * numpy.sin(t)
-                        edg1.extend(curve)
-                        edg0.append(q[i,:])
-                edges.append(numpy.array([points[start]-vec[start], points[start]+vec[start]] + edg0 + [points[stop]+vec[stop-1], points[stop]-vec[stop-1]] + list(reversed(edg1))))
-                stop = start
-    else:
-        raise ValueError('Argument join must be one of "miter", "bevel", or "round".')
-
-    result = boolext.clip(poly + edges, op, eps)
-    return None if result is None or len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
-
-
 def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_points=199, layer=0, datatype=0):
     """
     Shrink or expand a polygon or polygon set.
@@ -3263,11 +3024,11 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_p
     join : {'miter', 'bevel', 'round'}
         Type of join used to create the offset polygon.
     tolerance : integer or float
-        For miter joints, this number represents the maximun distance in
-        multiples of offset betwen new vertices and their original position
-        before beveling to avoid spikes at acute joints. For round joints,
-        it indicates the curvature resolution. In this case the number of
-        points in a full circle would be: pi/acos(1 - tolerance/|distance|).
+        For miter joints, this number must be at least 2 and it represents
+        the maximun distance in multiples of offset betwen new vertices and
+        their original position before beveling to avoid spikes at acute
+        joints. For round joints, it indicates the curvature resolution in
+        number of points per full circle.
     precision : float
         Desired precision for rounding vertice coordinates.
     max_points : integer
@@ -3309,6 +3070,8 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_p
 
 def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
+    This function is deprecated in favor of 'fast_boolean'.
+
     Execute any generalized boolean operation on polygons and polygon sets.
 
     Parameters
@@ -3363,6 +3126,7 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13)
             lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
+    warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be removed in a future version. Please use 'fast_boolean' instead.", stacklevel=2)
     poly = []
     indices = [0]
     special_function = False
@@ -3400,8 +3164,8 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
         ``CellReference``, ``CellArray``, or an array. The array may
         contain any of the previous objects or an array-like[N][2] of
         vertices of a polygon.
-    operandB : polygon or array-like
-        First operand. Must be a ``Polygon``, ``PolygonSet``,
+    operandB : polygon, array-like or ``None``
+        Second operand. Must be ``None``, a ``Polygon``, ``PolygonSet``,
         ``CellReference``, ``CellArray``, or an array. The array may
         contain any of the previous objects or an array-like[N][2] of
         vertices of a polygon.
@@ -3434,7 +3198,7 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
             poly += obj.polygons
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             poly += obj.get_polygons()
-        else:
+        elif obj is not  None:
             for inobj in obj:
                 if isinstance(inobj, Polygon):
                     poly.append(inobj.points)
@@ -3444,6 +3208,8 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
                     poly += inobj.get_polygons()
                 else:
                     poly.append(inobj)
+    if len(polyB) == 0:
+        polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1/precision)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
 

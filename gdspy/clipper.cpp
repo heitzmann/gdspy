@@ -4742,12 +4742,12 @@ static PyObject* offset(PyObject *self, PyObject *args)
   else if (strcmp(join, "miter") == 0)
   {
     jt = jtMiter;
-    clprof.MiterLimit = tolerance * scaling;
+    clprof.MiterLimit = tolerance;
   }
   else if (strcmp(join, "round") == 0)
   {
     jt = jtRound;
-    clprof.ArcTolerance = tolerance * scaling;
+    clprof.ArcTolerance = distance * scaling * (1.0 - cos(M_PI/tolerance));
   }
   else
   {
@@ -4813,12 +4813,11 @@ distance : number\n\
 join : {'miter', 'bevel', 'round'}\n\
     Type of join used to create the offset polygon.\n\
 tolerance : number\n\
-    For miter joints, this number represents the maximun distance in\n\
-    multiples of offset betwen new vertices and their original\n\
-    position before beveling to avoid spikes at acute joints. For\n\
-    round joints it indicates the curvature resolution. In this case\n\
-    the number of points in a full circle would be\n\
-    pi / acos(1 - tolerance / |distance|).\n\
+    For miter joints, this number must be at elast 2 and it\n\
+    represents the maximun distance in multiples of offset betwen new\n\
+    vertices and their original position before squaring to avoid\n\
+    spikes at acute joints. For round joints it indicates the\n\
+    curvature resolution in number of points per full circle.\n\
 scaling : float\n\
     Because *clipper* uses integer coordinates internally, it is\n\
     useful to scale polygon coordinates before any operation and\n\

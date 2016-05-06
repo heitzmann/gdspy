@@ -120,10 +120,10 @@ CellArray
 Functions
 ~~~~~~~~~
 
-boolean
--------
+fast_boolean
+------------
 
-.. autofunction:: gdspy.boolean
+.. autofunction:: gdspy.fast_boolean
 
 
 offset
@@ -136,4 +136,10 @@ slice
 -----
 
 .. autofunction:: gdspy.slice
+
+
+boolean
+-------
+
+.. autofunction:: gdspy.boolean
 
