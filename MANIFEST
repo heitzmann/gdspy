@@ -40,6 +40,7 @@ docs/_build/html/_static/websupport.js
 gdspy/__init__.py
 gdspy/boolext.c
 gdspy/clipper.cpp
+gdspy/clipper.hpp
 gdspy/viewer.py
 gdspy/data/00.xbm
 gdspy/data/01.xbm

@@ -2,3 +2,4 @@ recursive-include docs/_build/html *
 include *.txt
 include gdspy-sample.*
 include LICENSE
+include gdspy/clipper.hpp
