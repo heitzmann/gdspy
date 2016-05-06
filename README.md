@@ -46,7 +46,7 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Version 0.8 (June 26, 2015)
+### Version 0.8 (May 6, 2016)
 * New `fast_boolean` function based on the [Clipper](http://www.angusj.com/delphi/clipper.php) library with much better performance than the old `boolean`.
 * Changed `offset` signature to also use the [Clipper](http://www.angusj.com/delphi/clipper.php) library (this change **breaks compatibility** with previous versions).
 * Bug fix for error when importing some labels from GDSII files.
