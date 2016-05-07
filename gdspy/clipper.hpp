@@ -49,6 +49,11 @@
 //use_deprecated: Enables temporary support for the obsolete functions
 //#define use_deprecated  
 
+
+// Required for windows to include
+// the defines in CMATH durring compile.
+#define _USE_MATH_DEFINES
+
 #include <vector>
 #include <set>
 #include <stdexcept>
