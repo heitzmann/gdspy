@@ -322,17 +322,16 @@ class Polygon:
             return self
 
 
-    def translate(self, direction, distance):
+    def translate(self, dx, dy):
         """
         Move the polygon from one place to another
 
         Parameters
         ----------
-        direction : {'+x', '-x', '+y', '-y'} or number
-            Direction or angle (in *radians*) the path points to. The numerical
-            angle is returned only after a rotation of the object.
-        distance : float
-            Distance to move.
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
 
         Returns
         -------
@@ -342,32 +341,11 @@ class Polygon:
         Examples
         --------
         >>> polygon = gdspy.Polygon((0, 0), (10, 20))
-        >>> polygon = polygon.translate("+x", 2)
+        >>> polygon = polygon.translate(2,0)
         >>> myCell.add(polygon)
         """
 
-        if direction == None:
-            direction = self.direction
-        else:
-            self.direction = direction
-        if direction == '+x':
-            dx = 1
-            dy = 0
-        elif direction == '-x':
-            dx = -1
-            dy = 0
-        elif direction == '+y':
-            dx = 0
-            dy = 1
-        elif direction == '-y':
-            dx = 0
-            dy = -1
-        else:
-            dx = numpy.cos(direction)
-            dy = numpy.sin(direction)
-
-        n = len(self.points)
-        self.points += distance * numpy.array([dx, dy]*n).reshape(n,2)
+        self.points += [dx, dy]
 
         return self
 
@@ -612,47 +590,24 @@ class PolygonSet:
         return self
 
 
-    def translate(self, direction, distance):
+    def translate(self, dx, dy):
         """
         Move the polygons from one place to another
 
         Parameters
         ----------
-        direction : {'+x', '-x', '+y', '-y'} or number
-            Direction or angle (in *radians*) the path points to. The numerical
-            angle is returned only after a rotation of the object.
-        distance : float
-            Distance to move.
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
 
         Returns
         -------
         out : ``PolygonSet``
             This object.
         """
-
-        if direction == None:
-            direction = self.direction
-        else:
-            self.direction = direction
-        if direction == '+x':
-            dx = 1
-            dy = 0
-        elif direction == '-x':
-            dx = -1
-            dy = 0
-        elif direction == '+y':
-            dx = 0
-            dy = 1
-        elif direction == '-y':
-            dx = 0
-            dy = -1
-        else:
-            dx = numpy.cos(direction)
-            dy = numpy.sin(direction)
-
         for ii in range(len(self.polygons)):
-            n = len(self.polygons[ii])
-            self.polygons[ii] += distance * numpy.array([dx, dy]*n).reshape(n,2)
+            self.polygons[ii] += [dx, dy]
 
         return self
 
@@ -1872,17 +1827,16 @@ class Label:
         return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
 
-    def translate(self, direction, distance):
+    def translate(self, dx, dy):
         """
         Move the text from one place to another
 
         Parameters
         ----------
-        direction : {'+x', '-x', '+y', '-y'} or number
-            Direction or angle (in *radians*) the path points to. The numerical
-            angle is returned only after a rotation of the object.
-        distance : float
-            Distance to move.
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
 
         Returns
         -------
@@ -1892,31 +1846,10 @@ class Label:
         Examples
         --------
         >>> text = gdspy.Label((0, 0), (10, 20))
-        >>> text = text.translate("+x", 2)
+        >>> text = text.translate(2, 0)
         >>> myCell.add(text)
         """
-
-        if direction == None:
-            direction = self.direction
-        else:
-            self.direction = direction
-        if direction == '+x':
-            dx = 1
-            dy = 0
-        elif direction == '-x':
-            dx = -1
-            dy = 0
-        elif direction == '+y':
-            dx = 0
-            dy = 1
-        elif direction == '-y':
-            dx = 0
-            dy = -1
-        else:
-            dx = numpy.cos(direction)
-            dy = numpy.sin(direction)
-
-        self.position = (distance*dx+self.position[0], distance*dy+self.position[1])
+        self.position = (dx+self.position[0], dy+self.position[1])
 
         return self
 
@@ -2479,17 +2412,16 @@ class CellReference:
         else:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
-    def translate(self, direction, distance):
+    def translate(self, dx, dy):
         """
         Move the reference from one place to another
 
         Parameters
         ----------
-        direction : {'+x', '-x', '+y', '-y'} or number
-            Direction or angle (in *radians*) the path points to. The numerical
-            angle is returned only after a rotation of the object.
-        distance : float
-            Distance to move.
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
 
         Returns
         -------
@@ -2497,27 +2429,7 @@ class CellReference:
             This object.
         """
 
-        if direction == None:
-            direction = self.direction
-        else:
-            self.direction = direction
-        if direction == '+x':
-            dx = 1
-            dy = 0
-        elif direction == '-x':
-            dx = -1
-            dy = 0
-        elif direction == '+y':
-            dx = 0
-            dy = 1
-        elif direction == '-y':
-            dx = 0
-            dy = -1
-        else:
-            dx = numpy.cos(direction)
-            dy = numpy.sin(direction)
-
-        self.origin = (distance*dx+self.origin[0], distance*dy+self.origin[1])
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
 
         return self
 
@@ -2755,17 +2667,16 @@ class CellArray:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
 
-    def translate(self, direction, distance):
+    def translate(self, dx, dy):
         """
         Move the reference from one place to another
 
         Parameters
         ----------
-        direction : {'+x', '-x', '+y', '-y'} or number
-            Direction or angle (in *radians*) the path points to. The numerical
-            angle is returned only after a rotation of the object.
-        distance : float
-            Distance to move.
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
 
         Returns
         -------
@@ -2773,27 +2684,7 @@ class CellArray:
             This object.
         """
 
-        if direction == None:
-            direction = self.direction
-        else:
-            self.direction = direction
-        if direction == '+x':
-            dx = 1
-            dy = 0
-        elif direction == '-x':
-            dx = -1
-            dy = 0
-        elif direction == '+y':
-            dx = 0
-            dy = 1
-        elif direction == '-y':
-            dx = 0
-            dy = -1
-        else:
-            dx = numpy.cos(direction)
-            dy = numpy.sin(direction)
-
-        self.origin = (distance*dx, distance*dy)
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
 
         return self
 
@@ -3452,18 +3343,19 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
 
 
 
-def copy(obj, direction, distance):
+def copy(obj, dx, dy):
     """
     Creates a copy of ``obj`` and translates the new object to a new location.
 
     Parameters
     ----------
-    obj : any translatable geometery object.
-    direction : {'+x', '-x', '+y', '-y'} or number
-        Direction or angle (in *radians*) the path points to. The numerical
-        angle is returned only after a rotation of the object.
-    distance : float
-        Distance to move new object
+    obj : ``obj``
+        any translatable geometery object.
+    dx  : float
+        distance to move in the x-direction
+    dy  : float
+        distance to move in the y-direction
+
 
     Returns
     -------
@@ -3473,13 +3365,13 @@ def copy(obj, direction, distance):
     Examples
     --------
     >>> rectangle = gdspy.Rectangle((0, 0), (10, 20))
-    >>> rectangle2 = gdspy.copy(rectangle, "+x", 2)
+    >>> rectangle2 = gdspy.copy(rectangle, 2,0)
     >>> myCell.add(rectangle)
     >>> myCell.add(rectangle2)
     """
 
     newObj = libCopy.deepcopy(obj)
-    newObj.translate(direction,distance)
+    newObj.translate(dx,dy)
 
     return newObj
 
