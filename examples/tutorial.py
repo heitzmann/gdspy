@@ -282,6 +282,47 @@ ref_cell.add(gdspy.Label('Created with gdspy ' + gdspy.__version__,
 
 
 ## ------------------------------------------------------------------ ##
+##      Translation
+## ------------------------------------------------------------------ ##
+
+trans_cell = gdspy.Cell('TRANS')
+
+## Any geometric object can be translated by providing the distance to
+## translate in the x-direction and y-direction:  translate(dx, dy)
+rect1 = gdspy.Rectangle( (80,0), (81,1), 1 )
+rect1.translate(2, 0)
+trans_cell.add(rect1)
+
+## Translatable objects can also be copied & translated in the same way.
+rect2 = gdspy.Rectangle( (80,0), (81,1), 2 )
+rect3 = gdspy.copy(rect2, 0,3)
+trans_cell.add(rect2)
+trans_cell.add(rect3)
+
+
+## Reference Cells are also translatable, and thus copyable.
+ref1 = gdspy.CellReference(poly_cell, (25, 0), rotation=180)
+ref2 = gdspy.copy(ref1, 30,30)
+trans_cell.add(ref1)
+trans_cell.add(ref2)
+
+
+
+## Same goes for Labels & Text
+text1 = gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
+                        (-7, -35), layer=6) 
+text2 = gdspy.copy(text1, 0,-20)
+label1 = gdspy.Label('Created with gdspy ' + gdspy.__version__,
+                         (-7, -36), 'nw', layer=6)
+label2 = gdspy.copy(label1, 0,-20)
+trans_cell.add(text1)
+trans_cell.add(text2)
+trans_cell.add(label1)
+trans_cell.add(label2)
+
+
+
+## ------------------------------------------------------------------ ##
 ##      OUTPUT
 ## ------------------------------------------------------------------ ##
 
@@ -303,7 +344,8 @@ gdsii = gdspy.GdsImport('tutorial.gds',
                                 'PATHS': 'IMPORT_PATHS',
                                 'OPERATIONS': 'IMPORT_OPER',
                                 'SLICE': 'IMPORT_SLICE',
-                                'REFS': 'IMPORT_REFS'},
+                                'REFS': 'IMPORT_REFS',
+                                'TRANS': 'IMPORT_TRANS'},
                         layers={1:7,2:8,3:9})
 
 ## Now we extract the cells we want to actually include in our current

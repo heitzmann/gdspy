@@ -26,6 +26,7 @@ import struct
 import datetime
 import warnings
 import numpy
+import copy as libCopy
 
 from gdspy import boolext
 from gdspy import clipper
@@ -321,6 +322,35 @@ class Polygon:
             return self
 
 
+    def translate(self, dx, dy):
+        """
+        Move the polygon from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``Polygon``
+            This object.
+
+        Examples
+        --------
+        >>> polygon = gdspy.Polygon((0, 0), (10, 20))
+        >>> polygon = polygon.translate(2,0)
+        >>> myCell.add(polygon)
+        """
+
+        self.points += [dx, dy]
+
+        return self
+
+
+
 class PolygonSet:
     """
     Set of polygonal objects.
@@ -481,6 +511,7 @@ class PolygonSet:
                     ii += 1
         return self
 
+
     def fillet(self, radius, points_per_2pi=128, max_points=199):
         """
         Round the corners of these polygons and fractures them into polygons
@@ -557,6 +588,29 @@ class PolygonSet:
         if fracture:
             self.fracture(max_points)
         return self
+
+
+    def translate(self, dx, dy):
+        """
+        Move the polygons from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``PolygonSet``
+            This object.
+        """
+        for ii in range(len(self.polygons)):
+            self.polygons[ii] += [dx, dy]
+
+        return self
+
 
 
 class Rectangle(Polygon):
@@ -1773,6 +1827,34 @@ class Label:
         return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
 
+    def translate(self, dx, dy):
+        """
+        Move the text from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``Label``
+            This object.
+
+        Examples
+        --------
+        >>> text = gdspy.Label((0, 0), (10, 20))
+        >>> text = text.translate(2, 0)
+        >>> myCell.add(text)
+        """
+        self.position = (dx+self.position[0], dy+self.position[1])
+
+        return self
+
+
+
 class Cell:
     """
     Collection of elements, both geometric objects and references to other
@@ -2330,6 +2412,29 @@ class CellReference:
         else:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
+    def translate(self, dx, dy):
+        """
+        Move the reference from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``CellReference``
+            This object.
+        """
+
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
+
+        return self
+
+
+
 
 class CellArray:
     """
@@ -2560,6 +2665,29 @@ class CellArray:
             return bb
         else:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
+
+
+    def translate(self, dx, dy):
+        """
+        Move the reference from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``CellArray``
+            This object.
+        """
+
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
+
+        return self
+
 
 
 class GdsImport:
@@ -3212,6 +3340,41 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
         polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1/precision)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+
+
+
+def copy(obj, dx, dy):
+    """
+    Creates a copy of ``obj`` and translates the new object to a new location.
+
+    Parameters
+    ----------
+    obj : ``obj``
+        any translatable geometery object.
+    dx  : float
+        distance to move in the x-direction
+    dy  : float
+        distance to move in the y-direction
+
+
+    Returns
+    -------
+    out : ``obj``
+        Translated copy of original ``obj``
+
+    Examples
+    --------
+    >>> rectangle = gdspy.Rectangle((0, 0), (10, 20))
+    >>> rectangle2 = gdspy.copy(rectangle, 2,0)
+    >>> myCell.add(rectangle)
+    >>> myCell.add(rectangle2)
+    """
+
+    newObj = libCopy.deepcopy(obj)
+    newObj.translate(dx,dy)
+
+    return newObj
+
 
 
 def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9):
