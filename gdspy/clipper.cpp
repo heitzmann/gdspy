@@ -4736,7 +4736,9 @@ static PyObject* offset(PyObject *self, PyObject *args)
   JoinType jt;
   ClipperOffset clprof;
 
-  if (!PyArg_ParseTuple(args, "Odsdd:offset", &polygons, &distance, &join, &tolerance, &scaling)) return NULL;
+  unsigned char joinFirst;
+
+  if (!PyArg_ParseTuple(args, "Odsddb:offset", &polygons, &distance, &join, &tolerance, &scaling, &joinFirst)) return NULL;
 
   if (strcmp(join, "bevel") == 0) jt = jtSquare;
   else if (strcmp(join, "miter") == 0)
@@ -4763,7 +4765,20 @@ static PyObject* offset(PyObject *self, PyObject *args)
 
   if (parse_polygon_set(polygons, subj, scaling) != 0) return NULL; 
 
-  clprof.AddPaths(subj, jt, etClosedPolygon);
+  if (joinFirst > 0)
+  {
+    Paths intermediate;
+    ClipperOffset clprof_join;
+
+    clprof_join.AddPaths(subj, jtSquare, etClosedPolygon);
+    clprof_join.Execute(intermediate, 0);
+    clprof.AddPaths(intermediate, jt, etClosedPolygon);
+  }
+  else
+  {
+    clprof.AddPaths(subj, jt, etClosedPolygon);
+  }
+
   clprof.Execute(solution, distance * scaling);
 
   tree2paths(solution, result);
@@ -4824,6 +4839,9 @@ scaling : float\n\
     rescale the result back to the original size. For example, a\n\
     value of 100 will preserve the first 2 decimal places of all\n\
     coordinates.\n\
+joinFirst : bool\n\
+    Join all paths before offseting to avoid unecessary joins in\n\
+    adjacent polygon sides.\n\
 Returns\n\
 -------\n\
 out : list of array-like[N][2]\n\

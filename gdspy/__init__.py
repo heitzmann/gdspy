@@ -3136,7 +3136,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_points=199, layer=0, datatype=0):
+def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_first=False, max_points=199, layer=0, datatype=0):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -3159,6 +3159,9 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_p
         number of points per full circle.
     precision : float
         Desired precision for rounding vertice coordinates.
+    join_first : bool
+        Join all paths before offseting to avoid unecessary joins in
+        adjacent polygon sides.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
@@ -3191,7 +3194,7 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, max_p
                 poly += obj.get_polygons()
             else:
                 poly.append(obj)
-    result = clipper.offset(poly, distance, join, tolerance, 1/precision)
+    result = clipper.offset(poly, distance, join, tolerance, 1/precision, 1 if join_first else 0)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
