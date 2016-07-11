@@ -5,7 +5,9 @@ For installation instructions and other information, please check out the `GitHu
 
 .. toctree::
    :maxdepth: 2
+   :caption: Table of Contents
 
+   tutorial
    construction
    io
 
@@ -19,13 +21,3 @@ Help support the development of gdspy by donating:
    :target: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ
    :align: center
 
-Sample File
-===========
-
-The following code is a sample to quickly demonstrate some features of gdspy.
-
-:download:`Download sample file <../examples/tutorial.py>`
-
-.. literalinclude:: ../examples/tutorial.py
-   :language: python
-   :linenos:
