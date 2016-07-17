@@ -46,6 +46,11 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 0.9 (Jul 17, 2016)
+* Added option to join polygons before applying an `offset`.
+* Added a `translate` method to geometric entities (thanks John Bell for the commit).
+* Bug fixes.
+
 ### Version 0.8.1 (May 6, 2016)
 * New `fast_boolean` function based on the [Clipper](http://www.angusj.com/delphi/clipper.php) library with much better performance than the old `boolean`.
 * Changed `offset` signature to also use the [Clipper](http://www.angusj.com/delphi/clipper.php) library (this change **breaks compatibility** with previous versions).

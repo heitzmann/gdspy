@@ -38,7 +38,7 @@ class my_build(distutils.command.build_ext.build_ext):
             if os.path.isfile(f + 'pyc'): os.unlink(f + 'pyc')
 
 setup(name='gdspy',
-      version='0.8.1',
+      version='0.9',
       author='Lucas Heitzmann Gabrielli',
       author_email='heitzmann@gmail.com',
       license='GNU General Public License (GPL)',
