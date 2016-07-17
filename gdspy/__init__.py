@@ -522,8 +522,10 @@ class PolygonSet:
 
         Parameters
         ----------
-        radius : number
-            Radius of the corners.
+        radius : number, list
+            Radius of the corners. If number: All corners filleted by that amount
+            If list: Specify fillet radii on a per-corner basis (list length 
+            must be equal to the number of points in the Polygon)
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
             vertices in each corner of the polygon will be the fraction of this
