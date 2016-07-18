@@ -253,7 +253,7 @@ class Polygon:
 
         Parameters
         ----------
-        radius : number
+        radius : number, list
             Radius of the corners.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
@@ -289,10 +289,13 @@ class Polygon:
         theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
         ct = numpy.cos(theta * 0.5)
         tt = numpy.tan(theta * 0.5)
+        if not isinstance(radius, list): radius = [radius]*len(self.points)
+        if not len(self.points) == len(radius):
+            raise ValueError("[GDSPY] Fillet radius list length does not match the number of points in the polygon.")
 
         new_points = []
         for ii in range(-1, len(self.points) - 1):
-            if theta[ii] > 0:
+            if (theta[ii] > 0) and (radius[ii] > 0):
                 a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
                 a0 = numpy.arctan2(a0[1], a0[0])
                 a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
@@ -303,12 +306,12 @@ class Polygon:
                     a1 += two_pi
                 n = max(int(numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi) + 0.5), 2)
                 a = numpy.linspace(a0, a1, n)
-                l = radius * tt[ii]
+                l = radius[ii] * tt[ii]
                 if l > 0.49 * length[ii]:
                     r = 0.49 * length[ii] / tt[ii]
                     l = 0.49 * length[ii]
                 else:
-                    r = radius
+                    r = radius[ii]
                 if l > 0.49 * length[ii + 1]:
                     r = 0.49 * length[ii + 1] / tt[ii]
                 new_points += list(r * dvec[ii] / ct[ii] + self.points[ii] + numpy.vstack((r * numpy.cos(a), r * numpy.sin(a))).transpose())
@@ -519,8 +522,10 @@ class PolygonSet:
 
         Parameters
         ----------
-        radius : number
-            Radius of the corners.
+        radius : number, list
+            Radius of the corners. If number: All corners filleted by that amount
+            If list: Specify fillet radii on a per-corner basis (list length 
+            must be equal to the number of points in the Polygon)
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
             vertices in each corner of the polygon will be the fraction of this
