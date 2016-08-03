@@ -21,6 +21,9 @@
 ########################################################################
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
 
 import struct
 import datetime
@@ -101,7 +104,7 @@ def _eight_byte_real_to_float(value):
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
 
-class Polygon:
+class Polygon(object):
     """
     Polygonal geometric object.
 
@@ -354,7 +357,7 @@ class Polygon:
 
 
 
-class PolygonSet:
+class PolygonSet(object):
     """
     Set of polygonal objects.
 
@@ -1739,7 +1742,7 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-class Label:
+class Label(object):
     """
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
@@ -1860,7 +1863,7 @@ class Label:
 
 
 
-class Cell:
+class Cell(object):
     """
     Collection of elements, both geometric objects and references to other
     cells.
@@ -2219,7 +2222,7 @@ class Cell:
         return self
 
 
-class CellReference:
+class CellReference(object):
     """
     Simple reference to an existing cell.
 
@@ -2441,7 +2444,7 @@ class CellReference:
 
 
 
-class CellArray:
+class CellArray(object):
     """
     Multiple references to an existing cell in an array format.
 
@@ -2695,7 +2698,7 @@ class CellArray:
 
 
 
-class GdsImport:
+class GdsImport(object):
     """
     Object used to import structures from a GDSII stream file.
 
@@ -3441,7 +3444,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
         outfile.close()
 
 
-class GdsPrint:
+class GdsPrint(object):
     """
     GDSII strem library printer.
 
