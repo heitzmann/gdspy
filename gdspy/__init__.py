@@ -22,7 +22,6 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from __future__ import unicode_literals
 from __future__ import division
 
 import struct
@@ -35,7 +34,7 @@ from gdspy import boolext
 from gdspy import clipper
 from gdspy.viewer import LayoutViewer
 
-__version__ = '0.9'
+__version__ = '0.91'
 __doc__ = """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
