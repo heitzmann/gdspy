@@ -27,7 +27,7 @@ else:
     from distutils.command.build_py import build_py
 import distutils.command.build_ext
 
-from setuptools import setup, Extension
+from distutils.core import setup, Extension
 
 class my_build(distutils.command.build_ext.build_ext):
     def run(self):
@@ -38,7 +38,7 @@ class my_build(distutils.command.build_ext.build_ext):
             if os.path.isfile(f + 'pyc'): os.unlink(f + 'pyc')
 
 setup(name='gdspy',
-      version='0.91',
+      version='0.9',
       author='Lucas Heitzmann Gabrielli',
       author_email='heitzmann@gmail.com',
       license='GNU General Public License (GPL)',
