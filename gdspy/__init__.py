@@ -34,7 +34,7 @@ from gdspy import boolext
 from gdspy import clipper
 from gdspy.viewer import LayoutViewer
 
-__version__ = '0.91'
+__version__ = '0.9'
 __doc__ = """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
