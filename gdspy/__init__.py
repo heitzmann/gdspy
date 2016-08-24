@@ -1,6 +1,6 @@
 ########################################################################
 ##                                                                    ##
-##  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     ##
+##  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     ##
 ##                                                                    ##
 ##  This file is part of gdspy.                                       ##
 ##                                                                    ##
@@ -22,18 +22,20 @@
 
 
 
-import os
+
+
 import struct
 import datetime
 import warnings
 import numpy
-import copy
+import copy as libCopy
 
-from . import boolext
-from .viewer import LayoutViewer
+from gdspy import boolext
+from gdspy import clipper
+from gdspy.viewer import LayoutViewer
 import collections
 
-__version__ = '0.7.1'
+__version__ = '0.9'
 __doc__ = """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
@@ -45,6 +47,7 @@ If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
 
+_halfpi = 0.5 * numpy.pi
 
 def _eight_byte_real(value):
     """
@@ -96,12 +99,12 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 + long3) / \
-               72057594037927936.0
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296
+                + long3) / 72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16 ** (exponent - 64)
 
 
-class Polygon:
+class Polygon(object):
     """
     Polygonal geometric object.
 
@@ -158,14 +161,9 @@ class Polygon:
         out : string
             The GDSII binary string that represents this object.
         """
-        data = []
         if len(self.points) > 4094:
             raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
-        data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003))
-        for point in self.points:
-            data.append(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))))
-        data.append(struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100))
-        return b''.join(data)
+        return struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003) + b''.join(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))) for point in self.points) + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -258,7 +256,7 @@ class Polygon:
 
         Parameters
         ----------
-        radius : number
+        radius : number, list
             Radius of the corners.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
@@ -294,10 +292,13 @@ class Polygon:
         theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
         ct = numpy.cos(theta * 0.5)
         tt = numpy.tan(theta * 0.5)
+        if not isinstance(radius, list): radius = [radius]*len(self.points)
+        if not len(self.points) == len(radius):
+            raise ValueError("[GDSPY] Fillet radius list length does not match the number of points in the polygon.")
 
         new_points = []
         for ii in range(-1, len(self.points) - 1):
-            if theta[ii] > 0:
+            if (theta[ii] > 0) and (radius[ii] > 0):
                 a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
                 a0 = numpy.arctan2(a0[1], a0[0])
                 a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
@@ -308,12 +309,12 @@ class Polygon:
                     a1 += two_pi
                 n = max(int(numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi) + 0.5), 2)
                 a = numpy.linspace(a0, a1, n)
-                l = radius * tt[ii]
+                l = radius[ii] * tt[ii]
                 if l > 0.49 * length[ii]:
                     r = 0.49 * length[ii] / tt[ii]
                     l = 0.49 * length[ii]
                 else:
-                    r = radius
+                    r = radius[ii]
                 if l > 0.49 * length[ii + 1]:
                     r = 0.49 * length[ii + 1] / tt[ii]
                 new_points += list(r * dvec[ii] / ct[ii] + self.points[ii] + numpy.vstack((r * numpy.cos(a), r * numpy.sin(a))).transpose())
@@ -327,7 +328,36 @@ class Polygon:
             return self
 
 
-class PolygonSet:
+    def translate(self, dx, dy):
+        """
+        Move the polygon from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``Polygon``
+            This object.
+
+        Examples
+        --------
+        >>> polygon = gdspy.Polygon((0, 0), (10, 20))
+        >>> polygon = polygon.translate(2,0)
+        >>> myCell.add(polygon)
+        """
+
+        self.points += [dx, dy]
+
+        return self
+
+
+
+class PolygonSet(object):
     """
     Set of polygonal objects.
 
@@ -407,8 +437,7 @@ class PolygonSet:
             if len(self.polygons[ii]) > 4094:
                 raise ValueError("[GDSPY] Polygons with more than 4094 are not supported by the GDSII format.")
             data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
-            for point in self.polygons[ii]:
-                data.append(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))))
+            data.extend(struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier))) for point in self.polygons[ii])
             data.append(struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100))
         return b''.join(data)
 
@@ -488,6 +517,7 @@ class PolygonSet:
                     ii += 1
         return self
 
+
     def fillet(self, radius, points_per_2pi=128, max_points=199):
         """
         Round the corners of these polygons and fractures them into polygons
@@ -495,8 +525,10 @@ class PolygonSet:
 
         Parameters
         ----------
-        radius : number
-            Radius of the corners.
+        radius : number, list
+            Radius of the corners. If number: All corners filleted by that amount
+            If list: Specify fillet radii on a per-corner basis (list length
+            must be equal to the number of points in the Polygon)
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number of
             vertices in each corner of the polygon will be the fraction of this
@@ -564,6 +596,29 @@ class PolygonSet:
         if fracture:
             self.fracture(max_points)
         return self
+
+
+    def translate(self, dx, dy):
+        """
+        Move the polygons from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``PolygonSet``
+            This object.
+        """
+        for ii in range(len(self.polygons)):
+            self.polygons[ii] += [dx, dy]
+
+        return self
+
 
 
 class Rectangle(Polygon):
@@ -1183,38 +1238,38 @@ class Path(PolygonSet):
         """
         exact = True
         if angle == 'r':
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = 0
         elif angle == 'rr':
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = -delta_i
         elif angle == 'l':
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = 0
         elif angle == 'll':
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = -delta_i
         elif angle < 0:
             exact = False
-            delta_i = 0.5 * numpy.pi
+            delta_i = _halfpi
             delta_f = delta_i + angle
         else:
             exact = False
-            delta_i = -0.5 * numpy.pi
+            delta_i = -_halfpi
             delta_f = delta_i + angle
         if self.direction == '+x':
             self.direction = 0
         elif self.direction == '-x':
             self.direction = numpy.pi
         elif self.direction == '+y':
-            self.direction = 0.5 * numpy.pi
+            self.direction = _halfpi
         elif self.direction == '-y':
-            self.direction = -0.5 * numpy.pi
+            self.direction = -_halfpi
         elif exact:
             exact = False
         self.arc(radius, self.direction + delta_i, self.direction + delta_f, number_of_points, max_points, final_width, final_distance, layer, datatype)
         if exact:
-            self.direction = ['+x', '+y', '-x', '-y'][int(round(self.direction / (0.5 * numpy.pi))) % 4]
+            self.direction = ['+x', '+y', '-x', '-y'][int(round(self.direction / _halfpi)) % 4]
         return self
 
     def parametric(self, curve_function, curve_derivative=None, number_of_evaluations=99, max_points=199, final_width=None, final_distance=None, layer=0, datatype=0):
@@ -1588,7 +1643,7 @@ class PolyPath(PolygonSet):
 
     Notes
     -----
-    The bevel joint will give  strange results if the number of paths is
+    The bevel join will give  strange results if the number of paths is
     greater than 1.
     """
     def __init__(self, points, width, number_of_paths=1, distance=0, corners=0, ends=0, max_points=199, layer=0, datatype=0):
@@ -1617,11 +1672,11 @@ class PolyPath(PolygonSet):
             points[-1,:] = points[-1,:] + v * width[(points.shape[0] - 1) % len_w]
         elif ends == 1:
             v0 = points[1,:] - points[0,:]
-            angle0 = numpy.arctan2(v0[1], v0[0]) + 0.5 * numpy.pi
+            angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
             v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0 * v0))
             d0 = 0.5 * (number_of_paths - 1) * distance[0]
             v1 = points[-1,:] - points[-2,:]
-            angle1 = numpy.arctan2(v1[1], v1[0]) - 0.5 * numpy.pi
+            angle1 = numpy.arctan2(v1[1], v1[0]) - _halfpi
             v1 = numpy.array((-v1[1], v1[0])) / numpy.sqrt(numpy.sum(v1 * v1))
             j1w = (points.shape[0] - 1) % len_w
             j1d = (points.shape[0] - 1) % len_d
@@ -1687,7 +1742,7 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-class Label:
+class Label(object):
     """
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
@@ -1761,11 +1816,10 @@ class Label:
         out : string
             The GDSII binary string that represents this label.
         """
-        data = []
         text = self.text
         if len(text)%2 != 0:
             text = text + '\0'
-        data.append(struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.texttype, 6, 0x1701, self.anchor))
+        data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.texttype, 6, 0x1701, self.anchor)
         if not (self.rotation is None) or not (self.magnification is None) or self.x_reflection:
             word = 0
             values = b''
@@ -1777,12 +1831,39 @@ class Label:
             if not (self.rotation is None):
                 word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
-        data.append(struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100))
-        return b''.join(data)
+            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
 
-class Cell:
+    def translate(self, dx, dy):
+        """
+        Move the text from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``Label``
+            This object.
+
+        Examples
+        --------
+        >>> text = gdspy.Label((0, 0), (10, 20))
+        >>> text = text.translate(2, 0)
+        >>> myCell.add(text)
+        """
+        self.position = (dx+self.position[0], dy+self.position[1])
+
+        return self
+
+
+
+class Cell(object):
     """
     Collection of elements, both geometric objects and references to other
     cells.
@@ -1832,7 +1913,6 @@ class Cell:
             A number that multiplies all dimensions written in the GDSII
             structure.
 
-
         Returns
         -------
         out : string
@@ -1840,18 +1920,11 @@ class Cell:
         """
         now = datetime.datetime.today()
         name = self.name
-        data = []
         if len(name)%2 != 0:
             name = name + '\0'
-        data.append(struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii'))
-        for element in self.elements:
-            data.append(element.to_gds(multiplier))
-        for label in self.labels:
-            data.append(label.to_gds(multiplier))
-        data.append(struct.pack('>2h', 4, 0x0700))
-        return b''.join(data)
+        return struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii') + b''.join(element.to_gds(multiplier) for element in self.elements) + b''.join(label.to_gds(multiplier) for label in self.labels) + struct.pack('>2h', 4, 0x0700)
 
-    def copy(self, name, exclude_from_global=False, layers_to_include=[], layers_to_exclude=[]):
+    def copy(self, name, exclude_from_global=False):
         """
         Creates a copy of this cell.
 
@@ -1862,52 +1935,17 @@ class Cell:
         exclude_from_global : bool
             If ``True``, the cell will not be included in the global list of
             cells maintained by ``gdspy``.
-        layers_to_include :
-            List of the layers to be included in the returned cell. If empty,
-            include all layers.
-        layers_to_exclude :
-            List of the layers to be excluded in the returned cell.
-
 
         Returns
         -------
         out : ``Cell``
             The new copy of this cell.
         """
-
-        if not layers_to_include and not layers_to_exclude:
-            new_cell = Cell(name, exclude_from_global)
-            new_cell.elements = copy.deepcopy(self.elements)
-            new_cell.labels = copy.deepcopy(self.labels)
-            new_cell.bb_is_valid = False
-        elif list(set(layers_to_include) & set(layers_to_exclude)):
-            raise ValueError("[GDSPY] Cannot both include and exclude the same layers " + str(list(set(layers_to_include) & set(layers_to_exclude))) + '.')
-        else:
-            if not layers_to_include:
-                layers_to_include = self.get_layers()
-            layers_to_include = list(set(layers_to_include) - set(layers_to_exclude))
-            new_cell = self.copy(name, exclude_from_global=True)
-            new_cell._include_layers(layers_to_include)
-
+        new_cell = Cell(name, exclude_from_global)
+        new_cell.elements = libCopy.deepcopy(self.elements)
+        new_cell.labels = libCopy.deepcopy(self.labels)
+        new_cell.bb_is_valid = False
         return new_cell
-
-    def _include_layers(self, layers_to_include=[]):
-        elements_to_remove = list()
-
-        for element in self.elements:
-            if isinstance(element, Polygon):
-                if element.layer not in layers_to_include:
-                    elements_to_remove.append(element)
-            elif isinstance(element, PolygonSet):
-                if element.layers[0] not in layers_to_include:
-                    elements_to_remove.append(element)
-            elif isinstance(element, CellReference) or isinstance(element, CellArray):
-                element.ref_cell = element.ref_cell._include_layers(layers_to_include=layers_to_include)
-
-        if elements_to_remove:
-            [self.elements.remove(x) for x in elements_to_remove]
-
-        return self
 
     def add(self, element):
         """
@@ -2184,7 +2222,7 @@ class Cell:
         return self
 
 
-class CellReference:
+class CellReference(object):
     """
     Simple reference to an existing cell.
 
@@ -2239,11 +2277,10 @@ class CellReference:
         out : string
             The GDSII binary string that represents this object.
         """
-        data = []
         name = self.ref_cell.name
         if len(name)%2 != 0:
             name = name + '\0'
-        data.append(struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii'))
+        data = struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii')
         if not (self.rotation is None) or not (self.magnification is None) or self.x_reflection:
             word = 0
             values = b''
@@ -2255,9 +2292,8 @@ class CellReference:
             if not (self.rotation is None):
                 word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
-        data.append(struct.pack('>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), 4, 0x1100))
-        return b''.join(data)
+            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), 4, 0x1100)
 
     def area(self, by_spec=False):
         """
@@ -2384,8 +2420,31 @@ class CellReference:
         else:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
+    def translate(self, dx, dy):
+        """
+        Move the reference from one place to another
 
-class CellArray:
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``CellReference``
+            This object.
+        """
+
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
+
+        return self
+
+
+
+
+class CellArray(object):
     """
     Multiple references to an existing cell in an array format.
 
@@ -2449,11 +2508,10 @@ class CellArray:
         out : string
             The GDSII binary string that represents this object.
         """
-        data = []
         name = self.ref_cell.name
         if len(name)%2 != 0:
             name = name + '\0'
-        data.append(struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii'))
+        data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
         x2 = self.origin[0] + self.columns * self.spacing[0]
         y2 = self.origin[1]
         x3 = self.origin[0]
@@ -2478,9 +2536,8 @@ class CellArray:
                 y3 = (x3 - self.origin[0]) * sa + (y3 - self.origin[1]) * ca + self.origin[1]
                 x3 = tmp
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data.append(struct.pack('>2hH', 6, 0x1A01, word) + values)
-        data.append(struct.pack('>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100))
-        return b''.join(data)
+            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+        return data + struct.pack('>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100)
 
     def area(self, by_spec=False):
         """
@@ -2618,7 +2675,30 @@ class CellArray:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
 
-class GdsImport:
+    def translate(self, dx, dy):
+        """
+        Move the reference from one place to another
+
+        Parameters
+        ----------
+        dx : float
+            distance to move in the x-direction
+        dy : float
+            distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``CellArray``
+            This object.
+        """
+
+        self.origin = (dx+self.origin[0], dy+self.origin[1])
+
+        return self
+
+
+
+class GdsImport(object):
     """
     Object used to import structures from a GDSII stream file.
 
@@ -2842,7 +2922,7 @@ class GdsImport:
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
         return PolyPath(**kwargs)
 
-    def _create_label(self, xy, width=None, **kwargs):
+    def _create_label(self, xy, width=None, ends=None, **kwargs):
         kwargs['position'] = xy
         return Label(**kwargs)
 
@@ -3064,17 +3144,32 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(object, distance, max_points=199, layer=0, datatype=0):
+def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_first=False, max_points=199, layer=0, datatype=0):
     """
     Shrink or expand a polygon or polygon set.
 
     Parameters
     ----------
-    object : ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
-        or array-like[N][2]
-        Polygons to be offset.
+    polygons : polygon or array-like
+        Polygons to be offset. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
     distance : number
         Offset distance. Positive to expand, negative to shrink.
+    join : {'miter', 'bevel', 'round'}
+        Type of join used to create the offset polygon.
+    tolerance : integer or float
+        For miter joints, this number must be at least 2 and it represents
+        the maximun distance in multiples of offset betwen new vertices and
+        their original position before beveling to avoid spikes at acute
+        joints. For round joints, it indicates the curvature resolution in
+        number of points per full circle.
+    precision : float
+        Desired precision for rounding vertice coordinates.
+    join_first : bool
+        Join all paths before offseting to avoid unecessary joins in
+        adjacent polygon sides.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
         have at most ``max_points`` vertices. This is not a tessellating
@@ -3090,78 +3185,43 @@ def offset(object, distance, max_points=199, layer=0, datatype=0):
     out : ``PolygonSet`` or ``None``
         Return the offset shape as a set of polygons.
     """
-    if distance > 0:
-        op = lambda a,b: a or b
+    poly = []
+    if isinstance(polygons, Polygon):
+        poly.append(polygons.points)
+    elif isinstance(polygons, PolygonSet):
+        poly += polygons.polygons
+    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+        poly += polygons.get_polygons()
     else:
-        op = lambda a,b: a and not b
-    if isinstance(object, Polygon):
-        polygons = [object.points]
-    elif isinstance(object, PolygonSet):
-        polygons = object.polygons
-    elif isinstance(object, CellReference) or isinstance(object, CellArray):
-        polygons = object.get_polygons()
-    else:
-        polygons = [object]
-
-    result = []
-    for points in polygons:
-        vec = points[1:,:] - points[0,:]
-        s = numpy.sign(numpy.sum(vec[:-1,0]*vec[1:,1] - vec[:-1,1]*vec[1:,0]))
-        if s == 0:
-            s = 1
-        vec = points.astype(float) - numpy.roll(points, 1, 0)
-        length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-        ii = numpy.flatnonzero(length)
-        if len(ii) < len(length):
-            points = points[ii]
-            vec = points - numpy.roll(points, 1, 0)
-            length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-        vec[:,0] /= length
-        vec[:,1] /= length
-        base = points + s * distance * numpy.array([1,-1]) * vec[:,::-1]
-
-        dbase = numpy.roll(base, -1, 0) - base
-        v1 = numpy.roll(vec, -1, 0)
-        den = vec[:,0] * v1[:,1] - vec[:,1] * v1[:,0]
-        ii = den == 0.0
-        den[ii] = 1.0
-        a = (dbase[:,0] * v1[:,1] - dbase[:,1] * v1[:,0]) / den
-        a[ii] = 0
-        pts = base + (a * vec.transpose()).transpose()
-        ii = numpy.sum(vec * (pts - numpy.roll(pts, 1, 0)), 1) > 0
-        while ii.sum() < a.size:
-            base = base[ii,:]
-            vec = vec[ii,:]
-            dbase = numpy.roll(base, -1, 0) - base
-            v1 = numpy.roll(vec, -1, 0)
-            den = vec[:,0] * v1[:,1] - vec[:,1] * v1[:,0]
-            ii = den == 0.0
-            den[ii] = 1.0
-            a = (dbase[:,0] * v1[:,1] - dbase[:,1] * v1[:,0]) / den
-            a[ii] = 0
-            pts = base + (a * vec.transpose()).transpose()
-            ii = numpy.sum(vec * (pts - numpy.roll(pts, 1, 0)), 1) > 0
-
-        edge = numpy.vstack((points, points[:1,:], pts[:1], pts[::-1]))
-        r = boolext.clip([points, edge], op, 1e-13)
-        if not (r is None):
-            result.extend(r)
-    return None if len(result) == 0 else PolygonSet(result, layer, datatype, False).fracture(max_points)
+        for obj in polygons:
+            if isinstance(obj, Polygon):
+                poly.append(obj.points)
+            elif isinstance(obj, PolygonSet):
+                poly += obj.polygons
+            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+                poly += obj.get_polygons()
+            else:
+                poly.append(obj)
+    result = clipper.offset(poly, distance, join, tolerance, 1/precision, 1 if join_first else 0)
+    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
 
-def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
+
+def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
     """
-    Execute any boolean operation on polygons and polygon sets.
+    This function is deprecated in favor of 'fast_boolean'.
+
+    Execute any generalized boolean operation on polygons and polygon sets.
 
     Parameters
     ----------
-    objects : array-like
+    polygons : array-like
         Operands of the boolean operation. Each element of this array must
         be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
         or an array-like[N][2] of vertices of a polygon.
     operation : function
-        Function that accepts as input ``len(objects)`` integers. Each
-        integer represents the incidence of the corresponding ``object``.
+        Function that accepts as input ``len(polygons)`` integers. Each
+        integer represents the incidence of the corresponding ``polygon``.
         The function must return a bool or integer (interpreted as bool).
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
@@ -3205,30 +3265,181 @@ def boolean(objects, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
             lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
-    polygons = []
+    warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be removed in a future version. Please use 'fast_boolean' instead.", stacklevel=2)
+    poly = []
     indices = [0]
     special_function = False
-    for obj in objects:
+    for obj in polygons:
         if isinstance(obj, Polygon):
-            polygons.append(obj.points)
+            poly.append(obj.points)
             indices.append(indices[-1] + 1)
         elif isinstance(obj, PolygonSet):
             special_function = True
-            polygons += obj.polygons
+            poly += obj.polygons
             indices.append(indices[-1] + len(obj.polygons))
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             special_function = True
             a = obj.get_polygons()
-            polygons += a
+            poly += a
             indices.append(indices[-1] + len(a))
         else:
-            polygons.append(obj)
+            poly.append(obj)
             indices.append(indices[-1] + 1)
     if special_function:
-        result = boolext.clip(polygons, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
+        result = boolext.clip(poly, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
     else:
-        result = boolext.clip(polygons, operation, eps)
+        result = boolext.clip(poly, operation, eps)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+
+
+def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199, layer=0, datatype=0):
+    """
+    Execute any boolean operation between 2 polygons or polygon sets.
+
+    Parameters
+    ----------
+    operandA : polygon or array-like
+        First operand. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    operandB : polygon, array-like or ``None``
+        Second operand. Must be ``None``, a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    operation : {'or', 'and', 'xor', 'not'}
+        Boolean operation to be executed. The 'not' operation returns
+        the difference ``operandA - operandB``.
+    precision : float
+        Desired precision for rounding vertice coordinates.
+    max_points : integer
+        If greater than 4, fracture the resulting polygons to ensure they
+        have at most ``max_points`` vertices. This is not a tessellating
+        function, so this number should be as high as possible. For example,
+        it should be set to 199 for polygons being drawn in GDSII files.
+    layer : integer
+        The GDSII layer number for the resulting element.
+    datatype : integer
+        The GDSII datatype for the resulting element (between 0 and 255).
+
+    Returns
+    -------
+    out : PolygonSet or ``None``
+        Result of the boolean operation.
+    """
+    polyA = []
+    polyB = []
+    for poly,obj in zip((polyA, polyB),(operandA, operandB)):
+        if isinstance(obj, Polygon):
+            poly.append(obj.points)
+        elif isinstance(obj, PolygonSet):
+            poly += obj.polygons
+        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+            poly += obj.get_polygons()
+        elif obj is not  None:
+            for inobj in obj:
+                if isinstance(inobj, Polygon):
+                    poly.append(inobj.points)
+                elif isinstance(inobj, PolygonSet):
+                    poly += inobj.polygons
+                elif isinstance(inobj, CellReference) or isinstance(inobj, CellArray):
+                    poly += inobj.get_polygons()
+                else:
+                    poly.append(inobj)
+    if len(polyB) == 0:
+        polyB.append(polyA.pop())
+    result = clipper.clip(polyA, polyB, operation, 1/precision)
+    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+
+
+def inside(points, polygons, groupsize=1, groupstate=True, precision=0.001):
+    """
+    Test whether each of the points is within the given set of polygons.
+
+    Parameters
+    ----------
+    points : array-like
+        A list of points to test. The array is an array-like[N][2] with the
+        coordinates of the points.
+    polygons : polygon or array-like
+        Polygons to be tested against. Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array. The array may
+        contain any of the previous objects or an array-like[N][2] of
+        vertices of a polygon.
+    groupsize : number
+        Logical group size of the list of points (optional). To increase the
+        performance, for groupsize > 1, the algorithm will short-circuit the test
+        result for all members of the group. If groupsize = 1, each point in
+        the list is tested individually.
+    groupstate : boolean
+        State to use for short-circuit (optional, True = inside, False = outside).
+        For groupsize > 1 and groupstate = True, if any one of the points within the
+        group is inside the set of polygons, all the remaining points in the group
+        will also be assumed to be inside. For groupsize > 1 and groupstate = False,
+        if any one of the points within the group is outside the set of polygons,
+        all the remaining points in the group will also be assumed to be outside.
+    precision : float
+        Desired precision for rounding vertice coordinates.
+
+    Returns
+    -------
+    out : list
+            List of booleans indicating whether each of the points is inside
+            (True) or outside (False) the set of polygons.
+    """
+    poly = []
+    if isinstance(polygons, Polygon):
+        poly.append(polygons.points)
+    elif isinstance(polygons, PolygonSet):
+        poly += polygons.polygons
+    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+        poly += polygons.get_polygons()
+    else:
+        for obj in polygons:
+            if isinstance(obj, Polygon):
+                poly.append(obj.points)
+            elif isinstance(obj, PolygonSet):
+                poly += obj.polygons
+            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+                poly += obj.get_polygons()
+            else:
+                poly.append(obj)
+    return clipper.inside(points, poly, groupsize, int(groupstate), 1/precision)
+
+
+def copy(obj, dx, dy):
+    """
+    Creates a copy of ``obj`` and translates the new object to a new location.
+
+    Parameters
+    ----------
+    obj : ``obj``
+        any translatable geometery object.
+    dx  : float
+        distance to move in the x-direction
+    dy  : float
+        distance to move in the y-direction
+
+
+    Returns
+    -------
+    out : ``obj``
+        Translated copy of original ``obj``
+
+    Examples
+    --------
+    >>> rectangle = gdspy.Rectangle((0, 0), (10, 20))
+    >>> rectangle2 = gdspy.copy(rectangle, 2,0)
+    >>> myCell.add(rectangle)
+    >>> myCell.add(rectangle2)
+    """
+
+    newObj = libCopy.deepcopy(obj)
+    newObj.translate(dx,dy)
+
+    return newObj
+
 
 
 def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9):
@@ -3287,7 +3498,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
         outfile.close()
 
 
-class GdsPrint:
+class GdsPrint(object):
     """
     GDSII strem library printer.
 

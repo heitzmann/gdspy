@@ -1,6 +1,6 @@
 /**********************************************************************
  *                                                                    *
- *  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     *
+ *  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     *
  *                                                                    *
  *  This file is part of gdspy.                                       *
  *                                                                    *
@@ -61,13 +61,13 @@ typedef struct polygon_struct {
 } polygon_type;
 
 #ifdef DEBUG
-#define FLAG printf("DEBUG %ld\n", ++dbg);
-#define POINT(m,a) printf("%s%lx: %g,%g : ",m,a,a->x[0],a->x[1]);for(itmp=0;itmp<a->max_seg&&a->segment[itmp]!=NULL;++itmp)printf("%lx,",a->segment[itmp]);printf("\b\n");
-#define POINTS(m,a,b) printf(m);for(ptmp=(a);ptmp!=(b);ptmp=ptmp->nxt1){printf("%lx: %g,%g : ",ptmp,ptmp->x[0],ptmp->x[1]);for(itmp=0;itmp<ptmp->max_seg&&ptmp->segment[itmp]!=NULL;++itmp)printf("%lx,",ptmp->segment[itmp]);printf("\b\n");}
-#define POINTS_ALT(m,a,b) printf(m);for(ptmp=(a);ptmp!=(b);ptmp=ptmp->nxt2){printf("%lx: %g,%g : ",ptmp,ptmp->x[0],ptmp->x[1]);for(itmp=0;itmp<ptmp->max_seg&&ptmp->segment[itmp]!=NULL;++itmp)printf("%lx,",ptmp->segment[itmp]);printf("\b\n");}
-#define SEGMENT(m,a) printf("%s%lx: %g,%g ~ %g,%g (%lx ~ %lx) [",m,a,a->point[0]->x[0],a->point[0]->x[1],a->point[1]->x[0],a->point[1]->x[1],a->point[0],a->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",a->polygon[itmp]);printf("\b] %hd\n",a->output);
-#define SEGMENTS(m,a,b) printf(m);for(stmp=(a);stmp!=(b);stmp=stmp->nxt1){printf("%lx: %g,%g	~  %g,%g (%lx ~ %lx) [",stmp,stmp->point[0]->x[0],stmp->point[0]->x[1],stmp->point[1]->x[0],stmp->point[1]->x[1],stmp->point[0],stmp->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",stmp->polygon[itmp]);printf("\b] %hd\n", stmp->output);}
-#define SEGMENTS_ALT(m,a,b) printf(m);for(stmp=(a);stmp!=(b);stmp=stmp->nxt2){printf("%lx: %g,%g	~  %g,%g (%lx ~ %lx) [",stmp,stmp->point[0]->x[0],stmp->point[0]->x[1],stmp->point[1]->x[0],stmp->point[1]->x[1],stmp->point[0],stmp->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",stmp->polygon[itmp]);printf("\b] %hd\n", stmp->output);}
+#define FLAG printf("DEBUG %ld\n", ++dbg);fflush(stdout);
+#define POINT(m,a) printf("%s%lx: %g,%g : ",m,a,a->x[0],a->x[1]);for(itmp=0;itmp<a->max_seg&&a->segment[itmp]!=NULL;++itmp)printf("%lx,",a->segment[itmp]);printf("\b\n");fflush(stdout);
+#define POINTS(m,a,b) printf(m);for(ptmp=(a);ptmp!=(b);ptmp=ptmp->nxt1){printf("%lx: %g,%g : ",ptmp,ptmp->x[0],ptmp->x[1]);for(itmp=0;itmp<ptmp->max_seg&&ptmp->segment[itmp]!=NULL;++itmp)printf("%lx,",ptmp->segment[itmp]);printf("\b\n");}fflush(stdout);
+#define POINTS_ALT(m,a,b) printf(m);for(ptmp=(a);ptmp!=(b);ptmp=ptmp->nxt2){printf("%lx: %g,%g : ",ptmp,ptmp->x[0],ptmp->x[1]);for(itmp=0;itmp<ptmp->max_seg&&ptmp->segment[itmp]!=NULL;++itmp)printf("%lx,",ptmp->segment[itmp]);printf("\b\n");}fflush(stdout);
+#define SEGMENT(m,a) printf("%s%lx: %g,%g ~ %g,%g (%lx ~ %lx) [",m,a,a->point[0]->x[0],a->point[0]->x[1],a->point[1]->x[0],a->point[1]->x[1],a->point[0],a->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",a->polygon[itmp]);printf("\b] %hd\n",a->output);fflush(stdout);
+#define SEGMENTS(m,a,b) printf(m);for(stmp=(a);stmp!=(b);stmp=stmp->nxt1){printf("%lx: %g,%g	~  %g,%g (%lx ~ %lx) [",stmp,stmp->point[0]->x[0],stmp->point[0]->x[1],stmp->point[1]->x[0],stmp->point[1]->x[1],stmp->point[0],stmp->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",stmp->polygon[itmp]);printf("\b] %hd\n", stmp->output);}fflush(stdout);
+#define SEGMENTS_ALT(m,a,b) printf(m);for(stmp=(a);stmp!=(b);stmp=stmp->nxt2){printf("%lx: %g,%g	~  %g,%g (%lx ~ %lx) [",stmp,stmp->point[0]->x[0],stmp->point[0]->x[1],stmp->point[1]->x[0],stmp->point[1]->x[1],stmp->point[0],stmp->point[1]);for(itmp=0;itmp<num_polygons;++itmp)printf("%hd,",stmp->polygon[itmp]);printf("\b] %hd\n", stmp->output);}fflush(stdout);
 #define PAUSE gets(str);
 point_type *ptmp;
 segment_type *stmp;
@@ -78,7 +78,7 @@ void POLYGONS(int i, polygon_type *a) {
 	polygon_type *g1;
 	int j;
 	for(g1=a;g1!=NULL;g1=g1->nxt)
-	{  
+	{
 		j = i;
 		while (0 < j--) printf("	");
 		printf("[%lx] : ",g1);
@@ -237,7 +237,7 @@ long remove_segment(point_type *p, segment_type *s)
 	long i = 0;
 	while (p->segment[i] != s) ++i;
 	++i;
-	while (i < p->max_seg && p->segment[i] != NULL) 
+	while (i < p->max_seg && p->segment[i] != NULL)
 	{
 		p->segment[i - 1] = p->segment[i];
 		++i;
@@ -256,12 +256,12 @@ char inside(double x, double y, polygon_type *poly)
 	p2 = p1->nxt2;
 	while (stop == 0)
 	{
-		if (p2 == NULL) 
+		if (p2 == NULL)
 		{
 			p2 = poly->point;
 			stop = 1;
 		}
-		if (((p2->x[1] < y && p1->x[1] >= y) || (p1->x[1] < y && p2->x[1] >= y)) && 
+		if (((p2->x[1] < y && p1->x[1] >= y) || (p1->x[1] < y && p2->x[1] >= y)) &&
 				(p1->x[0] - p2->x[0]) * (y - p2->x[1]) / (p1->x[1] - p2->x[1]) - x + p2->x[0] < 0)
 			result = 1 - result;
 		p1 = p2;
@@ -414,7 +414,7 @@ point_type * mergesort_points(point_type *p1)
 			++merges;
 			p2 = p1;
 			n1 = 0;
-			while (p2 != NULL && n1 < step) 
+			while (p2 != NULL && n1 < step)
 			{
 				++n1;
 				p2 = p2->nxt1;
@@ -440,7 +440,7 @@ point_type * mergesort_points(point_type *p1)
 					tail->nxt1 = p2;
 					p2 = p2->nxt1;
 				}
-				else 
+				else
 				{
 					--n1;
 					tail->nxt1 = p1;
@@ -525,7 +525,7 @@ polygon_type * mergesort_polygons(polygon_type *g1)
 			++merges;
 			g2 = g1;
 			n1 = 0;
-			while (g2 != NULL && n1 < step) 
+			while (g2 != NULL && n1 < step)
 			{
 				++n1;
 				g2 = g2->nxt;
@@ -551,7 +551,7 @@ polygon_type * mergesort_polygons(polygon_type *g1)
 					tail->nxt = g2;
 					g2 = g2->nxt;
 				}
-				else 
+				else
 				{
 					--n1;
 					tail->nxt = g1;
@@ -611,7 +611,7 @@ long intersect_point_segment(point_type *p1)
 				add_segment(p2, s1);
 				s1->point[1] = p2;
 			}
-			else 
+			else
 			{
 				prev = prev->nxt2;
 				s1 = s1->nxt2;
@@ -745,7 +745,7 @@ static PyObject * clip(PyObject *self, PyObject *args)
 				p0 = new_point(x1, y1);
 				p1 = p0;
 			}
-			else 
+			else
 			{
 				p1->nxt1 = new_point(x1, y1);
 				p1 = p1->nxt1;
@@ -800,17 +800,16 @@ static PyObject * clip(PyObject *self, PyObject *args)
 		else free_point_cycle(p0);
 		p0 = NULL;
 	}
-	segment_first = beam.nxt1;
-	point_first = head.nxt1;
 
-	if (point_first == NULL)
+	if (head.nxt1 == NULL)
 	{
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
 
 	/* Sort points by x-coordinate (y, if same x) */
-	point_first = mergesort_points(point_first);
+	point_first = mergesort_points(head.nxt1);
+	segment_first = beam.nxt1;
 
 	/* Merge overlaping points */
 	p1 = point_first;
@@ -821,9 +820,10 @@ static PyObject * clip(PyObject *self, PyObject *args)
 		{
 			for (i = 0; i < p2->max_seg && p2->segment[i] != NULL; ++i)
 			{
-				add_segment(p1, p2->segment[i]);
-				if (p2->segment[i]->point[0] == p2) p2->segment[i]->point[0] = p1;
-				else p2->segment[i]->point[1] = p1;
+				s1 = p2->segment[i];
+				add_segment(p1, s1);
+				if (s1->point[0] == p2) s1->point[0] = p1;
+				else s1->point[1] = p1;
 			}
 			p1->nxt1 = p2 = free_point(p2);
 		}
@@ -891,7 +891,7 @@ static PyObject * clip(PyObject *self, PyObject *args)
 				while (s0->nxt2 != s1) s0 = s0->nxt2;
 				s0->nxt2 = s1->nxt2;
 				if (s1 == tail) tail = s0;
-				
+
 				/* Check for intersections */
 				dx1 = s1->point[1]->x[0] - s1->point[0]->x[0];
 				dy1 = s1->point[1]->x[1] - s1->point[0]->x[1];
@@ -977,9 +977,25 @@ static PyObject * clip(PyObject *self, PyObject *args)
 		{
 			for (i = 0; i < p2->max_seg && p2->segment[i] != NULL; ++i)
 			{
-				add_segment(p1, p2->segment[i]);
-				if (p2->segment[i]->point[0] == p2) p2->segment[i]->point[0] = p1;
-				else p2->segment[i]->point[1] = p1;
+				s1 = p2->segment[i];
+				if (s1->point[1] != p1 && s1->point[0] != p1)
+				{
+					add_segment(p1, s1);
+					if (s1->point[0] == p2) s1->point[0] = p1;
+					else s1->point[1] = p1;
+				}
+				else
+				{
+					remove_segment(p1, s1);
+					if (s1 == segment_first)
+						segment_first = free_segment(segment_first);
+					else
+					{
+						s0 = segment_first;
+						while (s0->nxt1 != s1) s0 = s0->nxt1;
+						s0->nxt1 = free_segment(s1);
+					}
+				}
 			}
 			p1->nxt1 = p2 = free_point(p2);
 		}
@@ -999,7 +1015,10 @@ static PyObject * clip(PyObject *self, PyObject *args)
 				{
 					/* Search for duplicate edges only among the ones removed from the scanbeam so far in this iteration */
 					s0 = &beam;
-					while (s0->nxt2 != s1) s0 = s0->nxt2;
+					while (s0->nxt2 != s1)
+					{
+						s0 = s0->nxt2;
+					}
 					s0->nxt2 = s1->nxt2;
 					if (s1 == tail) tail = s0;
 
@@ -1040,7 +1059,6 @@ static PyObject * clip(PyObject *self, PyObject *args)
 #ifdef DEBUG
 POINTS("\nAll pts:\n",point_first,NULL);
 SEGMENTS("\nAll segs:\n",segment_first,NULL);
-fflush(stdout);
 #endif
 
 	/* Perform operation */
@@ -1065,12 +1083,14 @@ fflush(stdout);
 		memset(counter, 0, num_polygons * sizeof(long));
 		memset(phase, 0, num_polygons * sizeof(short));
 		last_result = 0;
-#if DEBUG > 1
+#if DEBUG > 0
 POINT("\nBeam at: ",p1);
-fflush(stdout);
 #endif
 		if (beam.nxt2 != NULL)
 		{
+#if DEBUG > 1
+SEGMENTS_ALT("", beam.nxt2, NULL);
+#endif
 			for (s0 = beam.nxt2; s0->nxt2 != NULL; s0 = s0->nxt2)
 			{
 				obj1 = PyTuple_New(num_polygons);
@@ -1113,17 +1133,16 @@ fflush(stdout);
 					last_result = result;
 				}
 				else s0->output = 0;
-#if DEBUG > 1
+#if DEBUG > 0
 printf("Op = %+d : ", result);
 SEGMENT("", s0);
-fflush(stdout);
 #endif
 				Py_DECREF(obj1);
 			}
 			s0->output = (last_result > 0 ? -1 : 0);
-#if DEBUG > 1
-SEGMENT("Op last : ", s0);
-fflush(stdout);
+#if DEBUG > 0
+printf("Op last = %+d : ", last_result);
+SEGMENT("", s0);
 #endif
 		}
 		/* Update scanbeam */
@@ -1142,9 +1161,8 @@ fflush(stdout);
 			}
 			else
 			{
-#if DEBUG > 1
+#if DEBUG > 0
 SEGMENT("Test: ",s1);
-fflush(stdout);
 #endif
 				s0 = &beam;
 				while (s0->nxt2 != s1) s0 = s0->nxt2;
@@ -1152,9 +1170,8 @@ fflush(stdout);
 				if (s1->output != 0) ++i;
 				else
 				{
-#if DEBUG > 1
+#if DEBUG > 0
 SEGMENT("REM: ", s1);
-fflush(stdout);
 #endif
 					remove_segment(s1->point[0], s1);
 					remove_segment(s1->point[1], s1);
@@ -1183,7 +1200,6 @@ fflush(stdout);
 
 #ifdef DEBUG
 SEGMENTS("\nResulting segs:\n",segment_first,NULL);
-fflush(stdout);
 #endif
 
 	/* Find resulting polygons */
@@ -1200,15 +1216,13 @@ fflush(stdout);
 		p1 = s0->point[1];
 		left = s0->output;
 		head.nxt3 = NULL;
-#if DEBUG > 1
+#if DEBUG > 0
 POINT("\nStart: ",p0);
-fflush(stdout);
 #endif
 		while (p1 != p0)
 		{
-#if DEBUG > 1
+#if DEBUG > 0
 POINT("  + ",p1);
-fflush(stdout);
 #endif
 			if (p1->flag != 0)
 			{
@@ -1223,17 +1237,16 @@ fflush(stdout);
 						if (p3 != NULL) p3->nxt2 = duplicate_point(point_last);
 					}
 				g0 = new_polygon(duplicate_point(p1));
-#if DEBUG > 1
+#if DEBUG > 0
 printf("Remove [%lx]\n", g0);
 POINTS_ALT("",g0->point,NULL);
-fflush(stdout);
 #endif
 				add_inside(g0, &polygon_tree);
 				for (point_last = p0; point_last->nxt2 != p1; point_last = point_last->nxt2);
 			}
 			i = 0;
 			while (i < p1->max_seg && p1->segment[i] != NULL &&
-					(p1->segment[i]->point[0] != p1 || p1->segment[i]->output != left) && 
+					(p1->segment[i]->point[0] != p1 || p1->segment[i]->output != left) &&
 					(p1->segment[i]->point[1] != p1 || p1->segment[i]->output == left)) ++i;
 			s1 = p1->segment[i];
 			if (s1 == segment_first) segment_first = segment_first->nxt1;
@@ -1261,10 +1274,9 @@ fflush(stdout);
 			if (point_last->flag != 0) p3->nxt2 = duplicate_point(point_last);
 		if (p0->segment[0] != NULL) p0 = duplicate_point(p0);
 		g0 = new_polygon(p0);
-#if DEBUG > 1
+#if DEBUG > 0
 printf("Final [%lx]\n", g0);
 POINTS_ALT("",g0->point,NULL);
-fflush(stdout);
 #endif
 		add_inside(g0, &polygon_tree);
 		p2 = head.nxt3;
@@ -1280,7 +1292,6 @@ fflush(stdout);
 #ifdef DEBUG
 printf("\nAll polygons:\n");
 POLYGONS(0, polygon_tree.inside);
-fflush(stdout);
 #endif
 
 	/* Connect holes to their outer polygons */
@@ -1288,7 +1299,7 @@ fflush(stdout);
 	while (polygon_last->nxt != NULL) polygon_last = polygon_last->nxt;
 	for (g0 = polygon_tree.inside; g0 != NULL; g0 = g0->nxt)
 	{
-#if DEBUG > 1
+#if DEBUG > 0
 printf("\nPiercing [%lx]\n", g0);
 fflush(stdout);
 #endif
@@ -1335,7 +1346,7 @@ fflush(stdout);
 			}
 			if (left > 0)
 			{
-				/* Check for existing connections with other holes */ 
+				/* Check for existing connections with other holes */
 				hole_prev2 = g1;
 				g2 = g1->nxt;
 				while (g2 != NULL)
@@ -1426,7 +1437,6 @@ fflush(stdout);
 #ifdef DEBUG
 printf("\nPierced polygons:\n");
 POLYGONS(0, polygon_tree.inside);
-fflush(stdout);
 #endif
 
 	for (i = 0, g0 = polygon_tree.inside; g0 != NULL; ++i, g0 = g0->nxt);

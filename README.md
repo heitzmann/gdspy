@@ -38,10 +38,23 @@ Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and sho
 
 The file gdspy-sample.py is a sample script to show the features provided by this module.
 The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
-It is also available [on-line](http://gdspy.readthedocs.org/en/latest/)
+It is also available [on-line](http://gdspy.readthedocs.io/en/latest/)
 
+## Support
+
+Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
 ## History of changes
+
+### Version 0.9 (Jul 17, 2016)
+* Added option to join polygons before applying an `offset`.
+* Added a `translate` method to geometric entities (thanks John Bell for the commit).
+* Bug fixes.
+
+### Version 0.8.1 (May 6, 2016)
+* New `fast_boolean` function based on the [Clipper](http://www.angusj.com/delphi/clipper.php) library with much better performance than the old `boolean`.
+* Changed `offset` signature to also use the [Clipper](http://www.angusj.com/delphi/clipper.php) library (this change **breaks compatibility** with previous versions).
+* Bug fix for error when importing some labels from GDSII files.
 
 ### Version 0.7.1 (June 26, 2015)
 * Rebased to GitHub.

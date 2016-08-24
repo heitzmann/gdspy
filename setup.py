@@ -1,6 +1,6 @@
 ########################################################################
 ##                                                                    ##
-##  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     ##
+##  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     ##
 ##                                                                    ##
 ##  This file is part of gdspy.                                       ##
 ##                                                                    ##
@@ -33,12 +33,12 @@ class my_build(distutils.command.build_ext.build_ext):
     def run(self):
         distutils.command.build_ext.build_ext.run(self)
         for p in [self.build_lib, self.build_temp]:
-            f = p + os.sep + 'gdspy' + os.sep + 'boolext.'
+            f = p + os.sep + 'gdspy' + os.sep + 'clipper.'
             if os.path.isfile(f + 'py'): os.unlink(f + 'py')
             if os.path.isfile(f + 'pyc'): os.unlink(f + 'pyc')
 
 setup(name='gdspy',
-      version='0.7.1',
+      version='0.9',
       author='Lucas Heitzmann Gabrielli',
       author_email='heitzmann@gmail.com',
       license='GNU General Public License (GPL)',
@@ -48,7 +48,8 @@ setup(name='gdspy',
       packages = ['gdspy'],
       package_dir = {'gdspy': 'gdspy'},
       package_data = {'gdspy': ['data/*']},
-      ext_modules = [Extension('gdspy.boolext', ['gdspy/boolext.c'])],
+      ext_modules = [Extension('gdspy.boolext', ['gdspy/boolext.c']),
+                     Extension('gdspy.clipper', ['gdspy/clipper.cpp'])],
       provides=['gdspy'],
       requires=['numpy'],
       platforms='OS Independent',

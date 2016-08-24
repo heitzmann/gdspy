@@ -1,5 +1,7 @@
+MANIFEST
 test.sh
-winbuild*.txt
+debug.py
+winbuild*
 *.gds
 docs/_*
 .*.swp
@@ -61,6 +63,3 @@ docs/_build/
 
 # PyBuilder
 target/
-
-# IntelliJ IDEA
-.idea/

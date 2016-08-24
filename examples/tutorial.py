@@ -1,6 +1,6 @@
 ########################################################################
 ##                                                                    ##
-##  Copyright 2009-2015 Lucas Heitzmann Gabrielli                     ##
+##  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     ##
 ##                                                                    ##
 ##  This file is part of gdspy.                                       ##
 ##                                                                    ##
@@ -155,7 +155,7 @@ def dspiral_dt(t):
 ## function (fracture will be performed automatically to ensure polygons
 ## with less than 200 points).
 path3.parametric(spiral, dspiral_dt,
-                 final_width=lambda t: abs(0.5 * (1 - 2 * t)**3),
+                 final_width=lambda t: 0.1 + abs(0.4 * (1 - 2 * t)**3),
                  number_of_evaluations=600, layer=3)
 path_cell.add(path3)
 
@@ -196,74 +196,33 @@ path_cell.add(l1path)
 
 
 ## ------------------------------------------------------------------ ##
-##      BOOLEAN OPERATIONS
+##      POLYGON OPERATIONS
 ## ------------------------------------------------------------------ ##
 
+## Boolean operations can be executed with either gdspy polygons or
+## point lists).  The operations are union, intersection, subtraction,
+## symmetric subtracion (respectively 'or', 'and', 'not', 'xor').
+oper_cell = gdspy.Cell('OPERATIONS')
 
-## Boolean operations can be executed with polygons (either gdspy
-## objects or point lists).  The operands are given as a list.  In this
-## example we will have 2 operands which will be 2 PolygonSet objects.
-bool_cell = gdspy.Cell('BOOLEAN')
-primitives = []
-
-## Both operands are a path with a ring inside, but with different
-## widths. This is how we create them.
-for width in [2, 8]:
-
-    ## Closed path in a square shape with rounded corners.  Boolean
-    ## operations become slower with the number of points involved, so
-    ## it's important to keep these to a minimum.
-    bool_path = gdspy.Path(width, (0, 10))
-    bool_path.segment(30, '+y')
-    bool_path.turn(10, 'r', number_of_points=64)
-    bool_path.segment(30, '+x')
-    bool_path.turn(10, 'r', number_of_points=64)
-    bool_path.segment(30, '-y')
-    bool_path.turn(10, 'r', number_of_points=64)
-    bool_path.segment(30, '-x')
-    bool_path.turn(10, 'r', number_of_points=64)
-
-    ## Ring inside the square path.
-    ring = gdspy.Round((25, 25), 25 + width * 0.5,
-                       inner_radius=25 - width * 0.5,
-                       number_of_points=256)
-
-    ## We create a PolygonSet that contains both our path segments and
-    ## ring, and then append it to our list of operands.
-    primitives.append(gdspy.PolygonSet(bool_path.polygons +
-                                       ring.polygons))
-
-## The list of operands contains 2 polygon sets.  We will subtract the
-## 1st (narrower) from the 2nd (wider).  For that we need to define a
-## function that receives 2 integers (each representing an operand) and
-## returns the operation we want executed. Here we use a lambda
-## expression to do so.
-subtraction = lambda p1, p2: p2 and not p1
-
-## We perform the operation, put the resulting polygons in layer 1, and
-## add to our boolean cell.
-bool_cell.add(gdspy.boolean(primitives, subtraction, max_points=199,
-                            layer=1))
-
-
-## ------------------------------------------------------------------ ##
-##      POLYGON OFFSET
-## ------------------------------------------------------------------ ##
+## Here we subtract the previously created spiral from a rectangle with
+## the 'not' operation.
+oper_cell.add(gdspy.fast_boolean(gdspy.Rectangle((10,-4), (17,4)), path3,
+                                 'not', layer=1))
 
 ## Polygon offset (inset and outset) can be used, for instance, to
 ## define safety margins around shapes.
 
 spec = {'layer': 7}
-path4 = gdspy.Path(0.5, (21, -5)).segment(3, '+x', **spec)\
-        .turn(4, 'r', **spec).turn(4, 'rr', **spec)\
-        .segment(3, **spec)
-path_cell.add(path4)
+path4 = gdspy.Path(0.5, (21, -5)).segment(3, '+x', **spec) \
+    .turn(4, 'r', **spec).turn(4, 'rr', **spec) \
+    .segment(3, **spec)
+oper_cell.add(path4)
 
 ## Merge all parts into a single polygon.
-merged = gdspy.boolean([path4], lambda *p: any(p), max_points=0)
+merged = gdspy.fast_boolean(path4, None, 'or', max_points=0)
 
 ## Offset the path shape by 0.5 and add it to the cell.
-path_cell.add(gdspy.offset(merged, 1, layer=8))
+oper_cell.add(gdspy.offset(merged, 1, layer=8))
 
 
 ## ------------------------------------------------------------------ ##
@@ -287,7 +246,7 @@ slice_cell.add(result[1])
 ## If the cut needs to be at an angle we can rotate the geometry, slice
 ## it, and rotate back.
 original = gdspy.PolyPath([(12, 0), (12, 8), (28, 8), (28, -8),
-        (12, -8), (12, 0)], 1, 3, 2)
+                           (12, -8), (12, 0)], 1, 3, 2)
 original.rotate(numpy.pi / 3, center=(20, 0))
 result = gdspy.slice(original, 7, 1, layer=2)
 result[0].rotate(-numpy.pi / 3, center=(20, 0))
@@ -304,10 +263,10 @@ ref_cell = gdspy.Cell('REFS')
 ref_cell.add(gdspy.CellReference(poly_cell, (0, 30), x_reflection=True))
 ref_cell.add(gdspy.CellReference(poly_cell, (25, 0), rotation=180))
 
-## References can be whole arrays. Add an array of the boolean cell
-## with 2 lines and 3 columns and 1st element at (50, -15).
-ref_cell.add(gdspy.CellArray('BOOLEAN', 3, 2, (35, 35) ,(50, -15),
-                             magnification=0.5))
+## References can be whole arrays. Add an array of the operations cell
+## with 2 lines and 3 columns and 1st element at (25, 10).
+ref_cell.add(gdspy.CellArray('OPERATIONS', 3, 2, (35, 30) ,(25, 10),
+                             magnification=1.5))
 
 ## Text are also sets of polygons. They have edges parallel to 'x' and
 ## 'y' only.
@@ -320,6 +279,47 @@ ref_cell.add(gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
 ## included GUI, but they are included in the resulting GDSII file.
 ref_cell.add(gdspy.Label('Created with gdspy ' + gdspy.__version__,
                          (-7, -36), 'nw', layer=6))
+
+
+## ------------------------------------------------------------------ ##
+##      Translation
+## ------------------------------------------------------------------ ##
+
+trans_cell = gdspy.Cell('TRANS')
+
+## Any geometric object can be translated by providing the distance to
+## translate in the x-direction and y-direction:  translate(dx, dy)
+rect1 = gdspy.Rectangle( (80,0), (81,1), 1 )
+rect1.translate(2, 0)
+trans_cell.add(rect1)
+
+## Translatable objects can also be copied & translated in the same way.
+rect2 = gdspy.Rectangle( (80,0), (81,1), 2 )
+rect3 = gdspy.copy(rect2, 0,3)
+trans_cell.add(rect2)
+trans_cell.add(rect3)
+
+
+## Reference Cells are also translatable, and thus copyable.
+ref1 = gdspy.CellReference(poly_cell, (25, 0), rotation=180)
+ref2 = gdspy.copy(ref1, 30,30)
+trans_cell.add(ref1)
+trans_cell.add(ref2)
+
+
+
+## Same goes for Labels & Text
+text1 = gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
+                   (-7, -35), layer=6)
+text2 = gdspy.copy(text1, 0,-20)
+label1 = gdspy.Label('Created with gdspy ' + gdspy.__version__,
+                     (-7, -36), 'nw', layer=6)
+label2 = gdspy.copy(label1, 0,-20)
+trans_cell.add(text1)
+trans_cell.add(text2)
+trans_cell.add(label1)
+trans_cell.add(label2)
+
 
 
 ## ------------------------------------------------------------------ ##
@@ -342,9 +342,10 @@ gdspy.gds_print('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
 gdsii = gdspy.GdsImport('tutorial.gds',
                         rename={'POLYGONS':'IMPORT_POLY',
                                 'PATHS': 'IMPORT_PATHS',
-                                'BOOLEAN': 'IMPORT_BOOL',
+                                'OPERATIONS': 'IMPORT_OPER',
                                 'SLICE': 'IMPORT_SLICE',
-                                'REFS': 'IMPORT_REFS'},
+                                'REFS': 'IMPORT_REFS',
+                                'TRANS': 'IMPORT_TRANS'},
                         layers={1:7,2:8,3:9})
 
 ## Now we extract the cells we want to actually include in our current
