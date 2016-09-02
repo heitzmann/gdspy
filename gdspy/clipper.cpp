@@ -4893,14 +4893,14 @@ static PyObject* inside(PyObject *self, PyObject *args)
   // pre-calculate the bounding boxes of the polygons
   for (unsigned long p = 0; p < numpolygons; ++p)
   {
-    cInt* polygons_bb[p] = BoundingBox(polygons[p].begin(), polygons[p].end());
+    polygons_bb[p] = BoundingBox(polygons[p].begin(), polygons[p].end());
     polygons_bb_areas[p] = (polygons_bb[p][1]-polygons_bb[p][0])*(polygons_bb[p][3]-polygons_bb[p][2]);
   }
 
   for (unsigned long i = 0; i < numpts; i+=groupsize)
   {
     // calculate the bounding box of the group of points
-    pts_group_bb = BoundingBox(points.begin()+i, points.begin()+i+groupsize-1);
+    cInt* pts_group_bb = BoundingBox(points.begin()+i, points.begin()+i+groupsize-1);
     bool continue_test = true;
     for (unsigned long p = 0; p < numpolygons; ++p)
     {
