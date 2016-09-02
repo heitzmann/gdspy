@@ -1923,7 +1923,7 @@ class Cell(object):
             name = name + '\0'
         return struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii') + b''.join(element.to_gds(multiplier) for element in self.elements) + b''.join(label.to_gds(multiplier) for label in self.labels) + struct.pack('>2h', 4, 0x0700)
 
-    def copy(self, name, exclude_from_global=False):
+    def copy(self, name, exclude_from_global=False, deep_copy=False):
         """
         Creates a copy of this cell.
 
@@ -1934,6 +1934,10 @@ class Cell(object):
         exclude_from_global : bool
             If ``True``, the cell will not be included in the global list of
             cells maintained by ``gdspy``.
+        deep_copy : bool
+            If ``False``, the new cell will contain only references to the
+            existing elements.  If ``True``, copies of all elements are also
+            created.
 
         Returns
         -------
@@ -1941,9 +1945,13 @@ class Cell(object):
             The new copy of this cell.
         """
         new_cell = Cell(name, exclude_from_global)
-        new_cell.elements = list(self.elements)
-        new_cell.labels = list(self.labels)
         new_cell.bb_is_valid = False
+        if deep_copy:
+            new_cell.elements = list(self.elements)
+            new_cell.labels = list(self.labels)
+        else:
+            new_cell.elements = libCopy.deepcopy(self.elements)
+            new_cell.labels = libCopy.deepcopy(self.labels)
         return new_cell
 
     def add(self, element):
@@ -3224,7 +3232,7 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13)
         The function must return a bool or integer (interpreted as bool).
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices. This is not a tessellating
+        have at most ``max_points`` vertices.  This is not a tessellating
         function, so this number should be as high as possible. For example,
         it should be set to 199 for polygons being drawn in GDSII files.
     layer : integer
@@ -3303,18 +3311,18 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
         contain any of the previous objects or an array-like[N][2] of
         vertices of a polygon.
     operandB : polygon, array-like or ``None``
-        Second operand. Must be ``None``, a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array. The array may
+        Second operand.  Must be ``None``, a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array.  The array may
         contain any of the previous objects or an array-like[N][2] of
         vertices of a polygon.
     operation : {'or', 'and', 'xor', 'not'}
-        Boolean operation to be executed. The 'not' operation returns
+        Boolean operation to be executed.  The 'not' operation returns
         the difference ``operandA - operandB``.
     precision : float
         Desired precision for rounding vertice coordinates.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices. This is not a tessellating
+        have at most ``max_points`` vertices.  This is not a tessellating
         function, so this number should be as high as possible. For example,
         it should be set to 199 for polygons being drawn in GDSII files.
     layer : integer
@@ -3351,6 +3359,59 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
     result = clipper.clip(polyA, polyB, operation, 1/precision)
     return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
 
+
+
+def inside(points, polygons, groupsize=1, groupstate=True, precision=0.001):
+    """
+    Test whether each of the points is within the given set of polygons.
+
+    Parameters
+    ----------
+    points : array-like[N][2]
+        Coordinates of the points to be tested.
+    polygons : polygon or array-like
+        Polygons to be tested against.  Must be a ``Polygon``,
+        ``PolygonSet``, ``CellReference``, ``CellArray``, or an array.  The
+        array may contain any of the previous objects or an array-like[N][2]
+        of vertices of a polygon.
+    groupsize : number
+        Logical group size of the list of points (optional). To increase the
+        performance, for groupsize > 1, the algorithm will short-circuit the test
+        result for all members of the group. If groupsize = 1, each point in
+        the list is tested individually.
+    groupstate : boolean
+        State to use for short-circuit (optional, True = inside, False = outside).
+        For groupsize > 1 and groupstate = True, if any one of the points within the
+        group is inside the set of polygons, all the remaining points in the group
+        will also be assumed to be inside. For groupsize > 1 and groupstate = False,
+        if any one of the points within the group is outside the set of polygons,
+        all the remaining points in the group will also be assumed to be outside.
+    precision : float
+        Desired precision for rounding vertice coordinates.
+    Returns
+    -------
+    out : list
+            List of booleans indicating whether each of the points is inside
+            (True) or outside (False) the set of polygons.
+    """
+    poly = []
+    if isinstance(polygons, Polygon):
+        poly.append(polygons.points)
+    elif isinstance(polygons, PolygonSet):
+        poly += polygons.polygons
+    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+        poly += polygons.get_polygons()
+    else:
+        for obj in polygons:
+            if isinstance(obj, Polygon):
+                poly.append(obj.points)
+            elif isinstance(obj, PolygonSet):
+                poly += obj.polygons
+            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+                poly += obj.get_polygons()
+            else:
+                poly.append(obj)
+    return clipper.inside(points, poly, groupsize, int(groupstate), 1/precision)
 
 
 def copy(obj, dx, dy):
