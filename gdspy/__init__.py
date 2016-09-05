@@ -3361,38 +3361,33 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
 
 
 
-def inside(points, polygons, groupsize=1, groupstate=True, precision=0.001):
+def inside(points, polygons, short_circuit='any', precision=0.001):
     """
     Test whether each of the points is within the given set of polygons.
 
     Parameters
     ----------
-    points : array-like[N][2]
-        Coordinates of the points to be tested.
+    points : array-like[N][2] or list of array-like[N][2]
+        Coordinates of the points to be tested or groups of points to be
+        tested together.
     polygons : polygon or array-like
         Polygons to be tested against.  Must be a ``Polygon``,
         ``PolygonSet``, ``CellReference``, ``CellArray``, or an array.  The
         array may contain any of the previous objects or an array-like[N][2]
         of vertices of a polygon.
-    groupsize : number
-        Logical group size of the list of points (optional). To increase the
-        performance, for groupsize > 1, the algorithm will short-circuit the test
-        result for all members of the group. If groupsize = 1, each point in
-        the list is tested individually.
-    groupstate : boolean
-        State to use for short-circuit (optional, True = inside, False = outside).
-        For groupsize > 1 and groupstate = True, if any one of the points within the
-        group is inside the set of polygons, all the remaining points in the group
-        will also be assumed to be inside. For groupsize > 1 and groupstate = False,
-        if any one of the points within the group is outside the set of polygons,
-        all the remaining points in the group will also be assumed to be outside.
+    short_circuit : {'any', 'all'}
+        If `points` is a list of point groups, testing within each group
+        will be short-circuited if any of the points in the group is inside
+        ('any') or outside ('all') the polygons.  If `points` is simply a
+        list of points, this parameter has no effect.
     precision : float
         Desired precision for rounding vertice coordinates.
+
     Returns
     -------
     out : list
-            List of booleans indicating whether each of the points is inside
-            (True) or outside (False) the set of polygons.
+        List of booleans indicating if each of the points or point groups is
+        inside the set of polygons.
     """
     poly = []
     if isinstance(polygons, Polygon):
@@ -3411,7 +3406,13 @@ def inside(points, polygons, groupsize=1, groupstate=True, precision=0.001):
                 poly += obj.get_polygons()
             else:
                 poly.append(obj)
-    return clipper.inside(points, poly, groupsize, int(groupstate), 1/precision)
+    if hasattr(points[0][0], '__iter__'):
+        pts = points
+        sc = 1 if short_circuit == 'any' else -1
+    else:
+        pts = (points,)
+        sc = 0
+    return clipper.inside(pts, poly, sc, 1/precision)
 
 
 def copy(obj, dx, dy):

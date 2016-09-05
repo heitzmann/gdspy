@@ -4554,39 +4554,39 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
 
 //------------------------------------------------------------------------------
 
-short parse_point_set(PyObject *pointsset, Path &paths, double scaling)
-{
-    PyObject *py_point, *py_coord;
-    long num_points = PySequence_Length(pointsset);
-    paths.resize(num_points);
-    for (long j = 0; j < num_points; ++j)
-    {
-      if ((py_point = PySequence_ITEM(pointsset, j)) == NULL)
-      {
-        return -1;
-      }
-      if ((py_coord = PySequence_GetItem(py_point, 0)) == NULL)
-      {
-        Py_DECREF(py_point);
-        return -1;
-      }
-      double x = PyFloat_AsDouble(py_coord);
-      Py_DECREF(py_coord);
-
-      if ((py_coord = PySequence_GetItem(py_point, 1)) == NULL)
-      {
-        Py_DECREF(py_point);
-        return -1;
-      }
-      double y = PyFloat_AsDouble(py_coord);
-      Py_DECREF(py_coord);
-      Py_DECREF(py_point);
-      paths[j].X = (cInt)(scaling * x);
-      paths[j].Y = (cInt)(scaling * y);
-   }
-
-  return 0;
-}
+//short parse_point_set(PyObject *pointsset, Path &paths, double scaling)
+//{
+//    PyObject *py_point, *py_coord;
+//    long num_points = PySequence_Length(pointsset);
+//    paths.resize(num_points);
+//    for (long j = 0; j < num_points; ++j)
+//    {
+//      if ((py_point = PySequence_ITEM(pointsset, j)) == NULL)
+//      {
+//        return -1;
+//      }
+//      if ((py_coord = PySequence_GetItem(py_point, 0)) == NULL)
+//      {
+//        Py_DECREF(py_point);
+//        return -1;
+//      }
+//      double x = PyFloat_AsDouble(py_coord);
+//      Py_DECREF(py_coord);
+//
+//      if ((py_coord = PySequence_GetItem(py_point, 1)) == NULL)
+//      {
+//        Py_DECREF(py_point);
+//        return -1;
+//      }
+//      double y = PyFloat_AsDouble(py_coord);
+//      Py_DECREF(py_coord);
+//      Py_DECREF(py_point);
+//      paths[j].X = (cInt)(scaling * x);
+//      paths[j].Y = (cInt)(scaling * y);
+//   }
+//
+//  return 0;
+//}
 
 //------------------------------------------------------------------------------
 
@@ -4717,41 +4717,39 @@ PyObject* build_polygon_tuple(Paths &polygons, double scaling)
 
 //------------------------------------------------------------------------------
 
-// I'd prefer to avoid allocation inside the function.
-// Isn't it better to pass an array by reference?
-// Also: return area.
-//cInt bounding_box(Path& points, cInt* bb)
-//{
-//  bb[0] = points[0].X;
-//  bb[1] = points[0].X;
-//  bb[2] = points[0].Y;
-//  bb[3] = points[0].Y;
-//  for(Path::iterator it = points->begin(); it != points->end(); ++it)
-//  {
-//     if (it->X < bb[0]) bb[0] = it->X;
-//     if (it->X > bb[1]) bb[1] = it->X;
-//     if (it->Y < bb[2]) bb[2] = it->Y;
-//     if (it->Y > bb[3]) bb[3] = it->Y;
-//  }
-//  return (bb[1] - bb[0])*(bb[3] - bb[2]);
-//}
-template <typename Iterator>
-cInt* BoundingBox(Iterator start, Iterator end)
+cInt bounding_box(Path& points, cInt* bb)
 {
-  cInt* bb = (cInt*) malloc(sizeof(cInt) * 4);  // [xmin, xmax, ymin, ymax]
-  bb[0] = start->X;
-  bb[1] = start->X;
-  bb[2] = start->Y;
-  bb[3] = start->Y;
-  for (Iterator it = start; it !=end; ++it)
+  bb[0] = points[0].X;
+  bb[1] = points[0].X;
+  bb[2] = points[0].Y;
+  bb[3] = points[0].Y;
+  for(Path::iterator it = points.begin(); it != points.end(); ++it)
   {
      if (it->X < bb[0]) bb[0] = it->X;
      if (it->X > bb[1]) bb[1] = it->X;
      if (it->Y < bb[2]) bb[2] = it->Y;
      if (it->Y > bb[3]) bb[3] = it->Y;
   }
-  return bb;
+  return (bb[1] - bb[0])*(bb[3] - bb[2]);
 }
+
+//template <typename Iterator>
+//cInt* BoundingBox(Iterator start, Iterator end)
+//{
+//  cInt* bb = (cInt*) malloc(sizeof(cInt) * 4);  // [xmin, xmax, ymin, ymax]
+//  bb[0] = start->X;
+//  bb[1] = start->X;
+//  bb[2] = start->Y;
+//  bb[3] = start->Y;
+//  for (Iterator it = start; it !=end; ++it)
+//  {
+//     if (it->X < bb[0]) bb[0] = it->X;
+//     if (it->X > bb[1]) bb[1] = it->X;
+//     if (it->Y < bb[2]) bb[2] = it->Y;
+//     if (it->Y > bb[3]) bb[3] = it->Y;
+//  }
+//  return bb;
+//}
 
 //------------------------------------------------------------------------------
 
@@ -4863,91 +4861,115 @@ static PyObject* offset(PyObject *self, PyObject *args)
 
 static PyObject* inside(PyObject *self, PyObject *args)
 {
-  PyObject *pts, *poly;
-  double scaling, groupsize, groupstate;
-  Path points;
-  Paths polygons;
+  double scaling;
+  short short_circuit;
+  Paths groups, polygons;
+  PyObject *pts, *poly, *result;
 
-  if (!PyArg_ParseTuple(args, "OOddd:inside", &pts, &poly, &groupsize, &groupstate, &scaling)) return NULL;
+  if (!PyArg_ParseTuple(args, "OOhd:inside", &pts, &poly, &short_circuit, &scaling)) return NULL;
 
   if (!PySequence_Check(pts) || !PySequence_Check(poly))
   {
     PyErr_SetString(PyExc_TypeError, "First and second arguments must be sequences.");
     return NULL;
   }
-  if (groupsize < 1)
-  {
-    PyErr_SetString(PyExc_TypeError, "Group size must be at least 1.");
-    groupsize = 1;
-  }
 
-  if (parse_point_set(pts, points, scaling) != 0) return NULL;
+  if (parse_polygon_set(pts, groups, scaling) != 0) return NULL;
   if (parse_polygon_set(poly, polygons, scaling) != 0) return NULL;
 
-  unsigned long numpts = points.size();
+  unsigned long numgroups = groups.size();
   unsigned long numpolygons = polygons.size();
-  std::vector<int> result(numpts);
   std::vector<cInt*> polygons_bb(numpolygons);
   std::vector<double> polygons_bb_areas(numpolygons);
 
-  // pre-calculate the bounding boxes of the polygons
+  // Pre-calculate the bounding boxes of the polygons
   for (unsigned long p = 0; p < numpolygons; ++p)
   {
-    polygons_bb[p] = BoundingBox(polygons[p].begin(), polygons[p].end());
-    polygons_bb_areas[p] = (polygons_bb[p][1]-polygons_bb[p][0])*(polygons_bb[p][3]-polygons_bb[p][2]);
+    polygons_bb[p] = (cInt*) malloc(sizeof(cInt) * 4);
+    polygons_bb_areas[p] = bounding_box(polygons[p], polygons_bb[p]);
   }
 
-  for (unsigned long i = 0; i < numpts; i+=groupsize)
+  if (short_circuit == 0)
   {
-    // calculate the bounding box of the group of points
-    cInt* pts_group_bb = BoundingBox(points.begin()+i, points.begin()+i+groupsize-1);
-    bool continue_test = true;
-    for (unsigned long p = 0; p < numpolygons; ++p)
+    // No short-circuit
+    unsigned long numpoints = groups[0].size();
+    result = PyTuple_New(numpoints);
+    if (!result) return NULL;
+
+    for (unsigned long i = 0; i < numpoints; ++i)
     {
-      if (continue_test == true)
+      bool in = false;
+      for (unsigned long p = 0; p < numpolygons && in == false; ++p)
+        if (groups[0][i].X >= polygons_bb[p][0] && groups[0][i].X <= polygons_bb[p][1] && groups[0][i].Y >= polygons_bb[p][2] && groups[0][i].Y <= polygons_bb[p][3])
+          if (PointInPolygon(groups[0][i], polygons[p]) != 0)
+            in = true;
+      PyTuple_SET_ITEM(result, i, PyBool_FromLong(in));
+    }
+  }
+  else if (short_circuit > 0)
+  {
+    // Short-circuit: ANY
+    result = PyTuple_New(numgroups);
+    if (!result) return NULL;
+
+    for (unsigned long j = 0; j < numgroups; ++j)
+    {
+      cInt group_bb[4];
+      bool in = false;
+      unsigned long numpoints = groups[j].size();
+
+      bounding_box(groups[j], group_bb);
+
+      for (unsigned long p = 0; p < numpolygons && in == false; ++p)
+        if (group_bb[0] <= polygons_bb[p][1] && group_bb[1] >= polygons_bb[p][0] && group_bb[2] <= polygons_bb[p][3] && group_bb[3] >= polygons_bb[p][2])
+          for (unsigned long i = 0; i < numpoints && in == false; ++i)
+            if (groups[j][i].X >= polygons_bb[p][0] && groups[j][i].X <= polygons_bb[p][1] && groups[j][i].Y >= polygons_bb[p][2] && groups[j][i].Y <= polygons_bb[p][3])
+              if (PointInPolygon(groups[j][i], polygons[p]) != 0)
+                in = true;
+      PyTuple_SET_ITEM(result, j, PyBool_FromLong(in));
+    }
+  }
+  else
+  {
+    // Short-circuit: ALL
+    result = PyTuple_New(numgroups);
+    if (!result) return NULL;
+
+    for (unsigned long j = 0; j < numgroups; ++j)
+    {
+      bool in = true;
+      unsigned long numpoints = groups[j].size();
+      cInt all_bb[4];
+
+      all_bb[0] = polygons_bb[0][0];
+      all_bb[1] = polygons_bb[0][1];
+      all_bb[2] = polygons_bb[0][2];
+      all_bb[3] = polygons_bb[0][3];
+      for (unsigned long p = 1; p < numpolygons; ++p)
       {
-          // first perform a simple bounding box test
-          if (!((pts_group_bb[0] >= polygons_bb[p][1]) || (pts_group_bb[1] <= polygons_bb[p][0]) || (pts_group_bb[2] >= polygons_bb[p][3]) || (pts_group_bb[3] <= polygons_bb[p][2])))
-          {
-            for (unsigned long j = 0; j < groupsize; ++j)
-            {
-              // perform full point-in-polygon test
-              result[i+j] = PointInPolygon(points[i+j], polygons[p]);
-              if (abs(result[i+j]) == 1)
-                   continue_test = false;
-              // if result matches the required group state, short-circuit for the rest of the points in the group
-              if (abs(result[i+j]) == groupstate)
-              {
-                for (unsigned long k = 0; k < groupsize; ++k)
-                  result[i+k] = groupsize;
-                break;
-              }
-            }
-          } else {
-             // definitely no overlap between this group of points and this polygon - short-circuit for the rest of the points in the group
-             for (unsigned long k = 0; k < groupsize; ++k)
-                result[i+k] = 0;
-          }
-       } else {
-         break;
-       }
+        if (all_bb[0] > polygons_bb[p][0]) all_bb[0] = polygons_bb[p][0];
+        if (all_bb[1] < polygons_bb[p][1]) all_bb[1] = polygons_bb[p][1];
+        if (all_bb[2] > polygons_bb[p][2]) all_bb[2] = polygons_bb[p][2];
+        if (all_bb[3] < polygons_bb[p][3]) all_bb[3] = polygons_bb[p][3];
+      }
+
+      for (unsigned long i = 0; i < numpoints && in == true; ++i)
+      {
+        bool this_in = false;
+        if (groups[j][i].X >= all_bb[0] && groups[j][i].X <= all_bb[1] && groups[j][i].Y >= all_bb[2] && groups[j][i].Y <= all_bb[3])
+          for (unsigned long p = 0; p < numpolygons && this_in == false; ++p)
+            if (groups[j][i].X >= polygons_bb[p][0] && groups[j][i].X <= polygons_bb[p][1] && groups[j][i].Y >= polygons_bb[p][2] && groups[j][i].Y <= polygons_bb[p][3])
+              if (PointInPolygon(groups[j][i], polygons[p]) != 0)
+                this_in = true;
+        in = this_in;
+      }
+      PyTuple_SET_ITEM(result, j, PyBool_FromLong(in));
     }
   }
 
-  PyObject *result_pyobject = PyList_New(numpts);
+  for (unsigned long p = 0; p < numpolygons; ++p) free(polygons_bb[p]);
 
-  if (!result_pyobject)
-      return NULL;
-
-  for (unsigned long i = 0; i < numpts; i++) {
-    PyObject *num = PyBool_FromLong(result[i]);
-    if (!num) {
-      Py_DECREF(result_pyobject);
-      return NULL;
-    }
-    PyList_SET_ITEM(result_pyobject, i, num);
-  }
-  return result_pyobject;
+  return result;
 }
 
 } // extern "C"
@@ -4955,11 +4977,12 @@ static PyObject* inside(PyObject *self, PyObject *args)
 static const char doc[] = "\
 Clipper is a Python C++ extension based on the clipper library by Angus\n\
 Johnson (http://www.angusj.com).  It implements polygon clipping and\n\
-offseting and it is used for boolean operations in the context of *gdspy*.";
+offsetting and it is used for boolean operations in the context of\n\
+*gdspy*.";
 
 static PyMethodDef clipperMethods[] = {
   {"clip", clip, METH_VARARGS,\
-"Perform a boolean operation (clipping) btween 2 sets of polygons.\n\n\
+"Perform a boolean operation (clipping) between 2 sets of polygons.\n\n\
 Parameters\n\
 ----------\n\
 polyA : list of array-like[N][2]\n\
@@ -4993,9 +5016,9 @@ distance : number\n\
 join : {'miter', 'bevel', 'round'}\n\
     Type of join used to create the offset polygon.\n\
 tolerance : number\n\
-    For miter joints, this number must be at elast 2 and it\n\
-    represents the maximun distance in multiples of offset betwen new\n\
-    vertices and their original position before squaring to avoid\n\
+    For miter joints, this number must be at least 2 and it\n\
+    represents the maximum distance in multiples of offset between\n\
+    new vertices and their original position before squaring to avoid\n\
     spikes at acute joints. For round joints it indicates the\n\
     curvature resolution in number of points per full circle.\n\
 scaling : float\n\
@@ -5005,7 +5028,7 @@ scaling : float\n\
     value of 100 will preserve the first 2 decimal places of all\n\
     coordinates.\n\
 joinFirst : bool\n\
-    Join all paths before offseting to avoid unecessary joins in\n\
+    Join all paths before offsetting to avoid unnecessary joins in\n\
     adjacent polygon sides.\n\
 Returns\n\
 -------\n\
@@ -5017,34 +5040,27 @@ vertices and a set of polygons.\n\n\
 Parameters\n\
 ----------\n\
 pts : list of array-like[N][2]\n\
-    List of points. Each point is an array-like[N][2] object with the\n\
-    coordinates of the point.\n\
+    List of point groups. Each group is an array-like[N][2] object\n\
+    with the coordinates of the points.\n\
 poly : list of array-like[N][2]\n\
     List of polygons. Each polygon is an array-like[N][2] object with\n\
     the coordinates of the vertices of the polygon.\n\
-groupsize : integer\n\
-    Group size. Logical group size of the list of given points.\n\
-    When groupsize > 1, the algorithm will short-circuit the test\n\
-    result for all members of the group. If groupsize = 1, each\n\
-    point in the list is tested individually.\n\
-groupstate : integer\n\
-    State to use for short-circuiting (1 = inside, 0 = outside). For\n\
-    groupsize > 1 and groupstate = 1, if any one of the points within the group\n\
-    is inside the set of polygons, all the remaining points in the group\n\
-    will also be assumed to be inside. For groupsize > 1 and groupstate = 0,\n\
-    if any one of the points within the group is outside the set of polygons, \n\
-    all the remaining points in the group will also be assumed to be outside.\n\
+short_circuit : integer\n\
+    If 0, all points are tested.  If positive, tests whether any of\n\
+    the points within each group is inside the polygon set.  If\n\
+    negative, tests whether all of the points within the group are\n\
+    inside the polygon set.\n\
 scaling : float\n\
     Because *clipper* uses integer coordinates internally, it is\n\
     useful to scale polygon coordinates before any operation and\n\
     rescale the result back to the original size. For example, a\n\
     value of 100 will preserve the first 2 decimal places of all\n\
-    coordinates.\n\
+    coordinates.\n\n\
 Returns\n\
 -------\n\
-out : list of array-like[N]\n\
-    List of booleans indicating whether the given points are inside (TRUE / 1)\n\
-    or outside (FALSE / 0) the set of polygons."},
+out : list\n\
+    List of booleans indicating if each of the points or point groups\n\
+    is inside the set of polygons."},
   {NULL, NULL, 0, NULL}
 };
 
