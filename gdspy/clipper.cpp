@@ -4893,16 +4893,31 @@ static PyObject* inside(PyObject *self, PyObject *args)
   {
     // No short-circuit
     unsigned long numpoints = groups[0].size();
+    cInt all_bb[4];
+
+    all_bb[0] = polygons_bb[0][0];
+    all_bb[1] = polygons_bb[0][1];
+    all_bb[2] = polygons_bb[0][2];
+    all_bb[3] = polygons_bb[0][3];
+    for (unsigned long p = 1; p < numpolygons; ++p)
+    {
+      if (all_bb[0] > polygons_bb[p][0]) all_bb[0] = polygons_bb[p][0];
+      if (all_bb[1] < polygons_bb[p][1]) all_bb[1] = polygons_bb[p][1];
+      if (all_bb[2] > polygons_bb[p][2]) all_bb[2] = polygons_bb[p][2];
+      if (all_bb[3] < polygons_bb[p][3]) all_bb[3] = polygons_bb[p][3];
+    }
+
     result = PyTuple_New(numpoints);
     if (!result) return NULL;
 
     for (unsigned long i = 0; i < numpoints; ++i)
     {
       bool in = false;
-      for (unsigned long p = 0; p < numpolygons && in == false; ++p)
-        if (groups[0][i].X >= polygons_bb[p][0] && groups[0][i].X <= polygons_bb[p][1] && groups[0][i].Y >= polygons_bb[p][2] && groups[0][i].Y <= polygons_bb[p][3])
-          if (PointInPolygon(groups[0][i], polygons[p]) != 0)
-            in = true;
+      if (groups[0][i].X >= all_bb[0] && groups[0][i].X <= all_bb[1] && groups[0][i].Y >= all_bb[2] && groups[0][i].Y <= all_bb[3])
+        for (unsigned long p = 0; p < numpolygons && in == false; ++p)
+          if (groups[0][i].X >= polygons_bb[p][0] && groups[0][i].X <= polygons_bb[p][1] && groups[0][i].Y >= polygons_bb[p][2] && groups[0][i].Y <= polygons_bb[p][3])
+            if (PointInPolygon(groups[0][i], polygons[p]) != 0)
+              in = true;
       PyTuple_SET_ITEM(result, i, PyBool_FromLong(in));
     }
   }
@@ -4932,6 +4947,20 @@ static PyObject* inside(PyObject *self, PyObject *args)
   else
   {
     // Short-circuit: ALL
+    cInt all_bb[4];
+
+    all_bb[0] = polygons_bb[0][0];
+    all_bb[1] = polygons_bb[0][1];
+    all_bb[2] = polygons_bb[0][2];
+    all_bb[3] = polygons_bb[0][3];
+    for (unsigned long p = 1; p < numpolygons; ++p)
+    {
+      if (all_bb[0] > polygons_bb[p][0]) all_bb[0] = polygons_bb[p][0];
+      if (all_bb[1] < polygons_bb[p][1]) all_bb[1] = polygons_bb[p][1];
+      if (all_bb[2] > polygons_bb[p][2]) all_bb[2] = polygons_bb[p][2];
+      if (all_bb[3] < polygons_bb[p][3]) all_bb[3] = polygons_bb[p][3];
+    }
+
     result = PyTuple_New(numgroups);
     if (!result) return NULL;
 
@@ -4939,19 +4968,6 @@ static PyObject* inside(PyObject *self, PyObject *args)
     {
       bool in = true;
       unsigned long numpoints = groups[j].size();
-      cInt all_bb[4];
-
-      all_bb[0] = polygons_bb[0][0];
-      all_bb[1] = polygons_bb[0][1];
-      all_bb[2] = polygons_bb[0][2];
-      all_bb[3] = polygons_bb[0][3];
-      for (unsigned long p = 1; p < numpolygons; ++p)
-      {
-        if (all_bb[0] > polygons_bb[p][0]) all_bb[0] = polygons_bb[p][0];
-        if (all_bb[1] < polygons_bb[p][1]) all_bb[1] = polygons_bb[p][1];
-        if (all_bb[2] > polygons_bb[p][2]) all_bb[2] = polygons_bb[p][2];
-        if (all_bb[3] < polygons_bb[p][3]) all_bb[3] = polygons_bb[p][3];
-      }
 
       for (unsigned long i = 0; i < numpoints && in == true; ++i)
       {
