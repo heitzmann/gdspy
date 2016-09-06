@@ -20,45 +20,41 @@
 ##                                                                    ##
 ########################################################################
 
-import os
-if os.sys.version_info >= (3,):
-    from distutils.command.build_py import build_py_2to3 as build_py
-else:
-    from distutils.command.build_py import build_py
-import distutils.command.build_ext
+from setuptools import setup, Extension
 
-from distutils.core import setup, Extension
-
-class my_build(distutils.command.build_ext.build_ext):
-    def run(self):
-        distutils.command.build_ext.build_ext.run(self)
-        for p in [self.build_lib, self.build_temp]:
-            f = p + os.sep + 'gdspy' + os.sep + 'clipper.'
-            if os.path.isfile(f + 'py'): os.unlink(f + 'py')
-            if os.path.isfile(f + 'pyc'): os.unlink(f + 'pyc')
-
-setup(name='gdspy',
-      version='0.9',
-      author='Lucas Heitzmann Gabrielli',
-      author_email='heitzmann@gmail.com',
-      license='GNU General Public License (GPL)',
-      url='https://github.com/heitzmann/gdspy',
-      description='A Python GDSII exporter',
-      long_description='Module for creating GDSII stream files. Includes a visualization tool.',
-      packages = ['gdspy'],
-      package_dir = {'gdspy': 'gdspy'},
-      package_data = {'gdspy': ['data/*']},
-      ext_modules = [Extension('gdspy.boolext', ['gdspy/boolext.c']),
-                     Extension('gdspy.clipper', ['gdspy/clipper.cpp'])],
-      provides=['gdspy'],
-      requires=['numpy'],
-      platforms='OS Independent',
-      classifiers=['Development Status :: 4 - Beta',
-                   'Environment :: Console',
-                   'Intended Audience :: Developers',
-                   'Intended Audience :: Science/Research',
-                   'License :: OSI Approved :: GNU General Public License (GPL)',
-                   'Operating System :: OS Independent',
-                   'Programming Language :: Python',
-                   'Topic :: Scientific/Engineering'],
-      cmdclass={'build_py': build_py, 'build_ext':my_build})
+setup(
+    name = 'gdspy',
+    version = '0.9',
+    author = 'Lucas Heitzmann Gabrielli',
+    author_email = 'heitzmann@gmail.com',
+    license = 'GNU General Public License v3 (GPLv3)',
+    url = 'https://github.com/heitzmann/gdspy',
+    description = 'A Python GDSII creator',
+    long_description = 'Module for creating and modifying GDSII stream files. It includes a simple visualization tool.',
+    keywords = 'GDSII CAD layout',
+    packages = ['gdspy'],
+    package_dir = {'gdspy': 'gdspy'},
+    package_data = {'gdspy': ['data/*']},
+    ext_modules = [
+        Extension('gdspy.boolext', ['gdspy/boolext.c']),
+        Extension('gdspy.clipper', ['gdspy/clipper.cpp'])
+    ],
+    provides = ['gdspy'],
+    requires = ['numpy'],
+    platforms = 'OS Independent',
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Manufacturing',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Operating System :: OS Independent',
+        'Programming Language :: C',
+        'Programming Language :: C++',
+        'Programming Language :: Python',
+        'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)',
+    ],
+    use_2to3 = True,
+    zip_safe = False,
+)
