@@ -20,6 +20,17 @@
 ##                                                                    ##
 ########################################################################
 
+"""
+gdspy is a Python module that allows the creation of GDSII stream files.
+
+Many features of the GDSII format are implemented, such as cell
+references and arrays, but the support for fonts is quite limited.  Text
+is only available through polygonal objects.
+
+If the Python Imaging Library is installed, it can be used to output the
+geometry created to an image file.
+"""
+
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -35,18 +46,9 @@ from gdspy import clipper
 from gdspy.viewer import LayoutViewer
 
 __version__ = '0.9'
-__doc__ = """
-gdspy is a Python module that allows the creation of GDSII stream files.
-
-Many features of the GDSII format are implemented, such as cell
-references and arrays, but the support for fonts is quite limited.  Text
-is only available through polygonal objects.
-
-If the Python Imaging Library is installed, it can be used to output the
-geometry created to an image file.
-"""
 
 _halfpi = 0.5 * numpy.pi
+
 
 def _eight_byte_real(value):
     """

@@ -20,25 +20,26 @@
 ##                                                                    ##
 ########################################################################
 
+"""
+Classes and functions for the visualization of layouts cerated with the
+gdspy Python module.
+"""
+
 from __future__ import absolute_import
 
 import os
 import colorsys
 import numpy
-import Tkinter, tkMessageBox, tkColorChooser, tkFileDialog
+import Tkinter, tkMessageBox, tkColorChooser
 
 import gdspy
-
-__doc__ = """
-Classes and functions for the visualization of layouts cerated with the
-gdspy Python module.
-"""
 
 _stipple = tuple('@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', '{:02d}.xbm'.format(n)) for n in range(10))
 _icon_up = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'up.xbm')
 _icon_down = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'down.xbm')
 _invisible = 9
 _icon_outline = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'outline.xbm')
+
 
 class ColorDict(dict):
     def __init__(self, default):
@@ -408,7 +409,6 @@ class LayoutViewer(Tkinter.Frame):
         return func
 
     def _change_pattern(self, lbl, layer):
-        top = self.winfo_toplevel()
         def func(*args):
             pattern = []
             dlg = Tkinter.Toplevel()
