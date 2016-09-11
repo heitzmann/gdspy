@@ -45,7 +45,7 @@ from gdspy import boolext
 from gdspy import clipper
 from gdspy.viewer import LayoutViewer
 
-__version__ = '0.9'
+__version__ = '1.0'
 
 _halfpi = 0.5 * numpy.pi
 

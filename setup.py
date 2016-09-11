@@ -24,7 +24,7 @@ from setuptools import setup, Extension
 
 setup(
     name = 'gdspy',
-    version = '0.9',
+    version = '1.0',
     author = 'Lucas Heitzmann Gabrielli',
     author_email = 'heitzmann@gmail.com',
     license = 'GNU General Public License v3 (GPLv3)',

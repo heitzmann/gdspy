@@ -52,6 +52,12 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.0 (Sep 11, 2016)
+* Changed to "new style" classes (thanks to Adam McCaughan for the contribution).
+* Added	a per-point radius specification for `Polygon.fillet` (thanks to Adam McCaughan for the contribution).
+* Added `inside` fucntion to perform point-in-polygon tests (thanks to @okianus for the contribution).
+* Moved from distutils to setuptools for better Windows support.
+
 ### Version 0.9 (Jul 17, 2016)
 * Added option to join polygons before applying an `offset`.
 * Added a `translate` method to geometric entities (thanks John Bell for the commit).

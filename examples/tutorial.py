@@ -199,6 +199,7 @@ path_cell.add(l1path)
 ##      POLYGON OPERATIONS
 ## ------------------------------------------------------------------ ##
 
+
 ## Boolean operations can be executed with either gdspy polygons or
 ## point lists).  The operations are union, intersection, subtraction,
 ## symmetric subtracion (respectively 'or', 'and', 'not', 'xor').
@@ -285,6 +286,7 @@ ref_cell.add(gdspy.Label('Created with gdspy ' + gdspy.__version__,
 ##      Translation
 ## ------------------------------------------------------------------ ##
 
+
 trans_cell = gdspy.Cell('TRANS')
 
 ## Any geometric object can be translated by providing the distance to
@@ -307,7 +309,6 @@ trans_cell.add(ref1)
 trans_cell.add(ref2)
 
 
-
 ## Same goes for Labels & Text
 text1 = gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
                         (-7, -35), layer=6) 
@@ -319,7 +320,6 @@ trans_cell.add(text1)
 trans_cell.add(text2)
 trans_cell.add(label1)
 trans_cell.add(label2)
-
 
 
 ## ------------------------------------------------------------------ ##

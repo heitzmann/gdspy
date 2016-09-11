@@ -126,6 +126,11 @@ fast_boolean
 .. autofunction:: gdspy.fast_boolean
 
 
+boolean
+-------
+
+.. autofunction:: gdspy.boolean
+
 offset
 ------
 
@@ -138,8 +143,14 @@ slice
 .. autofunction:: gdspy.slice
 
 
-boolean
--------
+inside
+------
 
-.. autofunction:: gdspy.boolean
+.. autofunction:: gdspy.inside
+
+
+copy
+----
+
+.. autofunction:: gdspy.copy
 
