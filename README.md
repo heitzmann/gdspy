@@ -1,42 +1,48 @@
 # GDSPY README
 
-Gdspy is a Python  module for creating GDSII stream files, usually CAD layouts. 
-It includes a layout viewer for the geometries created, and it can also be used to import and merge GDSII files.
+Gdspy is a Python  module for creating/importing/merging GDSII stream files.
+It includes key libraries for creating complex CAD layouts:
 
-_Note:_
+* Boolean operations on polygons (AND, OR, NOT, XOR) based on clipping algorithm
+* Polygon offset (inward and outward rescaling of polygons)
+* Efficient point-in-polygon solutions for large array sets
 
-> As of version 0.5, gdspy is **NOT** backwards compatible with older versions.
-> The main incompatibility is that the `layer` argument in all applicable classes and functions has been moved to a position just before `datatype` in the argument list.
-> `LayoutViewer` has also been extensively improved.
-> See the history of changes for all compatibility changes.
+Gdspy also includes a simple layout viewer.
+
+Typical applications of Gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.
 
 ## Installation
 
-Requirements:
+### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 2.7 and 3.4)
+* [Python](http://www.python.org/) (tested with versions 2.7 and 3.5)
 * [Numpy](http://numpy.scipy.org/)
-* C compiler if you are building it from source
+* C compiler (needed only if built from source)
 
-Installation from source is as simple as:
+### Linux / OS X
 
-```sh
-python setup.py install
-```
-
-Gdspy can also be installed with [pip](https://docs.python.org/3/installing/):
+Option 1: using [pip](https://docs.python.org/3/installing/):
 
 ```sh
 pip install gdspy
 ```
 
-Windows users will need a development environment to compile the boolean extension module (automatically performed by the install command above).
+Option 2: download the source from [github](https://github.com/heitzmann/gdspy) and build/install with:
 
-Pre-compiled Windows binaries are also offered for 32 and 64-bit systems and should be preferable for most users: [download here](https://github.com/heitzmann/gdspy/releases).
+```sh
+python setup.py install
+```
+
+### Windows
+
+The preferred option is to install pre-compiled binaries from [here](https://github.com/heitzmann/gdspy/releases) for 32 and 64-bit systems.
+
+Installation via `pip` and building from source as above are also possible, but an appropriate build environment is required for compilation of the C extension modules.
 
 ## Usage
 
-The file gdspy-sample.py is a sample script to show the features provided by this module.
+The file [tutorial.py](https://github.com/heitzmann/gdspy/blob/master/examples/tutorial.py) in the `example` folder is a sample script to show the features provided by this module.
+
 The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
 It is also available [on-line](http://gdspy.readthedocs.io/en/latest/)
 

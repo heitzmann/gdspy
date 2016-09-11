@@ -29,8 +29,17 @@ setup(
     author_email = 'heitzmann@gmail.com',
     license = 'GNU General Public License v3 (GPLv3)',
     url = 'https://github.com/heitzmann/gdspy',
-    description = 'A Python GDSII creator',
-    long_description = 'Module for creating and modifying GDSII stream files. It includes a simple visualization tool.',
+    description = 'Python module for creating/importing/merging GDSII stream files.',
+    long_description = '''Gdspy is a Python  module for creating/importing/merging GDSII stream files.
+It includes key libraries for creating complex CAD layouts:
+
+* Boolean operations on polygons (AND, OR, NOT, XOR) based on clipping algorithm
+* Polygon offset (inward and outward rescaling of polygons)
+* Efficient point-in-polygon solutions for large array sets
+
+Gdspy also includes a simple layout viewer.
+
+Typical applications of Gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.''',
     keywords = 'GDSII CAD layout',
     packages = ['gdspy'],
     package_dir = {'gdspy': 'gdspy'},

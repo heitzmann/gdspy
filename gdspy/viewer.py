@@ -21,7 +21,7 @@
 ########################################################################
 
 """
-Classes and functions for the visualization of layouts cerated with the
+Classes and functions for the visualization of layouts created with the
 gdspy Python module.
 """
 
