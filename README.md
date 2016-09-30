@@ -37,7 +37,7 @@ python setup.py install
 
 The preferred option is to install pre-compiled binaries from [here](https://github.com/heitzmann/gdspy/releases) for 32 and 64-bit systems.
 
-Installation via `pip` and building from source as above are also possible, but an appropriate build environment is required for compilation of the C extension modules.
+Installation via `pip` and building from source as above are also possible, but an appropriate [build environment](https://wiki.python.org/moin/WindowsCompilers) is required for compilation of the C extension modules.
 
 ## Usage
 
