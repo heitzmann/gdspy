@@ -965,7 +965,7 @@ class Text(PolygonSet):
         'Y': [[(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)], [(1, 5), (2, 5), (2, 6), (2, 7), (1, 7), (1, 6)], [(2, 2), (3, 2), (3, 3), (3, 4), (3, 5), (2, 5), (2, 4), (2, 3)], [(3, 5), (4, 5), (4, 6), (4, 7), (3, 7), (3, 6)], [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
         'Z': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3), (3, 3), (2, 3), (1, 3), (1, 4), (0, 4), (0, 3)], [(0, 8), (1, 8), (2, 8), (3, 8), (4, 8), (4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (3, 9), (2, 9), (1, 9), (0, 9)], [(1, 4), (2, 4), (2, 5), (1, 5)], [(2, 5), (3, 5), (3, 6), (2, 6)], [(3, 6), (4, 6), (4, 7), (3, 7)]],
         '[': [[(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8), (3, 8), (4, 8), (4, 9), (3, 9), (2, 9), (1, 9), (1, 8), (1, 7), (1, 6), (1, 5), (1, 4), (1, 3)]],
-        '\\' :[[(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)], [(1, 6), (2, 6), (2, 7), (1, 7)], [(2, 5), (3, 5), (3, 6), (2, 6)], [(3, 4), (4, 4), (4, 5), (3, 5)], [(4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (4, 3)]],
+        '\\': [[(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)], [(1, 6), (2, 6), (2, 7), (1, 7)], [(2, 5), (3, 5), (3, 6), (2, 6)], [(3, 4), (4, 4), (4, 5), (3, 5)], [(4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (4, 3)]],
         ']': [[(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8), (4, 9), (3, 9), (2, 9), (1, 9), (1, 8), (2, 8), (3, 8), (3, 7), (3, 6), (3, 5), (3, 4), (3, 3), (2, 3), (1, 3)]],
         '^': [[(0, 6), (1, 6), (1, 7), (0, 7)], [(1, 7), (2, 7), (2, 8), (1, 8)], [(2, 8), (3, 8), (3, 9), (2, 9)], [(3, 7), (4, 7), (4, 8), (3, 8)], [(4, 6), (5, 6), (5, 7), (4, 7)]],
         '_': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3), (3, 3), (2, 3), (1, 3), (0, 3)]],
@@ -3205,7 +3205,9 @@ class GdsImport(object):
             elif record[0] == 0x21:
                 if record[1][0] > 2:
                     if verbose and 0x21 not in emitted_warnings:
-                        warnings.warn("[GDSPY] Path ends with custom size are not supported by gds_import.", stacklevel=2)
+                        warnings.warn("[GDSPY] Path ends with custom size are "
+                                      "not supported by gds_import.",
+                                      stacklevel=2)
                         emitted_warnings.append(0x21)
                 else:
                     kwargs['ends'] = record[1][0]
@@ -3215,10 +3217,15 @@ class GdsImport(object):
                     if ref.ref_cell in self.cell_dict:
                         ref.ref_cell = self.cell_dict[ref.ref_cell]
                     else:
-                        ref.ref_cell = Cell.cell_dict.get(ref.ref_cell, ref.ref_cell)
+                        ref.ref_cell = Cell.cell_dict.get(ref.ref_cell,
+                                                          ref.ref_cell)
             # Not supported
-            elif verbose and record[0] not in emitted_warnings and record[0] not in GdsImport._unused_records:
-                warnings.warn("[GDSPY] Record type {0} is not supported by gds_import.".format(GdsImport._record_name[record[0]]), stacklevel=2)
+            elif verbose and record[0] not in emitted_warnings and record[0] \
+                    not in GdsImport._unused_records:
+                warnings.warn("[GDSPY] Record type {0} is not supported by "
+                              "gds_import.".format(
+                                    GdsImport._record_name[record[0]]),
+                                    stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
@@ -3250,13 +3257,20 @@ class GdsImport(object):
         data = None
         if size > 4:
             if data_type == 0x01:
-                data = numpy.array(struct.unpack('>{0}H'.format((size - 4) // 2), stream.read(size - 4)), dtype='uint')
+                data = numpy.array(struct.unpack('>{0}H'.format((size-4) // 2),
+                                                 stream.read(size - 4)),
+                                   dtype='uint')
             elif data_type == 0x02:
-                data = numpy.array(struct.unpack('>{0}h'.format((size - 4) // 2), stream.read(size - 4)), dtype=int)
+                data = numpy.array(struct.unpack('>{0}h'.format((size-4) // 2),
+                                                 stream.read(size - 4)),
+                                   dtype=int)
             elif data_type == 0x03:
-                data = numpy.array(struct.unpack('>{0}l'.format((size - 4) // 4), stream.read(size - 4)), dtype=int)
+                data = numpy.array(struct.unpack('>{0}l'.format((size-4) // 4),
+                                                 stream.read(size - 4)),
+                                   dtype=int)
             elif data_type == 0x05:
-                data = numpy.array([_eight_byte_real_to_float(stream.read(8)) for _ in range((size - 4) // 8)])
+                data = numpy.array([_eight_byte_real_to_float(stream.read(8))
+                                    for _ in range((size - 4) // 8)])
             else:
                 data = stream.read(size - 4)
                 if data[-1] == '\0':
@@ -3264,7 +3278,8 @@ class GdsImport(object):
         return [rec_type, data]
 
     def _create_polygon(self, layer, datatype, xy, verbose):
-        return Polygon(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype, verbose)
+        return Polygon(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype,
+                       verbose)
 
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
@@ -3296,9 +3311,11 @@ class GdsImport(object):
                 y3 = xy[5]
             if kwargs['x_reflection']:
                 y3 = 2 * xy[1] - y3
-            kwargs['spacing'] = ((x2 - xy[0]) / kwargs['columns'], (y3 - xy[1]) / kwargs['rows'])
+            kwargs['spacing'] = ((x2 - xy[0]) / kwargs['columns'],
+                                 (y3 - xy[1]) / kwargs['rows'])
         else:
-            kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['columns'], (xy[5] - xy[1]) / kwargs['rows'])
+            kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['columns'],
+                                 (xy[5] - xy[1]) / kwargs['rows'])
         ref = CellArray(**kwargs)
         if not isinstance(ref.ref_cell, Cell):
             self._incomplete.append(ref)
@@ -3362,9 +3379,9 @@ def _chop(polygon, position, axis):
     Returns
     -------
     out : tuple[2]
-        Each element is a list of polygons (array-like[N][2]).  The first
-        list contains the polygons left before the slicing position, and the
-        second, the polygons left after that position.
+        Each element is a list of polygons (array-like[N][2]).  The first list
+        contains the polygons left before the slicing position, and the second,
+        the polygons left after that position.
     """
     out_polygons = ([], [])
     polygon = list(polygon)
@@ -3376,9 +3393,15 @@ def _chop(polygon, position, axis):
     while i < len(cross):
         if cross[i - 1] * cross[i] < 0:
             if axis == 0:
-                polygon.insert(i, [position, polygon[i - 1][1] + (position - polygon[i - 1][0]) * float(polygon[i][1] - polygon[i - 1][1]) / (polygon[i][0] - polygon[i - 1][0])])
+                polygon.insert(i, [position, polygon[i - 1][1]
+                        + (position - polygon[i - 1][0])
+                        * float(polygon[i][1] - polygon[i - 1][1])
+                        / (polygon[i][0] - polygon[i - 1][0])])
             else:
-                polygon.insert(i, [polygon[i - 1][0] + (position - polygon[i - 1][1]) * float(polygon[i][0] - polygon[i - 1][0]) / (polygon[i][1] - polygon[i - 1][1]), position])
+                polygon.insert(i, [polygon[i - 1][0]
+                        + (position - polygon[i - 1][1])
+                        * float(polygon[i][0] - polygon[i - 1][0])
+                        / (polygon[i][1] - polygon[i - 1][1]), position])
             cross.insert(i, 0)
             bnd[1 * (cross[i + 1] > 0)].append(i)
             i += 2
@@ -3435,16 +3458,16 @@ def slice(objects, position, axis, layer=0, datatype=0):
     Parameters
     ----------
     objects : ``Polygon``, ``PolygonSet``, or list
-        Operand of the slice operation.  If this is a list, each element
-        must be a ``Polygon``, ``PolygonSet``, ``CellReference``,
-        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
+        Operand of the slice operation.  If this is a list, each element must
+        be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``, or
+        an array-like[N][2] of vertices of a polygon.
     position : number or list of numbers
         Positions to perform the slicing operation along the specified axis.
     axis : 0 or 1
         Axis along which the polygon will be sliced.
     layer : integer, list
-        The GDSII layer numbers for the elements between each division.  If
-        the number of layers in the list is less than the number of divided
+        The GDSII layer numbers for the elements between each division.  If the
+        number of layers in the list is less than the number of divided
         regions, the list is repeated.
     datatype : integer
         The GDSII datatype for the resulting element (between 0 and 255).
@@ -3453,8 +3476,8 @@ def slice(objects, position, axis, layer=0, datatype=0):
     -------
     out : list[N] of PolygonSet
         Result of the slicing operation, with N = len(positions) + 1.  Each
-        PolygonSet comprises all polygons between 2 adjacent slicing
-        positions, in crescent order.
+        PolygonSet comprises all polygons between 2 adjacent slicing positions,
+        in crescent order.
 
     Examples
     --------
@@ -3493,7 +3516,8 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_first=False, max_points=199, layer=0, datatype=0):
+def offset(polygons, distance, join='miter', tolerance=2, precision=0.001,
+           join_first=False, max_points=199, layer=0, datatype=0):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -3501,29 +3525,29 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
     ----------
     polygons : polygon or array-like
         Polygons to be offset.  Must be a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+        ``CellReference``, ``CellArray``, or an array.  The array may contain
+        any of the previous objects or an array-like[N][2] of vertices of a
+        polygon.
     distance : number
         Offset distance.  Positive to expand, negative to shrink.
     join : {'miter', 'bevel', 'round'}
         Type of join used to create the offset polygon.
     tolerance : integer or float
-        For miter joints, this number must be at least 2 and it represents
-        the maximun distance in multiples of offset betwen new vertices and
-        their original position before beveling to avoid spikes at acute
-        joints.  For round joints, it indicates the curvature resolution in
-        number of points per full circle.
+        For miter joints, this number must be at least 2 and it represents the
+        maximun distance in multiples of offset betwen new vertices and their
+        original position before beveling to avoid spikes at acute joints.  For
+        round joints, it indicates the curvature resolution in number of points
+        per full circle.
     precision : float
         Desired precision for rounding vertice coordinates.
     join_first : bool
-        Join all paths before offseting to avoid unecessary joins in
-        adjacent polygon sides.
+        Join all paths before offseting to avoid unecessary joins in adjacent
+        polygon sides.
     max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices.  This is not a tessellating
-        function, so this number should be as high as possible.  For example,
-        it should be set to 199 for polygons being drawn in GDSII files.
+        If greater than 4, fracture the resulting polygons to ensure they have
+        at most ``max_points`` vertices.  This is not a tessellating function,
+        so this number should be as high as possible.  For example, it should
+        be set to 199 for polygons being drawn in GDSII files.
     layer : integer
         The GDSII layer number for the resulting element.
     datatype : integer
@@ -3539,7 +3563,8 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
         poly.append(polygons.points)
     elif isinstance(polygons, PolygonSet):
         poly += polygons.polygons
-    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+    elif isinstance(polygons, CellReference) or isinstance(polygons,
+                                                           CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
@@ -3551,12 +3576,15 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
                 poly += obj.get_polygons()
             else:
                 poly.append(obj)
-    result = clipper.offset(poly, distance, join, tolerance, 1/precision, 1 if join_first else 0)
-    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+    result = clipper.offset(poly, distance, join, tolerance, 1/precision,
+                            1 if join_first else 0)
+    return None if result is None else PolygonSet(result, layer, datatype,
+                                                  False).fracture(max_points)
 
 
 
-def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13):
+def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
+            eps=1e-13):
     """
     This function is deprecated in favor of 'fast_boolean'.
 
@@ -3565,18 +3593,18 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13)
     Parameters
     ----------
     polygons : array-like
-        Operands of the boolean operation.  Each element of this array must
-        be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
-        or an array-like[N][2] of vertices of a polygon.
+        Operands of the boolean operation.  Each element of this array must be
+        a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
     operation : function
         Function that accepts as input ``len(polygons)`` integers.  Each
-        integer represents the incidence of the corresponding ``polygon``.
-        The function must return a bool or integer (interpreted as bool).
+        integer represents the incidence of the corresponding ``polygon``.  The
+        function must return a bool or integer (interpreted as bool).
     max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices.  This is not a tessellating
-        function, so this number should be as high as possible.  For example,
-        it should be set to 199 for polygons being drawn in GDSII files.
+        If greater than 4, fracture the resulting polygons to ensure they have
+        at most ``max_points`` vertices.  This is not a tessellating function,
+        so this number should be as high as possible.  For example, it should
+        be set to 199 for polygons being drawn in GDSII files.
     layer : integer
         The GDSII layer number for the resulting element.
     datatype : integer
@@ -3614,7 +3642,9 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13)
             lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
-    warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be removed in a future version.  Please use 'fast_boolean' instead.", stacklevel=2)
+    warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be "
+                  "removed in a future version.  Please use 'fast_boolean' "
+                  "instead.", stacklevel=2)
     poly = []
     indices = [0]
     special_function = False
@@ -3635,13 +3665,17 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0, eps=1e-13)
             poly.append(obj)
             indices.append(indices[-1] + 1)
     if special_function:
-        result = boolext.clip(poly, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
+        result = boolext.clip(poly, lambda *p: operation(
+                *[sum(p[indices[ia]:indices[ia + 1]]) for ia in
+                range(len(indices) - 1)]), eps)
     else:
         result = boolext.clip(poly, operation, eps)
-    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+    return None if result is None else PolygonSet(result, layer, datatype,
+                                                  False).fracture(max_points)
 
 
-def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199, layer=0, datatype=0):
+def fast_boolean(operandA, operandB, operation, precision=0.001,
+                 max_points=199, layer=0, datatype=0):
     """
     Execute any boolean operation between 2 polygons or polygon sets.
 
@@ -3649,24 +3683,24 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
     ----------
     operandA : polygon or array-like
         First operand.  Must be a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+        ``CellReference``, ``CellArray``, or an array.  The array may contain
+        any of the previous objects or an array-like[N][2] of vertices of a
+        polygon.
     operandB : polygon, array-like or ``None``
         Second operand.  Must be ``None``, a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+        ``CellReference``, ``CellArray``, or an array.  The array may contain
+        any of the previous objects or an array-like[N][2] of vertices of a
+        polygon.
     operation : {'or', 'and', 'xor', 'not'}
-        Boolean operation to be executed.  The 'not' operation returns
-        the difference ``operandA - operandB``.
+        Boolean operation to be executed.  The 'not' operation returns the
+        difference ``operandA - operandB``.
     precision : float
         Desired precision for rounding vertice coordinates.
     max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices.  This is not a tessellating
-        function, so this number should be as high as possible.  For example,
-        it should be set to 199 for polygons being drawn in GDSII files.
+        If greater than 4, fracture the resulting polygons to ensure they have
+        at most ``max_points`` vertices.  This is not a tessellating function,
+        so this number should be as high as possible.  For example, it should
+        be set to 199 for polygons being drawn in GDSII files.
     layer : integer
         The GDSII layer number for the resulting element.
     datatype : integer
@@ -3692,14 +3726,16 @@ def fast_boolean(operandA, operandB, operation, precision=0.001, max_points=199,
                     poly.append(inobj.points)
                 elif isinstance(inobj, PolygonSet):
                     poly += inobj.polygons
-                elif isinstance(inobj, CellReference) or isinstance(inobj, CellArray):
+                elif isinstance(inobj, CellReference) or isinstance(inobj,
+                                                                    CellArray):
                     poly += inobj.get_polygons()
                 else:
                     poly.append(inobj)
     if len(polyB) == 0:
         polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1/precision)
-    return None if result is None else PolygonSet(result, layer, datatype, False).fracture(max_points)
+    return None if result is None else PolygonSet(result, layer, datatype,
+                                                  False).fracture(max_points)
 
 
 
@@ -3710,18 +3746,18 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
     Parameters
     ----------
     points : array-like[N][2] or list of array-like[N][2]
-        Coordinates of the points to be tested or groups of points to be
-        tested together.
+        Coordinates of the points to be tested or groups of points to be tested
+        together.
     polygons : polygon or array-like
-        Polygons to be tested against.  Must be a ``Polygon``,
-        ``PolygonSet``, ``CellReference``, ``CellArray``, or an array.  The
-        array may contain any of the previous objects or an array-like[N][2]
-        of vertices of a polygon.
+        Polygons to be tested against.  Must be a ``Polygon``, ``PolygonSet``,
+        ``CellReference``, ``CellArray``, or an array.  The array may contain
+        any of the previous objects or an array-like[N][2] of vertices of a
+        polygon.
     short_circuit : {'any', 'all'}
-        If `points` is a list of point groups, testing within each group
-        will be short-circuited if any of the points in the group is inside
-        ('any') or outside ('all') the polygons.  If `points` is simply a
-        list of points, this parameter has no effect.
+        If `points` is a list of point groups, testing within each group will
+        be short-circuited if any of the points in the group is inside ('any')
+        or outside ('all') the polygons.  If `points` is simply a list of
+        points, this parameter has no effect.
     precision : float
         Desired precision for rounding vertice coordinates.
 
@@ -3736,7 +3772,8 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         poly.append(polygons.points)
     elif isinstance(polygons, PolygonSet):
         poly += polygons.polygons
-    elif isinstance(polygons, CellReference) or isinstance(polygons, CellArray):
+    elif isinstance(polygons, CellReference) or isinstance(polygons,
+                                                           CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
@@ -3791,21 +3828,22 @@ def copy(obj, dx, dy):
 
 
 
-def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9):
+def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
+              precision=1.0e-9):
     """
     Output a list of cells as a GDSII stream library.
 
-    The dimensions actually written on the GDSII file will be the dimensions
-    of the objects created times the ratio ``unit/precision``. For example,
-    if a circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um)
-    and ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um
-    and the GDSII file will contain the dimension 1500 nm.
+    The dimensions actually written on the GDSII file will be the dimensions of
+    the objects created times the ratio ``unit/precision``. For example, if a
+    circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um) and
+    ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um and
+    the GDSII file will contain the dimension 1500 nm.
 
     Parameters
     ----------
     outfile : file or string
-        The file (or path) where the GDSII stream will be written.  It must
-        be opened for writing operations in binary format.
+        The file (or path) where the GDSII stream will be written.  It must be
+        opened for writing operations in binary format.
     cells : array-like
         The list of cells or cell names to be included in the library.  If
         ``None``, all cells listed in ``Cell.cell_dict`` are used.
@@ -3839,7 +3877,14 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
     now = datetime.datetime.today()
     if len(name)%2 != 0:
         name = name + '\0'
-    outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(precision / unit) + _eight_byte_real(precision))
+    outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
+                              now.month, now.day, now.hour, now.minute,
+                              now.second, now.year, now.month, now.day,
+                              now.hour, now.minute, now.second, 4+len(name),
+                              0x0206) + name.encode('ascii')
+                  + struct.pack('>2h', 20, 0x0305)
+                  + _eight_byte_real(precision / unit)
+                  + _eight_byte_real(precision))
     for cell in cells:
         outfile.write(cell.to_gds(unit / precision))
     outfile.write(struct.pack('>2h', 4, 0x0400))
@@ -3851,17 +3896,17 @@ class GdsPrint(object):
     """
     GDSII strem library printer.
 
-    The dimensions actually written on the GDSII file will be the dimensions
-    of the objects created times the ratio ``unit/precision``. For example,
-    if a circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um)
-    and ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um
-    and the GDSII file will contain the dimension 1500 nm.
+    The dimensions actually written on the GDSII file will be the dimensions of
+    the objects created times the ratio ``unit/precision``. For example, if a
+    circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um) and
+    ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um and
+    the GDSII file will contain the dimension 1500 nm.
 
     Parameters
     ----------
     outfile : file or string
-        The file (or path) where the GDSII stream will be written.  It must
-        be opened for writing operations in binary format.
+        The file (or path) where the GDSII stream will be written.  It must be
+        opened for writing operations in binary format.
     cells : array-like
         The list of cells or cell names to be included in the library.  If
         ``None``, all cells listed in ``Cell.cell_dict`` are used.
@@ -3876,8 +3921,8 @@ class GdsPrint(object):
     Notes
     -----
 
-    This class can be used for incremental output of the geometry in case
-    the complete layout is too large to be kept in memory all at once.
+    This class can be used for incremental output of the geometry in case the
+    complete layout is too large to be kept in memory all at once.
 
     Examples
     --------
@@ -3903,7 +3948,15 @@ class GdsPrint(object):
         now = datetime.datetime.today()
         if len(name)%2 != 0:
             name = name + '\0'
-        self._outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(precision / unit) + _eight_byte_real(precision))
+        self._outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
+                                        now.year, now.month, now.day, now.hour,
+                                        now.minute, now.second, now.year,
+                                        now.month, now.day, now.hour,
+                                        now.minute, now.second, 4+len(name),
+                                        0x0206) + name.encode('ascii')
+                            + struct.pack('>2h', 20, 0x0305)
+                            + _eight_byte_real(precision / unit)
+                            + _eight_byte_real(precision))
 
     def write_cell(self, cell):
         """
