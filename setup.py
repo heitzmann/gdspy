@@ -22,7 +22,7 @@
 
 from setuptools import setup, Extension
 
-with open('README.rst') as fin:
+with open('README.md') as fin:
     long_description = fin.read()
 
 setup(
