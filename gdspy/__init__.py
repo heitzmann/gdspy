@@ -377,7 +377,7 @@ class Polygon(object):
         >>> myCell.add(polygon)
         """
 
-        self.points += [dx, dy]
+        self.points = self.points + [dx, dy]
 
         return self
 
@@ -673,7 +673,7 @@ class PolygonSet(object):
             This object.
         """
         for ii in range(len(self.polygons)):
-            self.polygons[ii] += [dx, dy]
+            self.polygons[ii] = self.polygons[ii] + [dx, dy]
 
         return self
 
