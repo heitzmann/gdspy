@@ -303,13 +303,13 @@ class Polygon(object):
             self.points = self.points[ii]
             vec = self.points - numpy.roll(self.points, 1, 0)
             length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-        vec[:, 0] /= length
-        vec[:, 1] /= length
+        vec[:, 0] = vec[:, 0] / length
+        vec[:, 1] = vec[:, 1] / length
         dvec = numpy.roll(vec, -1, 0) - vec
         norm = numpy.sqrt(numpy.sum(dvec ** 2, 1))
         ii = numpy.flatnonzero(norm)
-        dvec[ii, 0] /= norm[ii]
-        dvec[ii, 1] /= norm[ii]
+        dvec[ii, 0] = dvec[ii, 0] / norm[ii]
+        dvec[ii, 1] = dvec[ii, 1] / norm[ii]
         theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
         ct = numpy.cos(theta * 0.5)
         tt = numpy.tan(theta * 0.5)
@@ -609,13 +609,13 @@ class PolygonSet(object):
                 self.polygons[jj] = self.polygons[jj][ii]
                 vec = self.polygons[jj] - numpy.roll(self.polygons[jj], 1, 0)
                 length = numpy.sqrt(numpy.sum(vec ** 2, 1))
-            vec[:, 0] /= length
-            vec[:, 1] /= length
+            vec[:, 0] = vec[:, 0] / length
+            vec[:, 1] = vec[:, 1] / length
             dvec = numpy.roll(vec, -1, 0) - vec
             norm = numpy.sqrt(numpy.sum(dvec ** 2, 1))
             ii = numpy.flatnonzero(norm)
-            dvec[ii, 0] /= norm[ii]
-            dvec[ii, 1] /= norm[ii]
+            dvec[ii, 0] = dvec[ii, 0] / norm[ii]
+            dvec[ii, 1] = dvec[ii, 1] / norm[ii]
             theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
             ct = numpy.cos(theta * 0.5)
             tt = numpy.tan(theta * 0.5)
@@ -2247,10 +2247,10 @@ class PolyPath(PolygonSet):
         points = numpy.array(points, dtype=float)
         if ends == 2:
             v = points[0, :] - points[1, :]
-            v /= numpy.sqrt(numpy.sum(v * v))
+            v = v / numpy.sqrt(numpy.sum(v * v))
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
-            v /= numpy.sqrt(numpy.sum(v * v))
+            v = v / numpy.sqrt(numpy.sum(v * v))
             points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1)
                                                       % len_w]
         elif ends == 1:
