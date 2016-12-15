@@ -25,9 +25,15 @@ from setuptools import setup, Extension
 with open('README.md') as fin:
     long_description = fin.read()
 
+with open('gdspy/__init__.py') as fin:
+    for line in fin:
+        if line.startswith('__version__ ='):
+            version = eval(line[14:])
+            break
+
 setup(
     name='gdspy',
-    version='1.0',
+    version=version,
     author='Lucas Heitzmann Gabrielli',
     author_email='heitzmann@gmail.com',
     license='GNU General Public License v3 (GPLv3)',
