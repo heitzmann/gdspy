@@ -1,8 +1,4 @@
 MANIFEST
-test.sh
-compile_extensions.sh
-debug.py
-winbuild*
 *.gds
 docs/_*
 .*.swp
