@@ -25,6 +25,23 @@ Classes and functions for the visualization of layouts created with the
 gdspy Python module.
 """
 
+import sys
+
+if sys.version_info.major < 3:
+    from __future__ import division
+    from __future__ import unicode_literals
+    from __future__ import print_function
+    from __future__ import absolute_import
+
+    from builtins import super
+    from builtins import range
+    from builtins import dict
+    from builtins import int
+    from builtins import str
+
+    from future import standard_library
+    standard_library.install_aliases()
+
 import os
 import colorsys
 import numpy

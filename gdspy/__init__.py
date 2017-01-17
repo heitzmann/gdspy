@@ -31,6 +31,23 @@ If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
 
+import sys
+
+if sys.version_info.major < 3:
+    from __future__ import division
+    from __future__ import unicode_literals
+    from __future__ import print_function
+    from __future__ import absolute_import
+
+    from builtins import zip
+    from builtins import open
+    from builtins import int
+    from builtins import round
+    from builtins import range
+
+    from future import standard_library
+    standard_library.install_aliases()
+
 import struct
 import datetime
 import warnings

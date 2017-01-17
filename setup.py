@@ -49,7 +49,10 @@ setup(
         Extension('gdspy.clipper', ['gdspy/clipper.cpp'])
     ],
     provides=['gdspy'],
-    requires=['numpy'],
+    install_requires=[
+        'numpy',
+        'future; python_version < "3"',
+    ],
     platforms='OS Independent',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -64,6 +67,5 @@ setup(
         'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
     ],
-    use_2to3=True,
     zip_safe=False,
 )
