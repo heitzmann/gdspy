@@ -31,10 +31,6 @@ If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import struct
 import datetime
 import warnings
@@ -75,14 +71,14 @@ def _eight_byte_real(value):
             byte1 = 0x80
             value = -value
         exponent = int(numpy.floor(numpy.log2(value) * 0.25))
-        mantissa = long(value * 16L**(14 - exponent))
-        while mantissa >= 72057594037927936L:
+        mantissa = int(value * 16**(14 - exponent))
+        while mantissa >= 72057594037927936:
             exponent += 1
-            mantissa = long(value * 16L**(14 - exponent))
+            mantissa = int(value * 16**(14 - exponent))
         byte1 += exponent + 64
-        byte2 = (mantissa // 281474976710656L)
-        short3 = (mantissa % 281474976710656L) // 4294967296L
-        long4 = mantissa % 4294967296L
+        byte2 = (mantissa // 281474976710656)
+        short3 = (mantissa % 281474976710656) // 4294967296
+        long4 = mantissa % 4294967296
     return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
 
 
@@ -102,9 +98,9 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296
                 + long3) / 72057594037927936.0
-    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
+    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16 ** (exponent - 64)
 
 
 class Polygon(object):
@@ -2637,7 +2633,7 @@ class Cell(object):
             cell_area = {}
             for element in self.elements:
                 element_area = element.area(True)
-                for ll in element_area.iterkeys():
+                for ll in element_area.keys():
                     if ll in cell_area:
                         cell_area[ll] += element_area[ll]
                     else:
@@ -2791,7 +2787,7 @@ class Cell(object):
                     else:
                         cell_polygons = element.get_polygons(
                                 True, None if depth is None else depth - 1)
-                        for kk in cell_polygons.iterkeys():
+                        for kk in cell_polygons.keys():
                             if kk in polygons:
                                 polygons[kk] += cell_polygons[kk]
                             else:
@@ -2851,14 +2847,14 @@ class Cell(object):
             poly_dic = self.get_polygons(True)
             self.elements = []
             if single_layer is None and single_datatype is None:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], *ld, verbose=verbose))
             elif single_layer is None:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype,
                              verbose=verbose))
             else:
-                for ld in poly_dic.iterkeys():
+                for ld in poly_dic.keys():
                     self.add(PolygonSet(poly_dic[ld], single_layer, ld[1],
                              verbose=verbose))
         else:
@@ -2977,7 +2973,7 @@ class CellReference(object):
             if by_spec:
                 factor = self.magnification * self.magnification
                 cell_area = self.ref_cell.area(True)
-                for kk in cell_area.iterkeys():
+                for kk in cell_area.keys():
                     cell_area[kk] *= factor
                 return cell_area
             else:
@@ -3017,7 +3013,7 @@ class CellReference(object):
             orgn = numpy.array(self.origin)
         if by_spec:
             polygons = self.ref_cell.get_polygons(True, depth)
-            for kk in polygons.iterkeys():
+            for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
                     if self.x_reflection:
                         polygons[kk][ii] *= xrefl
@@ -3247,7 +3243,7 @@ class CellArray(object):
                     * self.magnification
         if by_spec:
             cell_area = self.ref_cell.area(True)
-            for kk in cell_area.iterkeys():
+            for kk in cell_area.keys():
                 cell_area[kk] *= factor
             return cell_area
         else:
@@ -3287,7 +3283,7 @@ class CellArray(object):
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
-            for kk in cell_polygons.iterkeys():
+            for kk in cell_polygons.keys():
                 polygons[kk] = []
                 for ii in range(self.columns):
                     for jj in range(self.rows):
@@ -3713,8 +3709,8 @@ class GdsImport(object):
         out: List
             List of top level cells.
         """
-        top = list(self.cell_dict.itervalues())
-        for cell in self.cell_dict.itervalues():
+        top = list(self.cell_dict.values())
+        for cell in self.cell_dict.values():
             for dependency in cell.get_dependencies():
                 if dependency in top:
                     top.remove(dependency)
@@ -4220,7 +4216,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
     else:
         close = False
     if cells is None:
-        cells = Cell.cell_dict.itervalues()
+        cells = Cell.cell_dict.values()
     else:
         cells = [Cell.cell_dict.get(c, c) for c in cells]
         i = 0
