@@ -65,6 +65,8 @@ _halfpi = 0.5 * numpy.pi
 _directions_dict = {'+x': 0, '+y': 0.5, '-x': 1, '-y': -0.5}
 _directions_list = ['+x', '+y', '-x', '-y']
 
+_bounding_boxes = {}
+
 
 def _eight_byte_real(value):
     """
@@ -136,6 +138,15 @@ class Polygon(object):
     verbose : bool
         If False, warnings about the number of vertices of the polygon will
         be suppressed.
+
+    Attributes
+    ----------
+    points : numpy array[N,2]
+        Coordinates of the vertices of the polygon.
+    layer : integer
+        The GDSII layer number for this element.
+    datatype : integer
+        The GDSII datatype for this element (between 0 and 255).
 
     Notes
     -----
@@ -411,6 +422,15 @@ class PolygonSet(object):
     verbose : bool
         If False, warnings about the number of vertices of the polygons will
         be suppressed.
+
+    Attributes
+    ----------
+    polygons : list of numpy array[N][2]
+        Coordinates of the vertices of each polygon.
+    layers : list of integer
+        The GDSII layer number for each element.
+    datatypes : list of integer
+        The GDSII datatype for each element (between 0 and 255).
 
     Notes
     -----
@@ -2511,34 +2531,28 @@ class Cell(object):
     ----------
     name : string
         The name of the cell.
-    exclude_from_global : bool
-        If ``True``, the cell will not be included in the global list of
-        cells maintained by ``gdspy``.
+    exclude_from_current : bool
+        If ``True``, the cell will not be automatically included in the current
+        library.
+
+    Attributes
+    ----------
+    name : string
+        The name of this cell.
+    elements : list
+        List of cell elements (``Polygon``, ``PolygonSet``, ``CellReference``,
+        ``CellArray``).
+    labels : list
+        List of ``Label``.
     """
 
-    cell_dict = {}
-    """
-    Dictionary containing all cells created, indexed by name.  This
-    dictionary is updated automatically whenever a new ``Cell`` object is
-    created without the ``exclude_from_global`` flag.
-    """
-
-    _bounding_boxes = {}
-    """
-    Dictionary cache containing bounding box information for each cell,
-    along with rotation information for cell references.
-    """
-
-    def __init__(self, name, exclude_from_global=False):
+    def __init__(self, name, exclude_from_current=False):
         self.name = name
         self.elements = []
         self.labels = []
-        self.bb_is_valid = False
-        if name in Cell.cell_dict:
-            raise ValueError("[GDSPY] A cell named {0} has already been "
-                             "created.".format(name))
-        if not exclude_from_global:
-            Cell.cell_dict[name] = self
+        self._bb_valid = False
+        if not exclude_from_current:
+            current_library.add_cell(self)
 
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(
@@ -2572,7 +2586,7 @@ class Cell(object):
             + b''.join(label.to_gds(multiplier) for label in self.labels) \
             + struct.pack('>2h', 4, 0x0700)
 
-    def copy(self, name, exclude_from_global=False, deep_copy=False):
+    def copy(self, name, exclude_from_current=False, deep_copy=False):
         """
         Creates a copy of this cell.
 
@@ -2580,7 +2594,7 @@ class Cell(object):
         ----------
         name : string
             The name of the cell.
-        exclude_from_global : bool
+        exclude_from_current : bool
             If ``True``, the cell will not be included in the global list of
             cells maintained by ``gdspy``.
         deep_copy : bool
@@ -2593,8 +2607,7 @@ class Cell(object):
         out : ``Cell``
             The new copy of this cell.
         """
-        new_cell = Cell(name, exclude_from_global)
-        new_cell.bb_is_valid = False
+        new_cell = Cell(name, exclude_from_current)
         if deep_copy:
             new_cell.elements = list(self.elements)
             new_cell.labels = list(self.labels)
@@ -2628,7 +2641,7 @@ class Cell(object):
                 self.labels.append(element)
             else:
                 self.elements.append(element)
-        self.bb_is_valid = False
+        self._bb_valid = False
         return self
 
     def area(self, by_spec=False):
@@ -2727,9 +2740,8 @@ class Cell(object):
         """
         if len(self.elements) == 0:
             return None
-        self.bb_is_valid = (self.bb_is_valid and all([ref.bb_is_valid for ref
-                            in self.get_dependencies()]))
-        if not (self.bb_is_valid and self in Cell._bounding_boxes):
+        if not (self._bb_valid and all(ref._bb_valid for ref in
+                                       self.get_dependencies(True))):
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
             for element in self.elements:
@@ -2751,9 +2763,9 @@ class Cell(object):
                 bb[0, 1] = min(bb[0, 1], all_points[1].min())
                 bb[1, 0] = max(bb[1, 0], all_points[0].max())
                 bb[1, 1] = max(bb[1, 1], all_points[1].max())
-            Cell._bounding_boxes[self] = bb
-            self.bb_is_valid = True
-        return Cell._bounding_boxes[self]
+            self._bb_valid = True
+            _bounding_boxes[self] = bb
+        return _bounding_boxes[self]
 
     def get_polygons(self, by_spec=False, depth=None):
         """
@@ -2823,20 +2835,28 @@ class Cell(object):
                                 depth=None if depth is None else depth - 1)
         return polygons
 
-    def get_dependencies(self):
+    def get_dependencies(self, recursive=False):
         """
         Returns a list of the cells included in this cell as references.
 
+        Parameters
+        ----------
+        recursive : bool
+            If True returns cascading dependencies.
+
         Returns
         -------
-        out : list of ``Cell``
+        out : set of ``Cell``
             List of the cells referenced by this cell.
         """
-        dependencies = []
+        dependencies = set()
         for element in self.elements:
             if isinstance(element, CellReference) or isinstance(element,
                                                                 CellArray):
-                dependencies.append(element.ref_cell)
+                if recursive:
+                    dependencies.update(element.ref_cell.get_dependencies(
+                        True))
+                dependencies.add(element.ref_cell)
         return dependencies
 
     def flatten(self, single_layer=None, single_datatype=None, verbose=True):
@@ -2905,7 +2925,7 @@ class CellReference(object):
     def __init__(self, ref_cell, origin=(0, 0), rotation=None,
                  magnification=None, x_reflection=False):
         self.origin = origin
-        self.ref_cell = Cell.cell_dict.get(ref_cell, ref_cell)
+        self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
@@ -3066,16 +3086,19 @@ class CellReference(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        self.ref_cell.bb_is_valid = (self.ref_cell.bb_is_valid and
-                                     all([ref.bb_is_valid for ref in
-                                          self.ref_cell.get_dependencies()]))
         if self.rotation is None and self.magnification is None and \
                 self.x_reflection is None:
             key = self
         else:
             key = (self.ref_cell, self.rotation, self.magnification,
                    self.x_reflection)
-        if not (self.ref_cell.bb_is_valid and key in Cell._bounding_boxes):
+        deps = self.ref_cell.get_dependencies(True)
+        if not (self.ref_cell._bb_valid
+                and all(ref._bb_valid for ref in deps)
+                and key in _bounding_boxes):
+            for ref in deps:
+                ref.get_bounding_box()
+            self.ref_cell.get_bounding_box()
             tmp = self.origin
             self.origin = None
             polygons = self.get_polygons()
@@ -3086,11 +3109,9 @@ class CellReference(object):
                 all_points = numpy.concatenate(polygons).transpose()
                 bb = numpy.array(((all_points[0].min(), all_points[1].min()),
                                   (all_points[0].max(), all_points[1].max())))
-            Cell._bounding_boxes[key] = bb
-            self.ref_cell.bb_is_valid = True
-            for ref in self.ref_cell.get_dependencies():
-                ref.bb_is_valid = True
-        bb = Cell._bounding_boxes[key]
+            _bounding_boxes[key] = bb
+        else:
+            bb = _bounding_boxes[key]
         if self.origin is None or bb is None:
             return bb
         else:
@@ -3150,7 +3171,7 @@ class CellArray(object):
         self.rows = rows
         self.spacing = spacing
         self.origin = origin
-        self.ref_cell = Cell.cell_dict.get(ref_cell, ref_cell)
+        self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
@@ -3350,13 +3371,16 @@ class CellArray(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        self.ref_cell.bb_is_valid = (self.ref_cell.bb_is_valid and
-                                     all([ref.bb_is_valid for ref in
-                                          self.ref_cell.get_dependencies()]))
         key = (self.ref_cell, self.rotation, self.magnification,
                self.x_reflection, self.columns, self.rows, self.spacing[0],
                self.spacing[1])
-        if not (self.ref_cell.bb_is_valid and key in Cell._bounding_boxes):
+        deps = self.ref_cell.get_dependencies(True)
+        if not (self.ref_cell._bb_valid
+                and all(ref._bb_valid for ref in deps)
+                and key in _bounding_boxes):
+            for ref in deps:
+                ref.get_bounding_box()
+            self.ref_cell.get_bounding_box()
             tmp = self.origin
             self.origin = None
             polygons = self.get_polygons()
@@ -3367,11 +3391,9 @@ class CellArray(object):
                 all_points = numpy.concatenate(polygons).transpose()
                 bb = numpy.array(((all_points[0].min(), all_points[1].min()),
                                   (all_points[0].max(), all_points[1].max())))
-            Cell._bounding_boxes[key] = bb
-            self.ref_cell.bb_is_valid = True
-            for ref in self.ref_cell.get_dependencies():
-                ref.bb_is_valid = True
-        bb = Cell._bounding_boxes[key]
+            _bounding_boxes[key] = bb
+        else:
+            bb = _bounding_boxes[key]
         if self.origin is None or bb is None:
             return bb
         else:
@@ -3400,50 +3422,16 @@ class CellArray(object):
         return self
 
 
-class GdsImport(object):
+class GdsLibrary(object):
     """
-    Object used to import structures from a GDSII stream file.
+    GDSII library (file).
 
-    Parameters
-    ----------
-    infile : file or string
-        GDSII stream file (or path) to be imported.  It must be opened for
-        reading in binary format.
-    unit : number
-        Unit (in *meters*) to use for the imported structures.  If ``None``,
-        the units used to create the GDSII file will be used.
-    rename : dictionary
-        Dictionary used to rename the imported cells.  Keys and values must
-        be strings.
-    layers : dictionary
-        Dictionary used to convert the layers in the imported cells.  Keys
-        and values must be integers.
-    datatypes : dictionary
-        Dictionary used to convert the datatypes in the imported cells.  Keys
-        and values must be integers.
-    texttypes : dictionary
-        Dictionary used to convert the text types in the imported cells.
-        Keys and values must be integers.
-    verbose: bool
-        If False, suppresses warnings about unsupported elements in the
-        imported file.  Also supresses polygon generation warnings.
+    Represent a GDSII library containing a dictionary of cells.
 
     Attributes
     ----------
     cell_dict : dictionary
-        Dictionary will all imported cells, indexed by name.
-
-    Notes
-    -----
-    Not all features from the GDSII specification are currently supported.  A
-    warning will be produced if any unsuported features are found in the
-    imported file.
-
-    Examples
-    --------
-    >>> gdsii = gdspy.GdsImport('gdspy-sample.gds')
-    >>> for cell_name in gdsii.cell_dict:
-    ...     gdsii.extract(cell_name)
+        Dictionary of cells in this library, indexed by name.
     """
 
     _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR',
@@ -3462,9 +3450,128 @@ class GdsImport(object):
     _import_anchors = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's',
                        'se']
 
-    def __init__(self, infile, unit=None, rename={}, layers={}, datatypes={},
-                 texttypes={}, verbose=True):
+    def __init__(self):
         self.cell_dict = {}
+
+    def __str__(self):
+        return "GdsLibrary (" + ", ".join([c for c in self.cell_dict]) + ")"
+
+    def add_cell(self, cell, ignore_duplicates=False):
+        """
+        Add one or more cells to the library.
+
+        Parameters
+        ----------
+        cell : ``Cell`` of list of ``Cell``
+            Cells to be included in the library.
+        
+        Returns
+        -------
+        out : ``GdsLibrary``
+            This object.
+        """
+        if isinstance(cell, Cell):
+            if cell.name not in self.cell_dict:
+                self.cell_dict[cell.name] = cell
+            elif not ignore_duplicates:
+                raise ValueError("[GDSPY] a cell named {0} has already been "
+                                 "created in {1}".format(cell.name, self.name))
+        else:
+            for c in cell:
+                if c.name not in self.cell_dict:
+                    self.cell_dict[c.name] = c
+                elif not ignore_duplicates:
+                    raise ValueError("[GDSPY] a cell named {0} has already "
+                                     "been created in {1}.".format(c.name,
+                                                                   self.name))
+
+
+    def write_gds(self, outfile, cells=None, name='library', unit=1.0e-6,
+                  precision=1.0e-9):
+        """
+        Write the GDSII library to a file.
+
+        The dimensions actually written on the GDSII file will be the
+        dimensions of the objects created times the ratio ``unit/precision``.
+        For example, if a circle with radius 1.5 is created and we set
+        ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
+        the circle will be 1.5 um and the GDSII file will contain the dimension
+        1500 nm.
+
+        Parameters
+        ----------
+        outfile : file or string
+            The file (or path) where the GDSII stream will be written.  It must
+            be opened for writing operations in binary format.
+        cells : array-like
+            The list of cells or cell names to be included in the library.  If
+            ``None``, all cells are used.
+        name : string
+            Name of the GDSII library (file).
+        unit : number
+            Unit size for the objects in the library (in *meters*).
+        precision : number
+            Precision for the dimensions of the objects in the library (in
+            *meters*).
+        """
+        if isinstance(outfile, str):
+            outfile = open(outfile, 'wb')
+            close = True
+        else:
+            close = False
+        now = datetime.datetime.today()
+        if len(name) % 2 != 0:
+            name = name + '\0'
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
+                                  now.year, now.month, now.day, now.hour,
+                                  now.minute, now.second, now.year, now.month,
+                                  now.day, now.hour, now.minute, now.second,
+                                  4+len(name), 0x0206)
+                      + name.encode('ascii')
+                      + struct.pack('>2h', 20, 0x0305)
+                      + _eight_byte_real(precision / unit)
+                      + _eight_byte_real(precision))
+        for cell in self.cell_dict.values():
+            outfile.write(cell.to_gds(unit / precision))
+        outfile.write(struct.pack('>2h', 4, 0x0400))
+        if close:
+            outfile.close()
+
+    def read_gds(self, infile, unit=None, rename={}, layers={}, datatypes={},
+                 texttypes={}, verbose=True):
+        """
+        Read a GDSII file into this library.
+
+        Parameters
+        ----------
+        infile : file or string
+            GDSII stream file (or path) to be imported.  It must be opened for
+            reading in binary format.
+        unit : number
+            Unit (in *meters*) to use for the imported structures.  If
+            ``None``, the units used to create the GDSII file will be used.
+        rename : dictionary
+            Dictionary used to rename the imported cells.  Keys and values must
+            be strings.
+        layers : dictionary
+            Dictionary used to convert the layers in the imported cells.  Keys
+            and values must be integers.
+        datatypes : dictionary
+            Dictionary used to convert the datatypes in the imported cells.
+            Keys and values must be integers.
+        texttypes : dictionary
+            Dictionary used to convert the text types in the imported cells.
+            Keys and values must be integers.
+        verbose: bool
+            If False, suppresses warnings about unsupported elements in the
+            imported file.  Also supresses polygon generation warnings.
+
+        Notes
+        -----
+        Not all features from the GDSII specification are currently supported.  A
+        warning will be produced if any unsuported features are found in the
+        imported file.
+        """
         self._incomplete = []
         if isinstance(infile, str):
             infile = open(infile, 'rb')
@@ -3549,7 +3656,7 @@ class GdsImport(object):
                     else:
                         record[1] = record[1].decode('ascii')
                 name = rename.get(record[1], record[1])
-                cell = Cell(name, exclude_from_global=True)
+                cell = Cell(name, exclude_from_current=True)
                 self.cell_dict[name] = cell
             # STRING
             elif record[0] == 0x19:
@@ -3571,8 +3678,8 @@ class GdsImport(object):
                     factor = record[1][1] / unit
             # PRESENTATION
             elif record[0] == 0x17:
-                kwargs['anchor'] = GdsImport._import_anchors[int(record[1][0])
-                                                             & 0x000f]
+                kwargs['anchor'] = GdsLibrary._import_anchors[int(record[1][0])
+                                                              & 0x000f]
             # PATHTYPE
             elif record[0] == 0x21:
                 if record[1][0] > 2:
@@ -3593,18 +3700,15 @@ class GdsImport(object):
                                                           ref.ref_cell)
             # Not supported
             elif verbose and record[0] not in emitted_warnings and record[0] \
-                    not in GdsImport._unused_records:
+                    not in GdsLibrary._unused_records:
                 warnings.warn("[GDSPY] Record type {0} is not supported by "
                               "gds_import."
-                              .format(GdsImport._record_name[record[0]]),
+                              .format(GdsLibrary._record_name[record[0]]),
                               stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
             infile.close()
-
-    def __str__(self):
-        return "GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
 
     def _read_record(self, stream):
         """
@@ -3695,8 +3799,8 @@ class GdsImport(object):
 
     def extract(self, cell):
         """
-        Extract a cell from the imported GDSII file and include it in the
-        current scope, including referenced dependencies.
+        Extract a cell from the this GDSII file and include it in the
+        current global library, including referenced dependencies.
 
         Parameters
         ----------
@@ -3710,21 +3814,19 @@ class GdsImport(object):
             The extracted cell.
         """
         cell = self.cell_dict.get(cell, cell)
-        for c in cell.get_dependencies():
-            if c not in Cell.cell_dict.values():
-                self.extract(c)
-        if cell not in Cell.cell_dict.values():
-            Cell.cell_dict[cell.name] = cell
+        current_library.add_cell(cell)
+        current_library.add_cell(cell.get_dependencies(True))
         return cell
 
     def top_level(self):
         """
-        Output the top level cells from the GDSII data.  Top level cells are
-        those that are not referenced by any other cells.
+        Output the top level cells from the GDSII data.
+        
+        Top level cells are those that are not referenced by any other cells.
 
         Outputs
         ----------
-        out: List
+        out : list
             List of top level cells.
         """
         top = list(self.cell_dict.values())
@@ -3733,6 +3835,103 @@ class GdsImport(object):
                 if dependency in top:
                     top.remove(dependency)
         return top
+
+
+class GdsWriter(object):
+    """
+    GDSII strem library writer.
+
+    The dimensions actually written on the GDSII file will be the dimensions of
+    the objects created times the ratio ``unit/precision``. For example, if a
+    circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um) and
+    ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um and
+    the GDSII file will contain the dimension 1500 nm.
+
+    Parameters
+    ----------
+    outfile : file or string
+        The file (or path) where the GDSII stream will be written.  It must be
+        opened for writing operations in binary format.
+    cells : array-like
+        The list of cells or cell names to be included in the library.  If
+        ``None``, all cells listed in ``Cell.cell_dict`` are used.
+    name : string
+        Name of the GDSII library (file).
+    unit : number
+        Unit size for the objects in the library (in *meters*).
+    precision : number
+        Precision for the dimensions of the objects in the library (in
+        *meters*).
+
+    Notes
+    -----
+
+    This class can be used for incremental output of the geometry in case the
+    complete layout is too large to be kept in memory all at once.
+
+    Examples
+    --------
+    >>> writer = gdspy.GdsWriter('out-file.gds', unit=1.0e-6, precision=1.0e-9)
+    >>> for i in range(10):
+    ...     cell = gdspy.Cell('C{}'.format(i), True)
+    ...     # Add the contents of this cell...
+    ...     writer.write_cell(cell)
+    ...     # Clear the memory: erase Cell objects and any other objects
+    ...     # that won't be needed.
+    ...     del cell
+    >>> writer.close()
+    """
+
+    def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
+        if isinstance(outfile, str):
+            self._outfile = open(outfile, 'wb')
+            self._close = True
+        else:
+            self._outfile = outfile
+            self._close = False
+        self._res = unit / precision
+        now = datetime.datetime.today()
+        if len(name) % 2 != 0:
+            name = name + '\0'
+        self._outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
+                                        now.year, now.month, now.day, now.hour,
+                                        now.minute, now.second, now.year,
+                                        now.month, now.day, now.hour,
+                                        now.minute, now.second, 4+len(name),
+                                        0x0206) + name.encode('ascii')
+                            + struct.pack('>2h', 20, 0x0305)
+                            + _eight_byte_real(precision / unit)
+                            + _eight_byte_real(precision))
+
+    def write_cell(self, cell):
+        """
+        Write the specified cell to the file.
+
+        Parameters
+        ----------
+        cell : ``Cell``
+            Cell to be written.
+
+        Notes
+        -----
+        Only the specified cell is written.  Unlike in ``write_gds``, cell
+        dependencies are not automatically included.
+
+        Returns
+        -------
+        out : ``GdsWriter``
+            This object.
+        """
+        self._outfile.write(cell.to_gds(self._res))
+        return self
+
+    def close(self):
+        """
+        Finalize the GDSII stream library.
+        """
+        self._outfile.write(struct.pack('>2h', 4, 0x0400))
+        if self._close:
+            self._outfile.close()
 
 
 def _chop(polygon, position, axis):
@@ -4197,25 +4396,31 @@ def copy(obj, dx, dy):
     return newObj
 
 
+current_library = GdsLibrary()
+"""
+Current ``GdsLibrary`` instance for automatic creation of GDSII files.
+"""
+
 def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
               precision=1.0e-9):
     """
-    Output a list of cells as a GDSII stream library.
+    Write the current GDSII library to a file.
 
-    The dimensions actually written on the GDSII file will be the dimensions of
-    the objects created times the ratio ``unit/precision``. For example, if a
-    circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um) and
-    ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um and
-    the GDSII file will contain the dimension 1500 nm.
+    The dimensions actually written on the GDSII file will be the
+    dimensions of the objects created times the ratio ``unit/precision``.
+    For example, if a circle with radius 1.5 is created and we set
+    ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
+    the circle will be 1.5 um and the GDSII file will contain the dimension
+    1500 nm.
 
     Parameters
     ----------
     outfile : file or string
-        The file (or path) where the GDSII stream will be written.  It must be
-        opened for writing operations in binary format.
+        The file (or path) where the GDSII stream will be written.  It must
+        be opened for writing operations in binary format.
     cells : array-like
         The list of cells or cell names to be included in the library.  If
-        ``None``, all cells listed in ``Cell.cell_dict`` are used.
+        ``None``, all cells are used.
     name : string
         Name of the GDSII library (file).
     unit : number
@@ -4223,148 +4428,20 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
     precision : number
         Precision for the dimensions of the objects in the library (in
         *meters*).
-
-    Examples
-    --------
-    >>> gdspy.write_gds('out-file.gds', unit=1.0e-6, precision=1.0e-9)
     """
-    if isinstance(outfile, str):
-        outfile = open(outfile, 'wb')
-        close = True
-    else:
-        close = False
-    if cells is None:
-        cells = Cell.cell_dict.values()
-    else:
-        cells = [Cell.cell_dict.get(c, c) for c in cells]
-        i = 0
-        while i < len(cells):
-            for cell in cells[i].get_dependencies():
-                if cell not in cells:
-                    cells.append(cell)
-            i += 1
-    now = datetime.datetime.today()
-    if len(name) % 2 != 0:
-        name = name + '\0'
-    outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
-                              now.month, now.day, now.hour, now.minute,
-                              now.second, now.year, now.month, now.day,
-                              now.hour, now.minute, now.second, 4+len(name),
-                              0x0206) + name.encode('ascii')
-                  + struct.pack('>2h', 20, 0x0305)
-                  + _eight_byte_real(precision / unit)
-                  + _eight_byte_real(precision))
-    for cell in cells:
-        outfile.write(cell.to_gds(unit / precision))
-    outfile.write(struct.pack('>2h', 4, 0x0400))
-    if close:
-        outfile.close()
-
-
-class GdsWriter(object):
-    """
-    GDSII strem library printer.
-
-    The dimensions actually written on the GDSII file will be the dimensions of
-    the objects created times the ratio ``unit/precision``. For example, if a
-    circle with radius 1.5 is created and we set ``unit=1.0e-6`` (1 um) and
-    ``precision=1.0e-9`` (1 nm), the radius of the circle will be 1.5 um and
-    the GDSII file will contain the dimension 1500 nm.
-
-    Parameters
-    ----------
-    outfile : file or string
-        The file (or path) where the GDSII stream will be written.  It must be
-        opened for writing operations in binary format.
-    cells : array-like
-        The list of cells or cell names to be included in the library.  If
-        ``None``, all cells listed in ``Cell.cell_dict`` are used.
-    name : string
-        Name of the GDSII library (file).
-    unit : number
-        Unit size for the objects in the library (in *meters*).
-    precision : number
-        Precision for the dimensions of the objects in the library (in
-        *meters*).
-
-    Notes
-    -----
-
-    This class can be used for incremental output of the geometry in case the
-    complete layout is too large to be kept in memory all at once.
-
-    Examples
-    --------
-    >>> prt = gdspy.GdsWriter('out-file.gds', unit=1.0e-6, precision=1.0e-9)
-    >>> for i in range(10):
-    ...     cell = gdspy.Cell('C{}'.format(i))
-    ...     # Add the contents of this cell...
-    ...     prt.write_cell(cell)
-    ...     # Clear the memory: erase Cell objects and any other objects
-    ...     # that won't be needed.
-    ...     gdspy.Cell.cell_dict.clear()
-    >>> prt.close()
-    """
-
-    def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
-        if isinstance(outfile, str):
-            self._outfile = open(outfile, 'wb')
-            self._close = True
-        else:
-            self._outfile = outfile
-            self._close = False
-        self._res = unit / precision
-        now = datetime.datetime.today()
-        if len(name) % 2 != 0:
-            name = name + '\0'
-        self._outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
-                                        now.year, now.month, now.day, now.hour,
-                                        now.minute, now.second, now.year,
-                                        now.month, now.day, now.hour,
-                                        now.minute, now.second, 4+len(name),
-                                        0x0206) + name.encode('ascii')
-                            + struct.pack('>2h', 20, 0x0305)
-                            + _eight_byte_real(precision / unit)
-                            + _eight_byte_real(precision))
-
-    def write_cell(self, cell):
-        """
-        Write the specified cell to the file.
-
-        Parameters
-        ----------
-        cell : ``Cell``
-            Cell to be written.
-
-        Notes
-        -----
-        Only the specified cell is written.  Unlike in ``write_gds``, cell
-        dependencies are not automatically included.
-
-        Returns
-        -------
-        out : ``GdsWriter``
-            This object.
-        """
-        self._outfile.write(cell.to_gds(self._res))
-        return self
-
-    def close(self):
-        """
-        Finalize the GDSII stream library.
-        """
-        self._outfile.write(struct.pack('>2h', 4, 0x0400))
-        if self._close:
-            self._outfile.close()
+    current_library.write_gds(outfile, cells, name, unit, precision)
 
 
 # Deprecated names
 
-def gds_print(*args, **kwargs):
-    warnings.warn("[GDSPY] gds_print has been renamed to write_gds and "
-                  "will be removed in future versions.",
-                  FutureWarning, stacklevel=2)
-    write_gds(*args, **kwargs)
+
+class GdsImport(GdsLibrary):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("[GDSPY] GdsImport has been deprecated in favor of "
+                      "GdsLibrary and will be removed in future versions.",
+                      FutureWarning, stacklevel=2)
+        super().__init__()
+        super().read_gds(*args, **kwargs)
 
 
 class GdsPrint(GdsWriter):
@@ -4373,3 +4450,10 @@ class GdsPrint(GdsWriter):
                       "will be removed in future versions.",
                       FutureWarning, stacklevel=2)
         super().__init__(*args, **kwargs)
+
+
+def gds_print(*args, **kwargs):
+    warnings.warn("[GDSPY] gds_print has been renamed to write_gds and "
+                  "will be removed in future versions.",
+                  FutureWarning, stacklevel=2)
+    write_gds(*args, **kwargs)

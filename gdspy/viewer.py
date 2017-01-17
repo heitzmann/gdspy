@@ -124,9 +124,11 @@ class LayoutViewer(tkinter.Frame):
 
     Parameters
     ----------
+    library : ``GdsLibrary``
+        GDSII library to display.  If ``None``, the current library is used.
     cells : Cell, string or array-like
         The array of cells to be included in the view. If ``None``, all
-        cells listed in ``Cell.cell_dict`` are used.
+        cells listed in the current library are used.
     hidden_types : array-like
         The array of tuples (layer, datatype) to start in hidden state.
     depth : integer
@@ -156,14 +158,17 @@ class LayoutViewer(tkinter.Frame):
 
     >>> gdspy.LayoutViewer(pattern={'default':9}, color={(0,1):'#000000'})
     """
-    def __init__(self, cells=None, hidden_types=[], depth=0, color={},
-                 pattern={}, background='#202020', width=800, height=600):
+    def __init__(self, library=None, cells=None, hidden_types=[], depth=0,
+                 color={}, pattern={}, background='#202020', width=800,
+                 height=600):
         tkinter.Frame.__init__(self, None)
 
+        if library == None:
+            library = gdspy.current_library
         self.current_cell = tkinter.StringVar()
         if cells is None:
-            self.cells = gdspy.Cell.cell_dict
-            cell_names = list(gdspy.Cell.cell_dict.keys())
+            self.cells = library.cell_dict
+            cell_names = list(library.cell_dict.keys())
             self.cell_bb = dict([(s, None) for s in self.cells])
         else:
             if isinstance(cells, str) or isinstance(cells, gdspy.Cell):
@@ -172,7 +177,7 @@ class LayoutViewer(tkinter.Frame):
             cell_names = []
             self.cell_bb = {}
             for c in cells:
-                cell = gdspy.Cell.cell_dict.get(c, c)
+                cell = library.cell_dict.get(c, c)
                 self.cells[cell.name] = cell
                 cell_names.append(cell.name)
                 self.cell_bb[cell.name] = None

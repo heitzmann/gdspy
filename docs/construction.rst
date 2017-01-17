@@ -7,6 +7,16 @@ Main API
 Classes
 ~~~~~~~
 
+GdsLibrary
+----------
+
+.. autoclass:: gdspy.GdsLibrary
+   :members:
+   :no-undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+
 Cell
 ----
 

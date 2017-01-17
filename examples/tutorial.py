@@ -341,14 +341,15 @@ gdspy.write_gds('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
 
 # Import the file we just created, and extract the cell 'POLYGONS'. To
 # avoid naming conflict, we will rename all cells.
-gdsii = gdspy.GdsImport('tutorial.gds',
-                        rename={'POLYGONS': 'IMPORT_POLY',
-                                'PATHS': 'IMPORT_PATHS',
-                                'OPERATIONS': 'IMPORT_OPER',
-                                'SLICE': 'IMPORT_SLICE',
-                                'REFS': 'IMPORT_REFS',
-                                'TRANS': 'IMPORT_TRANS'},
-                        layers={1: 7, 2: 8, 3: 9})
+gdsii = gdspy.GdsLibrary()
+gdsii.read_gds('tutorial.gds',
+               rename={'POLYGONS': 'IMPORT_POLY',
+                       'PATHS': 'IMPORT_PATHS',
+                       'OPERATIONS': 'IMPORT_OPER',
+                       'SLICE': 'IMPORT_SLICE',
+                       'REFS': 'IMPORT_REFS',
+                       'TRANS': 'IMPORT_TRANS'},
+               layers={1: 7, 2: 8, 3: 9})
 
 # Now we extract the cells we want to actually include in our current
 # structure. Note that the referenced cells will be automatically

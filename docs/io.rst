@@ -7,14 +7,14 @@ Import and Output
 Classes
 ~~~~~~~
 
-GdsImport
----------
+LayoutViewer
+------------
 
-.. autoclass:: gdspy.GdsImport
+.. autoclass:: gdspy.LayoutViewer
    :members:
    :no-undoc-members:
-   :inherited-members:
-   :show-inheritance:
+   :no-inherited-members:
+   :no-show-inheritance:
 
 
 GdsWriter
@@ -25,16 +25,6 @@ GdsWriter
    :no-undoc-members:
    :inherited-members:
    :show-inheritance:
-
-
-LayoutViewer
-------------
-
-.. autoclass:: gdspy.LayoutViewer
-   :members:
-   :no-undoc-members:
-   :no-inherited-members:
-   :no-show-inheritance:
 
 
 Functions
