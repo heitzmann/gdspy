@@ -331,7 +331,7 @@ trans_cell.add(label2)
 
 # Output the layout to a GDSII file (default to all created cells).
 # Set the units we used to micrometers and the precision to nanometers.
-gdspy.gds_print('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
+gdspy.write_gds('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
 
 
 # ------------------------------------------------------------------ #

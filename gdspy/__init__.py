@@ -44,6 +44,7 @@ if sys.version_info.major < 3:
     from builtins import int
     from builtins import round
     from builtins import range
+    from builtins import super
 
     from future import standard_library
     standard_library.install_aliases()
@@ -4196,7 +4197,7 @@ def copy(obj, dx, dy):
     return newObj
 
 
-def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
+def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
               precision=1.0e-9):
     """
     Output a list of cells as a GDSII stream library.
@@ -4225,7 +4226,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
 
     Examples
     --------
-    >>> gdspy.gds_print('out-file.gds', unit=1.0e-6, precision=1.0e-9)
+    >>> gdspy.write_gds('out-file.gds', unit=1.0e-6, precision=1.0e-9)
     """
     if isinstance(outfile, str):
         outfile = open(outfile, 'wb')
@@ -4260,7 +4261,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
         outfile.close()
 
 
-class GdsPrint(object):
+class GdsWriter(object):
     """
     GDSII strem library printer.
 
@@ -4294,7 +4295,7 @@ class GdsPrint(object):
 
     Examples
     --------
-    >>> prt = gdspy.GdsPrint('out-file.gds', unit=1.0e-6, precision=1.0e-9)
+    >>> prt = gdspy.GdsWriter('out-file.gds', unit=1.0e-6, precision=1.0e-9)
     >>> for i in range(10):
     ...     cell = gdspy.Cell('C{}'.format(i))
     ...     # Add the contents of this cell...
@@ -4337,12 +4338,12 @@ class GdsPrint(object):
 
         Notes
         -----
-        Only the specified cell is written.  Unlike in ``gds_print``, cell
+        Only the specified cell is written.  Unlike in ``write_gds``, cell
         dependencies are not automatically included.
 
         Returns
         -------
-        out : ``GdsPrint``
+        out : ``GdsWriter``
             This object.
         """
         self._outfile.write(cell.to_gds(self._res))
@@ -4355,3 +4356,20 @@ class GdsPrint(object):
         self._outfile.write(struct.pack('>2h', 4, 0x0400))
         if self._close:
             self._outfile.close()
+
+
+# Deprecated names
+
+def gds_print(*args, **kwargs):
+    warnings.warn("[GDSPY] gds_print has been renamed to write_gds and "
+                  "will be removed in future versions.",
+                  FutureWarning, stacklevel=2)
+    write_gds(*args, **kwargs)
+
+
+class GdsPrint(GdsWriter):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("[GDSPY] GdsPrint has been renamed to GdsWriter and "
+                      "will be removed in future versions.",
+                      FutureWarning, stacklevel=2)
+        super().__init__(*args, **kwargs)

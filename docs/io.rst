@@ -17,10 +17,10 @@ GdsImport
    :show-inheritance:
 
 
-GdsPrint
---------
+GdsWriter
+---------
 
-.. autoclass:: gdspy.GdsPrint
+.. autoclass:: gdspy.GdsWriter
    :members:
    :no-undoc-members:
    :inherited-members:
@@ -40,7 +40,7 @@ LayoutViewer
 Functions
 ~~~~~~~~~
 
-gds_print
+write_gds
 ---------
 
-.. autofunction:: gdspy.gds_print
+.. autofunction:: gdspy.write_gds
