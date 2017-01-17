@@ -31,14 +31,14 @@ If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+
 import sys
 
 if sys.version_info.major < 3:
-    from __future__ import division
-    from __future__ import unicode_literals
-    from __future__ import print_function
-    from __future__ import absolute_import
-
     from builtins import zip
     from builtins import open
     from builtins import int
@@ -1517,7 +1517,7 @@ class Path(PolygonSet):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        if self.direction.__class__ == ''.__class__:
+        if isinstance(self.direction, str):
             self.direction = _directions_dict[self.direction] * numpy.pi
         self.direction += angle
         cur = numpy.array((self.x, self.y)) - c0
@@ -1603,11 +1603,11 @@ class Path(PolygonSet):
                 if old_w == 0:
                     self.polygons[-1] = self.polygons[-1][1:, :]
             self.length += numpy.sqrt(length ** 2 + axis_offset ** 2)
-            if (layer.__class__ == [].__class__):
+            if isinstance(layer, list):
                 self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
             else:
                 self.layers += [layer] * self.n
-            if (datatype.__class__ == [].__class__):
+            if isinstance(datatype, list):
                 self.datatypes += (datatype * (self.n // len(datatype)
                                    + 1))[:self.n]
             else:
@@ -1721,11 +1721,11 @@ class Path(PolygonSet):
                     self.polygons[-1][pts1:, 0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][pts1:, 1] = numpy.sin(ang) * rad + cy
                 self.length += abs((angles[jj+1] - angles[jj])*radius)
-                if (layer.__class__ == [].__class__):
+                if isinstance(layer, list):
                     self.layers += (layer * (self.n//len(layer) + 1))[:self.n]
                 else:
                     self.layers += [layer] * self.n
-                if (datatype.__class__ == [].__class__):
+                if isinstance(datatype, list):
                     self.datatypes += (datatype * (self.n // len(datatype)
                                        + 1))[:self.n]
                 else:
@@ -1937,11 +1937,11 @@ class Path(PolygonSet):
                 if width[0, 0] == 0:
                     p1 = p1[1:]
                 self.polygons.append(numpy.concatenate((p1, p2)))
-            if (layer.__class__ == [].__class__):
+            if isinstance(layer, list):
                 self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
             else:
                 self.layers += [layer] * self.n
-            if (datatype.__class__ == [].__class__):
+            if isinstance(datatype, list):
                 self.datatypes += (datatype * (self.n // len(datatype)
                                    + 1))[:self.n]
             else:
@@ -2011,9 +2011,9 @@ class L1Path(PolygonSet):
     def __init__(self, initial_point, direction, width, length, turn,
                  number_of_paths=1, distance=0, max_points=199, layer=0,
                  datatype=0):
-        if (layer.__class__ != [].__class__):
+        if not isinstance(layer, list):
             layer = [layer]
-        if (datatype.__class__ != [].__class__):
+        if not isinstance(datatype, list):
             datatype = [datatype]
         layer = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
         datatype = (datatype * (number_of_paths // len(datatype)
@@ -2242,9 +2242,9 @@ class PolyPath(PolygonSet):
 
     def __init__(self, points, width, number_of_paths=1, distance=0, corners=0,
                  ends=0, max_points=199, layer=0, datatype=0):
-        if (layer.__class__ != [].__class__):
+        if not isinstance(layer, list):
             layer = [layer]
-        if (datatype.__class__ != [].__class__):
+        if not isinstance(datatype, list):
             datatype = [datatype]
         if hasattr(width, '__iter__'):
             width = numpy.array(width) * 0.5
@@ -2616,7 +2616,7 @@ class Cell(object):
         out : ``Cell``
             This cell.
         """
-        if (element.__class__ == [].__class__):
+        if isinstance(element, list):
             for e in element:
                 if isinstance(e, Label):
                     self.labels.append(e)
@@ -3465,7 +3465,7 @@ class GdsImport(object):
                  texttypes={}, verbose=True):
         self.cell_dict = {}
         self._incomplete = []
-        if infile.__class__ == ''.__class__:
+        if isinstance(infile, str):
             infile = open(infile, 'rb')
             close = True
         else:
@@ -3857,11 +3857,11 @@ def slice(objects, position, axis, layer=0, datatype=0):
     >>> result = gdspy.slice(ring, [-7, 7], 0)
     >>> cell.add(result[1])
     """
-    if (layer.__class__ != [].__class__):
+    if not isinstance(layer, list):
         layer = [layer]
-    if (objects.__class__ != [].__class__):
+    if not isinstance(objects, list):
         objects = [objects]
-    if (position.__class__ != [].__class__):
+    if not isinstance(position, list):
         position = [position]
     position.sort()
     result = [[] for i in range(len(position) + 1)]
@@ -4227,7 +4227,7 @@ def gds_print(outfile, cells=None, name='library', unit=1.0e-6,
     --------
     >>> gdspy.gds_print('out-file.gds', unit=1.0e-6, precision=1.0e-9)
     """
-    if outfile.__class__ == ''.__class__:
+    if isinstance(outfile, str):
         outfile = open(outfile, 'wb')
         close = True
     else:
@@ -4306,7 +4306,7 @@ class GdsPrint(object):
     """
 
     def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
-        if outfile.__class__ == ''.__class__:
+        if isinstance(outfile, str):
             self._outfile = open(outfile, 'wb')
             self._close = True
         else:
