@@ -1,5 +1,6 @@
+#####################
 gdspy's Documentation
-=====================
+#####################
 
 For installation instructions and other information, please check out the `GitHub <https://github.com/heitzmann/gdspy>`_ repository or the README file included with the source.
 
@@ -8,11 +9,12 @@ For installation instructions and other information, please check out the `GitHu
    :caption: Table of Contents
 
    tutorial
-   construction
-   io
+   geometry
+   library
 
+*******
 Support
-=======
+*******
 
 Help support the development of gdspy by donating:
 

@@ -1,34 +1,15 @@
-Main API
-========
+#####################
+Geometry Construction
+#####################
 
 .. automodule:: gdspy
 
-
+*******
 Classes
-~~~~~~~
-
-GdsLibrary
-----------
-
-.. autoclass:: gdspy.GdsLibrary
-   :members:
-   :no-undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-
-Cell
-----
-
-.. autoclass:: gdspy.Cell
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
+*******
 
 Polygon
--------
+=======
 
 .. autoclass:: gdspy.Polygon
    :members:
@@ -38,7 +19,7 @@ Polygon
 
 
 Rectangle
----------
+=========
 
 .. autoclass:: gdspy.Rectangle
    :members:
@@ -48,7 +29,7 @@ Rectangle
 
 
 Round
------
+=====
 
 .. autoclass:: gdspy.Round
    :members:
@@ -58,7 +39,7 @@ Round
 
 
 PolygonSet
-----------
+==========
 
 .. autoclass:: gdspy.PolygonSet
    :members:
@@ -68,7 +49,7 @@ PolygonSet
 
 
 Path
-----
+====
 
 .. autoclass:: gdspy.Path
    :members:
@@ -78,7 +59,7 @@ Path
 
 
 PolyPath
---------
+========
 
 .. autoclass:: gdspy.PolyPath
    :members:
@@ -88,7 +69,7 @@ PolyPath
 
 
 L1Path
-------
+======
 
 .. autoclass:: gdspy.L1Path
    :members:
@@ -98,7 +79,7 @@ L1Path
 
 
 Text
-----
+====
 
 .. autoclass:: gdspy.Text
    :members:
@@ -107,60 +88,40 @@ Text
    :show-inheritance:
 
 
-CellReference
--------------
-
-.. autoclass:: gdspy.CellReference
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-
-CellArray
----------
-
-.. autoclass:: gdspy.CellArray
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-
+*********
 Functions
-~~~~~~~~~
+*********
 
 fast_boolean
-------------
+============
 
 .. autofunction:: gdspy.fast_boolean
 
 
 boolean
--------
+=======
 
 .. autofunction:: gdspy.boolean
 
 offset
-------
+======
 
 .. autofunction:: gdspy.offset
 
 
 slice
------
+=====
 
 .. autofunction:: gdspy.slice
 
 
 inside
-------
+======
 
 .. autofunction:: gdspy.inside
 
 
 copy
-----
+====
 
 .. autofunction:: gdspy.copy
-

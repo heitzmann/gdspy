@@ -1,4 +1,3 @@
 setuptools
 numpy
-numpydoc
 future; python_version < "3"

@@ -1,5 +1,6 @@
+###########
 Sample File
-===========
+###########
 
 The following code is a sample to quickly demonstrate some features of gdspy.
 
