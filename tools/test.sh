@@ -14,6 +14,7 @@ if [ $(which virtualenv$VERSION) ]; then
 	echo Testing $VERSION
 	cd examples
 	python tutorial.py
+	python photonics.py
 	cd -
 
 	deactivate
