@@ -52,6 +52,12 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.? (?)
+* Renamed `gds_print` to `save_gds` and `GdsPrint` to `GdsWriter`.
+* Development changed to Python 3 (Python 2.6 and above supported via [python-future](http://python-future.org/)).
+* Added photonics example.
+* Bug fixes introduced by numpy (thanks to Adam McCaughan for the contribution).
+
 ### Version 1.0 (Sep 11, 2016)
 * Changed to "new style" classes (thanks to Adam McCaughan for the contribution).
 * Added	a per-point radius specification for `Polygon.fillet` (thanks to Adam McCaughan for the contribution).
