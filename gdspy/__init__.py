@@ -3033,9 +3033,9 @@ class CellReference(object):
             for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
                     if self.x_reflection:
-                        polygons[kk][ii] *= xrefl
+                        polygons[kk][ii] = polygons[kk][ii] * xrefl
                     if self.magnification is not None:
-                        polygons[kk][ii] *= mag
+                        polygons[kk][ii] = polygons[kk][ii] * mag
                     if self.rotation is not None:
                         polygons[kk][ii] = polygons[kk][ii] * ct \
                                 + polygons[kk][ii][:, ::-1] * st
@@ -3045,9 +3045,9 @@ class CellReference(object):
             polygons = self.ref_cell.get_polygons(depth=depth)
             for ii in range(len(polygons)):
                 if self.x_reflection:
-                    polygons[ii] *= xrefl
+                    polygons[ii] = polygons[ii] * xrefl
                 if self.magnification is not None:
-                    polygons[ii] *= mag
+                    polygons[ii] = polygons[ii] * mag
                 if self.rotation is not None:
                     polygons[ii] = polygons[ii] * ct \
                             + polygons[ii][:, ::-1] * st
@@ -3312,7 +3312,7 @@ class CellArray(object):
                             else:
                                 polygons[kk].append(points + spc)
                             if self.x_reflection:
-                                polygons[kk][-1] *= xrefl
+                                polygons[kk][-1] = polygons[kk][-1] * xrefl
                             if self.rotation is not None:
                                 polygons[kk][-1] = polygons[kk][-1] * ct \
                                         + polygons[kk][-1][:, ::-1] * st
@@ -3331,7 +3331,7 @@ class CellArray(object):
                         else:
                             polygons.append(points + spc)
                         if self.x_reflection:
-                            polygons[-1] *= xrefl
+                            polygons[-1] = polygons[-1] * xrefl
                         if self.rotation is not None:
                             polygons[-1] = polygons[-1] * ct \
                                     + polygons[-1][:, ::-1] * st
