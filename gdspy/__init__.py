@@ -3991,13 +3991,13 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
     >>> circle = gdspy.Round((0, 0), 10)
     >>> triangle = gdspy.Round((0, 0), 12, number_of_points=3)
     >>> bad_poly = gdspy.L1Path((0, 0), '+y', 2,
-            [6, 4, 4, 8, 4, 5, 10], [-1, -1, -1, 1, 1, 1])
+    ...     [6, 4, 4, 8, 4, 5, 10], [-1, -1, -1, 1, 1, 1])
     >>> union = gdspy.boolean([circle, triangle],
-            lambda cir, tri: cir or tri)
+    ...     lambda cir, tri: cir or tri)
     >>> intersection = gdspy.boolean([circle, triangle],
-            lambda cir, tri: cir and tri)
+    ...     lambda cir, tri: cir and tri)
     >>> subtraction = gdspy.boolean([circle, triangle],
-            lambda cir, tri: cir and not tri)
+    ...     lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
     warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be "
