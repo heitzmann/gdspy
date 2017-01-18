@@ -65,7 +65,6 @@
 
 // Begin of GDSPY additional headers
 #include <Python.h>
-#include <cfenv>
 // End of GDSPY additional headers
 
 #include "clipper.hpp"
@@ -4500,21 +4499,16 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
   long num = PySequence_Length(polyset);
   paths.resize(num);
 
-  int oldroundmode = fegetround();
-  fesetround(FE_TONEAREST);
-
   for (long i = 0; i < num; ++i)
   {
     if ((py_polygon = PySequence_ITEM(polyset, i)) == NULL)
     {
-      fesetround(oldroundmode);
       return -1;
     }
     if (!PySequence_Check(py_polygon))
     {
       Py_DECREF(py_polygon);
       PyErr_SetString(PyExc_TypeError, "Elements of the first argument must be sequences.");
-      fesetround(oldroundmode);
       return -1;
     }
 
@@ -4527,14 +4521,12 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
       if ((py_point = PySequence_ITEM(py_polygon, j)) == NULL)
       {
         Py_DECREF(py_polygon);
-        fesetround(oldroundmode);
         return -1;
       }
       if ((py_coord = PySequence_GetItem(py_point, 0)) == NULL)
       {
         Py_DECREF(py_point);
         Py_DECREF(py_polygon);
-        fesetround(oldroundmode);
         return -1;
       }
       double x = PyFloat_AsDouble(py_coord);
@@ -4544,19 +4536,13 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
       {
         Py_DECREF(py_point);
         Py_DECREF(py_polygon);
-        fesetround(oldroundmode);
         return -1;
       }
       double y = PyFloat_AsDouble(py_coord);
       Py_DECREF(py_coord);
       Py_DECREF(py_point);
-#ifdef use_int32
-      paths[i][j].X = (cInt) lrint(scaling * x);
-      paths[i][j].Y = (cInt) lrint(scaling * y);
-#else
-      paths[i][j].X = (cInt) llrint(scaling * x);
-      paths[i][j].Y = (cInt) llrint(scaling * y);
-#endif
+      paths[i][j].X = Round(scaling * x);
+      paths[i][j].Y = Round(scaling * y);
       if (j > 1)
         orientation += (paths[i][0].X - paths[i][j].X) * (paths[i][j-1].Y - paths[i][0].Y) - (paths[i][0].Y - paths[i][j].Y) * (paths[i][j-1].X - paths[i][0].X);
     }
@@ -4568,7 +4554,6 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
     Py_DECREF(py_polygon);
   }
 
-  fesetround(oldroundmode);
   return 0;
 }
 
