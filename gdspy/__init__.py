@@ -2912,12 +2912,15 @@ class CellReference(object):
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None,
-                 magnification=None, x_reflection=False):
+                 magnification=None, x_reflection=False, verbose=True):
         self.origin = origin
         self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
+        if not isinstance(self.ref_cell, Cell):
+            warnings.warn("[GDSPY] Cell {0} not found; operations on this "
+                          "CellReference may not work.".format(self.ref_cell))
 
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
@@ -2994,18 +2997,19 @@ class CellReference(object):
         out : number, dictionary
             Area of this cell.
         """
+        if not isinstance(self.ref_cell, Cell):
+            return dict() if by_spec else 0
         if self.magnification is None:
             return self.ref_cell.area(by_spec)
         else:
             if by_spec:
-                factor = self.magnification * self.magnification
+                factor = self.magnification**2
                 cell_area = self.ref_cell.area(True)
                 for kk in cell_area.keys():
                     cell_area[kk] *= factor
                 return cell_area
             else:
-                return (self.ref_cell.area() * self.magnification
-                        * self.magnification)
+                return self.ref_cell.area() * self.magnification**2
 
     def get_polygons(self, by_spec=False, depth=None):
         """
@@ -3028,6 +3032,8 @@ class CellReference(object):
             List containing the coordinates of the vertices of each polygon, or
             dictionary with the list of polygons (if ``by_spec`` is ``True``).
         """
+        if not isinstance(self.ref_cell, Cell):
+            return dict() if by_spec else []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0)
@@ -3075,6 +3081,8 @@ class CellReference(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
+        if not isinstance(self.ref_cell, Cell):
+            return None
         if self.rotation is None and self.magnification is None and \
                 self.x_reflection is None:
             key = self
@@ -3123,9 +3131,7 @@ class CellReference(object):
         out : ``CellReference``
             This object.
         """
-
-        self.origin = (dx+self.origin[0], dy+self.origin[1])
-
+        self.origin = (self.origin[0] + dx, self.origin[1] + dy)
         return self
 
 
@@ -3164,6 +3170,9 @@ class CellArray(object):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
+        if not isinstance(self.ref_cell, Cell):
+            warnings.warn("[GDSPY] Cell {0} not found; operations on this "
+                          "CellArray may not work.".format(self.ref_cell))
 
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
@@ -3264,11 +3273,12 @@ class CellArray(object):
         out : number, dictionary
             Area of this cell.
         """
+        if not isinstance(self.ref_cell, Cell):
+            return dict() if by_spec else 0
         if self.magnification is None:
             factor = self.columns * self.rows
         else:
-            factor = self.columns * self.rows * self.magnification \
-                    * self.magnification
+            factor = self.columns * self.rows * self.magnification**2
         if by_spec:
             cell_area = self.ref_cell.area(True)
             for kk in cell_area.keys():
@@ -3298,6 +3308,8 @@ class CellArray(object):
             List containing the coordinates of the vertices of each polygon, or
             dictionary with the list of polygons (if ``by_spec`` is ``True``).
         """
+        if not isinstance(self.ref_cell, Cell):
+            return dict() if by_spec else []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0)
@@ -3360,6 +3372,8 @@ class CellArray(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
+        if not isinstance(self.ref_cell, Cell):
+            return None
         key = (self.ref_cell, self.rotation, self.magnification,
                self.x_reflection, self.columns, self.rows, self.spacing[0],
                self.spacing[1])
@@ -3405,9 +3419,7 @@ class CellArray(object):
         out : ``CellArray``
             This object.
         """
-
-        self.origin = (dx+self.origin[0], dy+self.origin[1])
-
+        self.origin = (self.origin[0] + dx, self.origin[1] + dy)
         return self
 
 
@@ -4201,9 +4213,9 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
     ...     lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
-    warnings.warn("[GDSPY] Function 'boolean' is deprecated and will be "
+    warnings.warn("[GDSPY] Function boolean is deprecated and it will be "
                   "removed in a future version.  Please use 'fast_boolean' "
-                  "instead.", stacklevel=2)
+                  "instead.", FutureWarning, stacklevel=2)
     poly = []
     indices = [0]
     special_function = False
@@ -4293,7 +4305,7 @@ def fast_boolean(operandA, operandB, operation, precision=0.001,
     if len(polyB) == 0:
         polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1/precision)
-    return None if result is None else PolygonSet(result, layer, datatype,
+    return None if len(result) == 0 else PolygonSet(result, layer, datatype,
                                                   False).fracture(max_points)
 
 
@@ -4426,7 +4438,7 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
 class GdsImport(GdsLibrary):
     def __init__(self, *args, **kwargs):
         warnings.warn("[GDSPY] GdsImport has been deprecated in favor of "
-                      "GdsLibrary and will be removed in future versions.",
+                      "GdsLibrary and it will be removed in future versions.",
                       FutureWarning, stacklevel=2)
         super().__init__()
         super().read_gds(*args, **kwargs)
@@ -4435,13 +4447,13 @@ class GdsImport(GdsLibrary):
 class GdsPrint(GdsWriter):
     def __init__(self, *args, **kwargs):
         warnings.warn("[GDSPY] GdsPrint has been renamed to GdsWriter and "
-                      "will be removed in future versions.",
+                      "it will be removed in future versions.",
                       FutureWarning, stacklevel=2)
         super().__init__(*args, **kwargs)
 
 
 def gds_print(*args, **kwargs):
     warnings.warn("[GDSPY] gds_print has been renamed to write_gds and "
-                  "will be removed in future versions.",
+                  "it will be removed in future versions.",
                   FutureWarning, stacklevel=2)
     write_gds(*args, **kwargs)
