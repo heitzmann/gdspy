@@ -3524,6 +3524,11 @@ class GdsLibrary(object):
         precision : number
             Precision for the dimensions of the objects in the library (in
             *meters*).
+
+        Notes
+        -----
+        Only the specified cells are written.  The user is responsible for
+        ensuring all cell dependencies are satisfied.
         """
         if isinstance(outfile, str):
             outfile = open(outfile, 'wb')
@@ -3542,7 +3547,11 @@ class GdsLibrary(object):
                       + struct.pack('>2h', 20, 0x0305)
                       + _eight_byte_real(precision / unit)
                       + _eight_byte_real(precision))
-        for cell in self.cell_dict.values():
+        if cells is None:
+            cells = self.cell_dict.values()
+        else:
+            cells = [self.cell_dict.get(c, c) for c in cells]
+        for cell in cells:
             outfile.write(cell.to_gds(unit / precision))
         outfile.write(struct.pack('>2h', 4, 0x0400))
         if close:
@@ -3921,8 +3930,8 @@ class GdsWriter(object):
 
         Notes
         -----
-        Only the specified cell is written.  Unlike in ``write_gds``, cell
-        dependencies are not automatically included.
+        Only the specified cell is written.  Dependencies must be manually
+        included.
 
         Returns
         -------
