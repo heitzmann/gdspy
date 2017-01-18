@@ -20,6 +20,7 @@
 #                                                                    #
 ######################################################################
 
+import sys
 from setuptools import setup, Extension
 
 with open('README.md') as fin:
@@ -31,8 +32,12 @@ with open('gdspy/__init__.py') as fin:
             version = eval(line[14:])
             break
 
+setup_requires = ['pytest-runner'] if \
+    {'pytest', 'test', 'ptr'}.intersection(sys.argv) else []
+
 setup(
     name='gdspy',
+
     version=version,
     author='Lucas Heitzmann Gabrielli',
     author_email='heitzmann@gmail.com',
@@ -53,6 +58,8 @@ setup(
         'numpy',
         'future; python_version < "3"',
     ],
+    setup_requires=setup_requires,
+    tests_require=['pytest'],
     platforms='OS Independent',
     classifiers=[
         'Development Status :: 4 - Beta',

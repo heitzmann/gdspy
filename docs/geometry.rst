@@ -88,6 +88,16 @@ Text
    :show-inheritance:
 
 
+Label
+=====
+
+.. autoclass:: gdspy.Label
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+
 *********
 Functions
 *********

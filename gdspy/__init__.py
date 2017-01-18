@@ -2609,11 +2609,11 @@ class Cell(object):
         """
         new_cell = Cell(name, exclude_from_current)
         if deep_copy:
-            new_cell.elements = list(self.elements)
-            new_cell.labels = list(self.labels)
-        else:
             new_cell.elements = libCopy.deepcopy(self.elements)
             new_cell.labels = libCopy.deepcopy(self.labels)
+        else:
+            new_cell.elements = list(self.elements)
+            new_cell.labels = list(self.labels)
         return new_cell
 
     def add(self, element):
@@ -2677,55 +2677,44 @@ class Cell(object):
 
     def get_layers(self):
         """
-        Returns a list of layers in this cell.
+        Returns a set of layers in this cell.
 
         Returns
         -------
-        out : list
-            List of the layers used in this cell.
+        out : set
+            Set of the layers used in this cell.
         """
-        layers = []
+        layers = set()
         for element in self.elements:
             if isinstance(element, Polygon):
-                if element.layer not in layers:
-                    layers.append(element.layer)
+                layers.add(element.layer)
             elif isinstance(element, PolygonSet):
-                for layer in element.layers:
-                    if layer not in layers:
-                        layers.append(layer)
+                layers.update(element.layers)
             elif isinstance(element, CellReference) or isinstance(element,
                                                                   CellArray):
-                for layer in element.ref_cell.get_layers():
-                    if layer not in layers:
-                        layers.append(layer)
+                layers.update(element.ref_cell.get_layers())
         for label in self.labels:
-            if label.layer not in layers:
-                layers.append(label.layer)
+            layers.add(label.layer)
         return layers
 
     def get_datatypes(self):
         """
-        Returns a list of datatypes in this cell.
+        Returns a set of datatypes in this cell.
 
         Returns
         -------
-        out : list
-            List of the datatypes used in this cell.
+        out : set
+            Set of the datatypes used in this cell.
         """
-        datatypes = []
+        datatypes = set()
         for element in self.elements:
             if isinstance(element, Polygon):
-                if element.datatype not in datatypes:
-                    datatypes.append(element.datatype)
+                datatypes.add(element.datatype)
             elif isinstance(element, PolygonSet):
-                for datatype in element.datatypes:
-                    if datatype not in datatypes:
-                        datatypes.append(datatype)
+                datatypes.update(element.datatypes)
             elif isinstance(element, CellReference) or isinstance(element,
                                                                   CellArray):
-                for datatype in element.ref_cell.get_datatypes():
-                    if datatype not in datatypes:
-                        datatypes.append(datatype)
+                datatypes.update(element.ref_cell.get_datatypes())
         return datatypes
 
     def get_bounding_box(self):
@@ -3474,16 +3463,15 @@ class GdsLibrary(object):
             if cell.name not in self.cell_dict:
                 self.cell_dict[cell.name] = cell
             elif not ignore_duplicates:
-                raise ValueError("[GDSPY] a cell named {0} has already been "
-                                 "created in {1}".format(cell.name, self.name))
+                raise ValueError("[GDSPY] cell named {0} already present in "
+                                 "library.".format(cell.name))
         else:
             for c in cell:
                 if c.name not in self.cell_dict:
                     self.cell_dict[c.name] = c
                 elif not ignore_duplicates:
-                    raise ValueError("[GDSPY] a cell named {0} has already "
-                                     "been created in {1}.".format(c.name,
-                                                                   self.name))
+                    raise ValueError("[GDSPY] cell named {0} already present "
+                                     "in library.".format(c.name))
 
 
     def write_gds(self, outfile, cells=None, name='library', unit=1.0e-6,
