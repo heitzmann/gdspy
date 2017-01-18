@@ -1,5 +1,8 @@
 # GDSPY README
 
+[![GPLv3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+[![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)
+
 Gdspy is a Python  module for creating/importing/merging GDSII stream files.
 It includes key libraries for creating complex CAD layouts:
 
@@ -9,7 +12,7 @@ It includes key libraries for creating complex CAD layouts:
 
 Gdspy also includes a simple layout viewer.
 
-Typical applications of Gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.
+Typical applications of gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.
 
 ## Installation
 
@@ -48,7 +51,7 @@ It is also available [on-line](http://gdspy.readthedocs.io/en/latest/)
 
 ## Support
 
-Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
+Help support gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
 ## History of changes
 
@@ -226,7 +229,7 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added `L1Path` class for Manhattan geometry (L1 norm) paths.
 
 ### Version 0.1.8 (May 10, 2010)
-* Removed the argument `fill` from `gds_view` and added a more flexible one: `style`.
+* [![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)Removed the argument `fill` from `gds_view` and added a more flexible one: `style`.
 * Fixed a rounding error on the `boolean` operator affecting polygons with holes.
 * Added a rotate method to `PolygonSet`.
 * Added a warning when `PolygonSet` has more than 199 points
