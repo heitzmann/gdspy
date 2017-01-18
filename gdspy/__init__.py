@@ -135,9 +135,6 @@ class Polygon(object):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygon will
-        be suppressed.
 
     Attributes
     ----------
@@ -163,11 +160,11 @@ class Polygon(object):
     >>> myCell.add(triangle)
     """
 
-    def __init__(self, points, layer=0, datatype=0, verbose=True):
-        if len(points) > 199 and verbose:
+    def __init__(self, points, layer=0, datatype=0):
+        if len(points) > 199:
             warnings.warn("[GDSPY] A polygon with more than 199 points was "
                           "created (not officially supported by the GDSII "
-                          "format).", stacklevel=2)
+                          "format).", RuntimeWarning, stacklevel=2)
         self.layer = layer
         self.points = numpy.array(points)
         self.datatype = datatype
@@ -419,9 +416,6 @@ class PolygonSet(object):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygons will
-        be suppressed.
 
     Attributes
     ----------
@@ -441,16 +435,16 @@ class PolygonSet(object):
     polygon.
     """
 
-    def __init__(self, polygons, layer=0, datatype=0, verbose=True):
+    def __init__(self, polygons, layer=0, datatype=0):
         self.layers = [layer] * len(polygons)
         self.datatypes = [datatype] * len(polygons)
         self.polygons = [None] * len(polygons)
         for i in range(len(polygons)):
             self.polygons[i] = numpy.array(polygons[i])
-            if len(polygons[i]) > 199 and verbose:
+            if len(polygons[i]) > 199:
                 warnings.warn("[GDSPY] A polygon with more than 199 points "
                               "was created (not officially supported by the "
-                              "GDSII format).", stacklevel=2)
+                              "GDSII format).", RuntimeWarning, stacklevel=2)
 
     def __str__(self):
         return ("PolygonSet ({} polygons, {} vertices, layers {}, datatypes "
@@ -2848,7 +2842,7 @@ class Cell(object):
                 dependencies.add(element.ref_cell)
         return dependencies
 
-    def flatten(self, single_layer=None, single_datatype=None, verbose=True):
+    def flatten(self, single_layer=None, single_datatype=None):
         """
         Flatten all ``CellReference`` and ``CellArray`` elements in this cell
         into real polygons, instead of references.
@@ -2861,9 +2855,6 @@ class Cell(object):
         single_datatype : integer or None
             If not ``None``, all polygons will be transfered to the datatype
             indicated by this number.
-        verbose : bool
-            If False, warnings about the number of vertices of the polygon will
-            be suppressed.
 
         Returns
         -------
@@ -2875,20 +2866,17 @@ class Cell(object):
             self.elements = []
             if single_layer is None and single_datatype is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], *ld, verbose=verbose))
+                    self.add(PolygonSet(poly_dic[ld], *ld))
             elif single_layer is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype,
-                             verbose=verbose))
+                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype))
             else:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1],
-                             verbose=verbose))
+                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1]))
         else:
             polygons = self.get_polygons()
             self.elements = []
-            self.add(PolygonSet(polygons, single_layer, single_datatype,
-                     verbose=verbose))
+            self.add(PolygonSet(polygons, single_layer, single_datatype))
         return self
 
 
@@ -2912,7 +2900,7 @@ class CellReference(object):
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None,
-                 magnification=None, x_reflection=False, verbose=True):
+                 magnification=None, x_reflection=False):
         self.origin = origin
         self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
@@ -3538,7 +3526,7 @@ class GdsLibrary(object):
             outfile.close()
 
     def read_gds(self, infile, unit=None, rename={}, layers={}, datatypes={},
-                 texttypes={}, verbose=True):
+                 texttypes={}):
         """
         Read a GDSII file into this library.
 
@@ -3562,9 +3550,6 @@ class GdsLibrary(object):
         texttypes : dictionary
             Dictionary used to convert the text types in the imported cells.
             Keys and values must be integers.
-        verbose: bool
-            If False, suppresses warnings about unsupported elements in the
-            imported file.  Also supresses polygon generation warnings.
 
         Notes
         -----
@@ -3613,7 +3598,6 @@ class GdsLibrary(object):
                 kwargs = {}
             # BOUNDARY
             elif record[0] == 0x08:
-                kwargs['verbose'] = verbose
                 create_element = self._create_polygon
             # PATH
             elif record[0] == 0x09:
@@ -3683,9 +3667,9 @@ class GdsLibrary(object):
             # PATHTYPE
             elif record[0] == 0x21:
                 if record[1][0] > 2:
-                    if verbose and 0x21 not in emitted_warnings:
+                    if 0x21 not in emitted_warnings:
                         warnings.warn("[GDSPY] Path ends with custom size are "
-                                      "not supported by gds_import.",
+                                      "not supported.", RuntimeWarning,
                                       stacklevel=2)
                         emitted_warnings.append(0x21)
                 else:
@@ -3699,12 +3683,13 @@ class GdsLibrary(object):
                         ref.ref_cell = Cell.cell_dict.get(ref.ref_cell,
                                                           ref.ref_cell)
             # Not supported
-            elif verbose and record[0] not in emitted_warnings and record[0] \
+            elif record[0] not in emitted_warnings and record[0] \
                     not in GdsLibrary._unused_records:
-                warnings.warn("[GDSPY] Record type {0} is not supported by "
-                              "gds_import."
-                              .format(GdsLibrary._record_name[record[0]]),
-                              stacklevel=2)
+                warnings.warn("[GDSPY] Record type {0} ({1:02X}) is not "
+                              "supported."
+                              .format(GdsLibrary._record_name[record[0]],
+                                      record[0]),
+                              RuntimeWarning, stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
@@ -3753,9 +3738,8 @@ class GdsLibrary(object):
                     data = data[:-1]
         return [rec_type, data]
 
-    def _create_polygon(self, layer, datatype, xy, verbose):
-        return Polygon(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype,
-                       verbose)
+    def _create_polygon(self, layer, datatype, xy):
+        return Polygon(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype)
 
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
