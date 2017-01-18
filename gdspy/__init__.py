@@ -3808,8 +3808,8 @@ class GdsLibrary(object):
         
         Top level cells are those that are not referenced by any other cells.
 
-        Outputs
-        ----------
+        Returns
+        -------
         out : list
             List of top level cells.
         """
