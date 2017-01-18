@@ -9,12 +9,14 @@ def test_8b_f():
     assert f(b'\x41\x20\x00\x00\x00\x00\x00\x00') == 2
     assert f(b'\xC1\x30\x00\x00\x00\x00\x00\x00') == -3
 
+
 def test_f_8b():
     g = gdspy._eight_byte_real
     assert b'\x00\x00\x00\x00\x00\x00\x00\x00' == g(0)
     assert b'\x41\x10\x00\x00\x00\x00\x00\x00' == g(1)
     assert b'\x41\x20\x00\x00\x00\x00\x00\x00' == g(2)
     assert b'\xC1\x30\x00\x00\x00\x00\x00\x00' == g(-3)
+
 
 def test_twoway():
     f = gdspy._eight_byte_real_to_float

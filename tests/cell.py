@@ -9,7 +9,7 @@ def unique():
 
 
 def test_duplicate():
-    name = unique()
+    name = 'c_duplicate'
     c1 = gdspy.Cell(name)
     with pytest.raises(ValueError) as e:
         c2 = gdspy.Cell(name)
@@ -17,13 +17,13 @@ def test_duplicate():
 
 
 def test_ignore_duplicate():
-    c1 = gdspy.Cell(unique())
+    c1 = gdspy.Cell('c_ignore_duplicate')
     c2 = gdspy.Cell(c1.name, True)
 
 
 def test_add_element():
     p = gdspy.Polygon(((0, 0), (1, 0), (0, 1)))
-    c = gdspy.Cell(unique())
+    c = gdspy.Cell('c_add_element')
     assert c.add(p) is c
     assert c.add([p, p]) is c
     assert c.elements == [p, p, p]
@@ -31,14 +31,14 @@ def test_add_element():
 
 def test_add_label():
     l = gdspy.Label('label', (0, 0))
-    c = gdspy.Cell(unique())
+    c = gdspy.Cell('c_add_label')
     assert c.add(l) is c
     assert c.add([l, l]) is c
     assert c.labels == [l, l, l]
 
 
 def test_copy():
-    name = unique()
+    name = 'c_copy'
     p = gdspy.Polygon(((0, 0), (1, 0), (0, 1)))
     l = gdspy.Label('label', (0, 0))
     c1 = gdspy.Cell(name)
@@ -49,10 +49,10 @@ def test_copy():
     assert name in str(e.value)
 
     c3 = c1.copy(name, True)
-    assert c3.elements == c1.elements
-    assert c3.labels == c1.labels
+    assert c3.elements == c1.elements and c3.elements is not c1.elements
+    assert c3.labels == c1.labels and c3.labels is not c1.labels
     
-    c4 = c1.copy(unique(), False, True)
+    c4 = c1.copy('c_copy_1', False, True)
     assert c4.elements != c1.elements
     assert c4.labels != c1.labels
 
@@ -62,13 +62,13 @@ def tree():
     p1 = gdspy.Polygon(((0, 0), (0, 1), (1, 0)), 0, 0)
     p2 = gdspy.Polygon(((2, 0), (2, 1), (1, 0)), 1, 1)
     l = gdspy.Label('label', (0, 0), layer=10)
-    c1 = gdspy.Cell(unique())
+    c1 = gdspy.Cell('tree_' + unique())
     c1.add(p1)
     c1.add(l)
-    c2 = gdspy.Cell(unique())
+    c2 = gdspy.Cell('tree_' + unique())
     c2.add(p2)
     c2.add(gdspy.CellReference(c1))
-    c3 = gdspy.Cell(unique())
+    c3 = gdspy.Cell('tree_' + unique())
     c3.add(gdspy.CellArray(c2, 3, 2, (3, 3)))
     return c3, c2, c1
 
