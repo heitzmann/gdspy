@@ -24,7 +24,7 @@ These structures are commonly used in the field of integrated photonics.
 
 :download:`Download sample file <../examples/photonics.py>`
 
-.. literalinclude:: ../examples/tutorial.py
+.. literalinclude:: ../examples/photonics.py
    :language: python
    :linenos:
 
