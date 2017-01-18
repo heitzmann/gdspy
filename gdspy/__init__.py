@@ -2394,7 +2394,27 @@ class Label(object):
         The text of this label.
     position : array-like[2]
         Text anchor position.
-    anchor : 'n', 's', 'e', 'w', 'o', 'ne', 'nw',...
+    anchor : 'n', 's', 'e', 'w', 'o', 'ne', 'nw'...
+        Position of the anchor relative to the text.
+    rotation : number
+        Angle of rotation of the label (in *degrees*).
+    magnification : number
+        Magnification factor for the label.
+    x_reflection : bool
+        If ``True``, the label is reflected parallel to the x direction
+        before being rotated (not supported by LayoutViewer).
+    layer : integer
+        The GDSII layer number for these elements.
+    texttype : integer
+        The GDSII text type for the label (between 0 and 63).
+
+    Attributes
+    ----------
+    text : string
+        The text of this label.
+    position : array-like[2]
+        Text anchor position.
+    anchor : int
         Position of the anchor relative to the text.
     rotation : number
         Angle of rotation of the label (in *degrees*).
@@ -2546,7 +2566,7 @@ class Cell(object):
         self.labels = []
         self._bb_valid = False
         if not exclude_from_current:
-            current_library.add_cell(self)
+            current_library.add(self)
 
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(
@@ -3445,7 +3465,7 @@ class GdsLibrary(object):
     def __str__(self):
         return "GdsLibrary (" + ", ".join([c for c in self.cell_dict]) + ")"
 
-    def add_cell(self, cell, ignore_duplicates=False):
+    def add(self, cell, overwrite_duplicate=False):
         """
         Add one or more cells to the library.
 
@@ -3453,6 +3473,9 @@ class GdsLibrary(object):
         ----------
         cell : ``Cell`` of list of ``Cell``
             Cells to be included in the library.
+        overwrite_duplicate : bool
+            If True an existing cell with the same name in the library will be
+            overwritten.
         
         Returns
         -------
@@ -3460,18 +3483,18 @@ class GdsLibrary(object):
             This object.
         """
         if isinstance(cell, Cell):
-            if cell.name not in self.cell_dict:
-                self.cell_dict[cell.name] = cell
-            elif not ignore_duplicates:
+            if not overwrite_duplicate and cell.name in self.cell_dict \
+               and self.cell_dict[cell.name] is not cell:
                 raise ValueError("[GDSPY] cell named {0} already present in "
                                  "library.".format(cell.name))
+            self.cell_dict[cell.name] = cell
         else:
             for c in cell:
-                if c.name not in self.cell_dict:
-                    self.cell_dict[c.name] = c
-                elif not ignore_duplicates:
+                if not overwrite_duplicate and c.name in self.cell_dict \
+                   and self.cell_dict[c.name] is not c:
                     raise ValueError("[GDSPY] cell named {0} already present "
                                      "in library.".format(c.name))
+                self.cell_dict[c.name] = c
 
 
     def write_gds(self, outfile, cells=None, name='library', unit=1.0e-6,
@@ -3798,8 +3821,8 @@ class GdsLibrary(object):
             The extracted cell.
         """
         cell = self.cell_dict.get(cell, cell)
-        current_library.add_cell(cell)
-        current_library.add_cell(cell.get_dependencies(True))
+        current_library.add(cell)
+        current_library.add(cell.get_dependencies(True))
         return cell
 
     def top_level(self):
@@ -4380,11 +4403,6 @@ def copy(obj, dx, dy):
     return newObj
 
 
-current_library = GdsLibrary()
-"""
-Current ``GdsLibrary`` instance for automatic creation of GDSII files.
-"""
-
 def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
               precision=1.0e-9):
     """
@@ -4415,6 +4433,14 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
     """
     current_library.write_gds(outfile, cells, name, unit, precision)
 
+
+current_library = GdsLibrary()
+"""
+Current ``GdsLibrary`` instance for automatic creation of GDSII files.
+
+This variable can be freely overwritten by the user with a new instance of
+``GdsLibrary``.
+"""
 
 # Deprecated names
 
