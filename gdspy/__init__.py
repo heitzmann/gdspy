@@ -136,6 +136,9 @@ class Polygon(object):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
+    verbose : bool
+        If False, warnings about the number of vertices of the polygon will
+        be suppressed.
 
     Attributes
     ----------
@@ -161,8 +164,8 @@ class Polygon(object):
     >>> myCell.add(triangle)
     """
 
-    def __init__(self, points, layer=0, datatype=0):
-        if len(points) > 199:
+    def __init__(self, points, layer=0, datatype=0, verbose=True):
+        if len(points) > 199 and verbose:
             warnings.warn("[GDSPY] A polygon with more than 199 points was "
                           "created (not officially supported by the GDSII "
                           "format).", RuntimeWarning, stacklevel=2)
@@ -417,6 +420,9 @@ class PolygonSet(object):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
+    verbose : bool
+        If False, warnings about the number of vertices of the polygon will
+        be suppressed.
 
     Attributes
     ----------
@@ -436,13 +442,14 @@ class PolygonSet(object):
     polygon.
     """
 
-    def __init__(self, polygons, layer=0, datatype=0):
+    def __init__(self, polygons, layer=0, datatype=0, verbose=True):
         self.layers = [layer] * len(polygons)
         self.datatypes = [datatype] * len(polygons)
         self.polygons = [None] * len(polygons)
         for i in range(len(polygons)):
             self.polygons[i] = numpy.array(polygons[i])
-            if len(polygons[i]) > 199:
+            if len(polygons[i]) > 199 and verbose:
+                verbose = False
                 warnings.warn("[GDSPY] A polygon with more than 199 points "
                               "was created (not officially supported by the "
                               "GDSII format).", RuntimeWarning, stacklevel=2)
@@ -2887,17 +2894,20 @@ class Cell(object):
             self.elements = []
             if single_layer is None and single_datatype is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], *ld))
+                    self.add(PolygonSet(poly_dic[ld], *ld, verbose=False))
             elif single_layer is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype))
+                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype,
+                                        verbose=False))
             else:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1]))
+                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1],
+                                        verbose=False))
         else:
             polygons = self.get_polygons()
             self.elements = []
-            self.add(PolygonSet(polygons, single_layer, single_datatype))
+            self.add(PolygonSet(polygons, single_layer, single_datatype,
+                                verbose=False))
         return self
 
 
@@ -4166,8 +4176,8 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001,
                 poly.append(obj)
     result = clipper.offset(poly, distance, join, tolerance, 1/precision,
                             1 if join_first else 0)
-    return None if result is None else PolygonSet(result, layer, datatype,
-                                                  False).fracture(max_points)
+    return None if len(result) == 0 else \
+        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
 
 
 def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
@@ -4321,8 +4331,8 @@ def fast_boolean(operandA, operandB, operation, precision=0.001,
     if len(polyB) == 0:
         polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1/precision)
-    return None if len(result) == 0 else PolygonSet(result, layer, datatype,
-                                                  False).fracture(max_points)
+    return None if len(result) == 0 else \
+        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
 
 
 def inside(points, polygons, short_circuit='any', precision=0.001):

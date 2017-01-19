@@ -16,6 +16,11 @@ if [ $(which virtualenv$VERSION) ]; then
 	python tutorial.py
 	python photonics.py
 	cd -
+	cd tests
+	for i in *.py; do
+		python "$i"
+	done
+	cd -
 
 	deactivate
 else
