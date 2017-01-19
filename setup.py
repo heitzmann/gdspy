@@ -37,7 +37,6 @@ setup_requires = ['pytest-runner'] if \
 
 setup(
     name='gdspy',
-
     version=version,
     author='Lucas Heitzmann Gabrielli',
     author_email='heitzmann@gmail.com',

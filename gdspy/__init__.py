@@ -3437,8 +3437,15 @@ class GdsLibrary(object):
 
     Represent a GDSII library containing a dictionary of cells.
 
+    Parameters
+    ----------
+    name : string
+        Name of the GDSII library.
+
     Attributes
     ----------
+    name : string
+        Name of the GDSII library.
     cell_dict : dictionary
         Dictionary of cells in this library, indexed by name.
     """
@@ -3459,7 +3466,8 @@ class GdsLibrary(object):
     _import_anchors = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's',
                        'se']
 
-    def __init__(self):
+    def __init__(self, name='library'):
+        self.name = name
         self.cell_dict = {}
 
     def __str__(self):
@@ -3497,8 +3505,7 @@ class GdsLibrary(object):
                 self.cell_dict[c.name] = c
 
 
-    def write_gds(self, outfile, cells=None, name='library', unit=1.0e-6,
-                  precision=1.0e-9):
+    def write_gds(self, outfile, cells=None, unit=1.0e-6, precision=1.0e-9):
         """
         Write the GDSII library to a file.
 
@@ -3517,8 +3524,6 @@ class GdsLibrary(object):
         cells : array-like
             The list of cells or cell names to be included in the library.  If
             ``None``, all cells are used.
-        name : string
-            Name of the GDSII library (file).
         unit : number
             Unit size for the objects in the library (in *meters*).
         precision : number
@@ -3536,8 +3541,7 @@ class GdsLibrary(object):
         else:
             close = False
         now = datetime.datetime.today()
-        if len(name) % 2 != 0:
-            name = name + '\0'
+        name = self.name if len(self.name) % 2 == 0 else (self.name + '\0')
         outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
                                   now.year, now.month, now.day, now.hour,
                                   now.minute, now.second, now.year, now.month,
@@ -3585,8 +3589,8 @@ class GdsLibrary(object):
 
         Notes
         -----
-        Not all features from the GDSII specification are currently supported.  A
-        warning will be produced if any unsuported features are found in the
+        Not all features from the GDSII specification are currently supported.
+        A warning will be produced if any unsuported features are found in the
         imported file.
         """
         self._incomplete = []
@@ -3639,11 +3643,6 @@ class GdsLibrary(object):
                 create_element = self._create_label
             # SNAME
             elif record[0] == 0x12:
-                if str is not bytes:
-                    if record[1][-1] == 0:
-                        record[1] = record[1][:-1].decode('ascii')
-                    else:
-                        record[1] = record[1].decode('ascii')
                 kwargs['ref_cell'] = rename.get(record[1], record[1])
             # COLROW
             elif record[0] == 0x13:
@@ -3666,23 +3665,12 @@ class GdsLibrary(object):
                 create_element = self._create_array
             # STRNAME
             elif record[0] == 0x06:
-                if str is not bytes:
-                    if record[1][-1] == 0:
-                        record[1] = record[1][:-1].decode('ascii')
-                    else:
-                        record[1] = record[1].decode('ascii')
                 name = rename.get(record[1], record[1])
                 cell = Cell(name, exclude_from_current=True)
                 self.cell_dict[name] = cell
             # STRING
             elif record[0] == 0x19:
-                if str is not bytes:
-                    if record[1][-1] == 0:
-                        kwargs['text'] = record[1][:-1].decode('ascii')
-                    else:
-                        kwargs['text'] = record[1].decode('ascii')
-                else:
-                    kwargs['text'] = record[1]
+                kwargs['text'] = record[1]
             # ENDSTR
             elif record[0] == 0x07:
                 cell = None
@@ -3692,6 +3680,9 @@ class GdsLibrary(object):
                     factor = record[1][0]
                 else:
                     factor = record[1][1] / unit
+            # LIBNAME
+            elif record[0] == 0x02:
+                self.name = record[1]
             # PRESENTATION
             elif record[0] == 0x17:
                 kwargs['anchor'] = GdsLibrary._import_anchors[int(record[1][0])
@@ -3766,7 +3757,12 @@ class GdsLibrary(object):
                                     for _ in range((size - 4) // 8)])
             else:
                 data = stream.read(size - 4)
-                if data[-1] == '\0':
+                if str is not bytes:
+                    if data[-1] == 0:
+                        data = data[:-1].decode('ascii')
+                    else:
+                        data = data.decode('ascii')
+                elif data[-1] == '\0':
                     data = data[:-1]
         return [rec_type, data]
 
@@ -3868,9 +3864,6 @@ class GdsWriter(object):
     outfile : file or string
         The file (or path) where the GDSII stream will be written.  It must be
         opened for writing operations in binary format.
-    cells : array-like
-        The list of cells or cell names to be included in the library.  If
-        ``None``, all cells listed in ``Cell.cell_dict`` are used.
     name : string
         Name of the GDSII library (file).
     unit : number
@@ -4433,14 +4426,15 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
         The list of cells or cell names to be included in the library.  If
         ``None``, all cells are used.
     name : string
-        Name of the GDSII library (file).
+        Name of the GDSII library.
     unit : number
         Unit size for the objects in the library (in *meters*).
     precision : number
         Precision for the dimensions of the objects in the library (in
         *meters*).
     """
-    current_library.write_gds(outfile, cells, name, unit, precision)
+    current_library.name = name
+    current_library.write_gds(outfile, cells, unit, precision)
 
 
 current_library = GdsLibrary()
