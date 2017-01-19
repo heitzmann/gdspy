@@ -1,53 +1,30 @@
-import numpy
 import gdspy
 
 
-def test_8b_f():
-    f = gdspy._eight_byte_real_to_float
-    assert f(b'\x00\x00\x00\x00\x00\x00\x00\x00') == 0
-    assert f(b'\x41\x10\x00\x00\x00\x00\x00\x00') == 1
-    assert f(b'\x41\x20\x00\x00\x00\x00\x00\x00') == 2
-    assert f(b'\xC1\x30\x00\x00\x00\x00\x00\x00') == -3
-
-
-def test_f_8b():
-    g = gdspy._eight_byte_real
-    assert b'\x00\x00\x00\x00\x00\x00\x00\x00' == g(0)
-    assert b'\x41\x10\x00\x00\x00\x00\x00\x00' == g(1)
-    assert b'\x41\x20\x00\x00\x00\x00\x00\x00' == g(2)
-    assert b'\xC1\x30\x00\x00\x00\x00\x00\x00' == g(-3)
-
-
-def test_twoway():
-    f = gdspy._eight_byte_real_to_float
-    g = gdspy._eight_byte_real
-    for x in [0, 1.5, -numpy.pi, 1/3.0e12, -1.0e12/7, 1.1e75, -0.9e-78]:
-        assert x == f(g(x))
-    for _ in range(10000):
-        x = 10**(numpy.random.random()*150-75)
-        assert x == f(g(x))
-
-
-def test_write_gds(tmpdir):
-    gdspy.current_library = gdspy.GdsLibrary()
-    c1 = gdspy.Cell('fu_rw_gds_1')
+def test_writer_gds(tmpdir):
+    lib = gdspy.GdsLibrary()
+    c1 = gdspy.Cell('gw_rw_gds_1', True)
     c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
     c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
-    c2 = gdspy.Cell('fu_rw_gds_2')
+    c2 = gdspy.Cell('gw_rw_gds_2', True)
     c2.add(gdspy.Round((0, 0), 1, number_of_points=32, max_points=20))
-    c3 = gdspy.Cell('fu_rw_gds_3')
+    c3 = gdspy.Cell('gw_rw_gds_3', True)
     c3.add(gdspy.CellReference(c1, (0, 1), -90, 2, True))
-    c4 = gdspy.Cell('fu_rw_gds_4')
+    c4 = gdspy.Cell('gw_rw_gds_4', True)
     c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
+    lib.add((c1, c2, c3, c4))
 
     fname1 = str(tmpdir.join('test1.gds'))
-    gdspy.write_gds(fname1, name='lib', unit=2e-3, precision=1e-5)
+    writer1 = gdspy.GdsWriter(fname1, name='lib', unit=2e-3, precision=1e-5)
+    for c in lib.cell_dict.values():
+        writer1.write_cell(c)
+    writer1.close()
     lib1 = gdspy.GdsLibrary()
-    lib1.read_gds(fname1, 1e-3, {'fu_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
+    lib1.read_gds(fname1, 1e-3, {'gw_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
-    assert set(lib1.cell_dict.keys()) == {'1', 'fu_rw_gds_2', 'fu_rw_gds_3',
-                                          'fu_rw_gds_4'}
+    assert set(lib1.cell_dict.keys()) == {'1', 'gw_rw_gds_2', 'gw_rw_gds_3',
+                                          'gw_rw_gds_4'}
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
@@ -62,12 +39,12 @@ def test_write_gds(tmpdir):
     assert c.labels[0].layer == 5
     assert c.labels[0].texttype == 7
 
-    c = lib1.cell_dict['fu_rw_gds_2']
+    c = lib1.cell_dict['gw_rw_gds_2']
     assert len(c.elements) == 2
     assert isinstance(c.elements[0], gdspy.Polygon) \
            and isinstance(c.elements[1], gdspy.Polygon)
 
-    c = lib1.cell_dict['fu_rw_gds_3']
+    c = lib1.cell_dict['gw_rw_gds_3']
     assert len(c.elements) == 1
     assert isinstance(c.elements[0], gdspy.CellReference)
     assert c.elements[0].ref_cell == lib1.cell_dict['1']
@@ -76,10 +53,10 @@ def test_write_gds(tmpdir):
     assert c.elements[0].magnification == 2
     assert c.elements[0].x_reflection == True
 
-    c = lib1.cell_dict['fu_rw_gds_4']
+    c = lib1.cell_dict['gw_rw_gds_4']
     assert len(c.elements) == 1
     assert isinstance(c.elements[0], gdspy.CellArray)
-    assert c.elements[0].ref_cell == lib1.cell_dict['fu_rw_gds_2']
+    assert c.elements[0].ref_cell == lib1.cell_dict['gw_rw_gds_2']
     assert c.elements[0].origin[0] == -2 and c.elements[0].origin[1] == -4
     assert c.elements[0].rotation == 180
     assert c.elements[0].magnification == 0.5
@@ -90,7 +67,10 @@ def test_write_gds(tmpdir):
 
     fname2 = str(tmpdir.join('test2.gds'))
     with open(fname2, 'wb') as fout:
-        gdspy.write_gds(fout, name='lib2', unit=2e-3, precision=1e-5)
+        writer2 = gdspy.GdsWriter(fout, name='lib2', unit=2e-3, precision=1e-5)
+        for c in lib.cell_dict.values():
+            writer2.write_cell(c)
+        writer2.close()
     with open(fname2, 'rb') as fin:
         lib2 = gdspy.GdsLibrary()
         lib2.read_gds(fin)

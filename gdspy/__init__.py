@@ -82,23 +82,22 @@ def _eight_byte_real(value):
     out : string
         The GDSII binary string that represents ``value``.
     """
-    byte1 = 0
-    byte2 = 0
-    short3 = 0
-    long4 = 0
-    if value != 0:
-        if value < 0:
-            byte1 = 0x80
-            value = -value
-        exponent = int(numpy.floor(numpy.log2(value) * 0.25))
-        mantissa = int(value * 16**(14 - exponent))
-        while mantissa >= 72057594037927936:
-            exponent += 1
-            mantissa = int(value * 16**(14 - exponent))
-        byte1 += exponent + 64
-        byte2 = (mantissa // 281474976710656)
-        short3 = (mantissa % 281474976710656) // 4294967296
-        long4 = mantissa % 4294967296
+    if value == 0:
+        return b'\x00\x00\x00\x00\x00\x00\x00\x00'
+    if value < 0:
+        byte1 = 0x80
+        value = -value
+    else:
+        byte1 = 0x00
+    fexp = numpy.log2(value) / 4
+    exponent = int(numpy.ceil(fexp))
+    if fexp == exponent:
+        exponent += 1
+    mantissa = int(value * 16 ** (14 - exponent))
+    byte1 += exponent + 64
+    byte2 = (mantissa // 281474976710656)
+    short3 = (mantissa % 281474976710656) // 4294967296
+    long4 = mantissa % 4294967296
     return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
 
 
@@ -117,10 +116,12 @@ def _eight_byte_real_to_float(value):
         The number represented by ``value``.
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
-    exponent = (short1 & 0x7f00) // 256
+    exponent = (short1 & 0x7f00) // 256 - 64
     mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296
                 + long3) / 72057594037927936.0
-    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16 ** (exponent - 64)
+    if short1 & 0x8000:
+        return -mantissa * 16 ** exponent
+    return mantissa * 16 ** exponent
 
 
 class Polygon(object):
@@ -2915,18 +2916,20 @@ class CellReference(object):
     magnification : number
         Magnification factor for the reference.
     x_reflection : bool
-        If ``True``, the reference is reflected parallel to the x direction
+        If ``True`` the reference is reflected parallel to the x direction
         before being rotated.
+    ignore_missing : bool
+        If ``False`` a warning is issued when the referenced cell is not found.
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None,
-                 magnification=None, x_reflection=False):
+                 magnification=None, x_reflection=False, ignore_missing=False):
         self.origin = origin
         self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
-        if not isinstance(self.ref_cell, Cell):
+        if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn("[GDSPY] Cell {0} not found; operations on this "
                           "CellReference may not work.".format(self.ref_cell))
 
@@ -3166,10 +3169,13 @@ class CellArray(object):
     x_reflection : bool
         If ``True``, the reference is reflected parallel to the x direction
         before being rotated.
+    ignore_missing : bool
+        If ``False`` a warning is issued when the referenced cell is not found.
     """
 
     def __init__(self, ref_cell, columns, rows, spacing, origin=(0, 0),
-                 rotation=None, magnification=None, x_reflection=False):
+                 rotation=None, magnification=None, x_reflection=False,
+                 ignore_missing=False):
         self.columns = columns
         self.rows = rows
         self.spacing = spacing
@@ -3178,7 +3184,7 @@ class CellArray(object):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
-        if not isinstance(self.ref_cell, Cell):
+        if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn("[GDSPY] Cell {0} not found; operations on this "
                           "CellArray may not work.".format(self.ref_cell))
 
@@ -3593,7 +3599,7 @@ class GdsLibrary(object):
         A warning will be produced if any unsuported features are found in the
         imported file.
         """
-        self._incomplete = []
+        self._references = []
         if isinstance(infile, str):
             infile = open(infile, 'rb')
             close = True
@@ -3699,12 +3705,11 @@ class GdsLibrary(object):
                     kwargs['ends'] = record[1][0]
             # ENDLIB
             elif record[0] == 0x04:
-                for ref in self._incomplete:
+                for ref in self._references:
                     if ref.ref_cell in self.cell_dict:
                         ref.ref_cell = self.cell_dict[ref.ref_cell]
-                    else:
-                        ref.ref_cell = Cell.cell_dict.get(ref.ref_cell,
-                                                          ref.ref_cell)
+                    elif ref.ref_cell in current_library.cell_dict:
+                        ref.ref_cell = current_library.cell_dict[ref.ref_cell]
             # Not supported
             elif record[0] not in emitted_warnings and record[0] \
                     not in GdsLibrary._unused_records:
@@ -3780,9 +3785,10 @@ class GdsLibrary(object):
 
     def _create_reference(self, **kwargs):
         kwargs['origin'] = kwargs.pop('xy')
+        kwargs['ignore_missing'] = True
         ref = CellReference(**kwargs)
-        if not isinstance(ref.ref_cell, Cell):
-            self._incomplete.append(ref)
+        ref.ref_cell = kwargs['ref_cell']
+        self._references.append(ref)
         return ref
 
     def _create_array(self, **kwargs):
@@ -3804,9 +3810,10 @@ class GdsLibrary(object):
         else:
             kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['columns'],
                                  (xy[5] - xy[1]) / kwargs['rows'])
+        kwargs['ignore_missing'] = True
         ref = CellArray(**kwargs)
-        if not isinstance(ref.ref_cell, Cell):
-            self._incomplete.append(ref)
+        ref.ref_cell = kwargs['ref_cell']
+        self._references.append(ref)
         return ref
 
     def extract(self, cell):
