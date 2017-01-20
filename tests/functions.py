@@ -28,6 +28,15 @@ def test_twoway():
         assert x == f(g(x))
 
 
+def test_inside():
+    polygons = [gdspy.Round((0, 0), 10, inner_radius=5, number_of_points=180),
+                gdspy.Rectangle((20, -10), (40, 10)),
+                gdspy.Rectangle((-10, 0), (10, 20))]
+    assert gdspy.inside([(0, 0)], polygons) == (True,)
+    assert gdspy.inside([(0, 0), (0, 30), (30, 0), (0, -1)], polygons) == \
+        (True, False, True, False)
+
+
 def test_write_gds(tmpdir):
     gdspy.current_library = gdspy.GdsLibrary()
     c1 = gdspy.Cell('fu_rw_gds_1')

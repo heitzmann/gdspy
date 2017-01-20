@@ -4359,8 +4359,8 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
 
     Returns
     -------
-    out : list
-        List of booleans indicating if each of the points or point groups is
+    out : tuple
+        Tuple of booleans indicating if each of the points or point groups is
         inside the set of polygons.
     """
     poly = []
