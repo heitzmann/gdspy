@@ -35,6 +35,44 @@ def test_inside():
     assert gdspy.inside([(0, 0)], polygons) == (True,)
     assert gdspy.inside([(0, 0), (0, 30), (30, 0), (0, -1)], polygons) == \
         (True, False, True, False)
+    assert gdspy.inside([[(0, 0), (0, 30), (30, 0), (0, -1)],
+                         [(0, -1), (0, 30)], [(0, 0), (30, 0)]], polygons,
+                        'any') == (True, False, True)
+    assert gdspy.inside([[(0, 0), (0, 30), (30, 0), (0, -1)],
+                         [(0, -1), (0, 30)], [(0, 0), (30, 0)]], polygons,
+                        'all') == (False, False, True)
+
+
+def test_copy():
+    p = gdspy.Rectangle((0, 0), (1, 1))
+    q = gdspy.copy(p, 1, -1)
+    assert set(p.points[:,0]) == {0, 1}
+    assert set(p.points[:,1]) == {0, 1}
+    assert set(q.points[:,0]) == {1, 2}
+    assert set(q.points[:,1]) == {-1, 0}
+    p = gdspy.PolygonSet([[(0, 0), (1, 0), (0, 1)], [(2, 2), (3, 2), (2, 3)]])
+    q = gdspy.copy(p, 1, -1)
+    assert set(p.polygons[0][:,0]) == {0, 1}
+    assert set(p.polygons[0][:,1]) == {0, 1}
+    assert set(q.polygons[0][:,0]) == {1, 2}
+    assert set(q.polygons[0][:,1]) == {-1, 0}
+    assert set(p.polygons[1][:,0]) == {2, 3}
+    assert set(p.polygons[1][:,1]) == {2, 3}
+    assert set(q.polygons[1][:,0]) == {3, 4}
+    assert set(q.polygons[1][:,1]) == {1, 2}
+    l = gdspy.Label('text', (0, 1))
+    m = gdspy.copy(l, -1, 1)
+    assert l.position == (0, 1)
+    assert m.position == (-1, 2)
+    c = gdspy.CellReference('empty', (0, 1), ignore_missing=True)
+    d = gdspy.copy(c, -1, 1)
+    assert c.origin == (0, 1)
+    assert d.origin == (-1, 2)
+    c = gdspy.CellArray('empty', 2, 3, (1, 0), (0, 1), ignore_missing=True)
+    d = gdspy.copy(c, -1, 1)
+    assert c.origin == (0, 1)
+    assert d.origin == (-1, 2)
+
 
 
 def test_write_gds(tmpdir):

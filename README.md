@@ -63,6 +63,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Development changed to Python 3 (Python 2 supported via [python-future](http://python-future.org/)).
 * Added photonics example.
 * Added test suite.
+* Fixed `inside` function sometimes reversing the order of the output.
 * Fixed rounding error in `fast_boolean`.
 * Fixed argument `deep_copy` being inverted in `Cell.copy`.
 * Bug fixes introduced by numpy (thanks to Adam McCaughan for the contribution).
