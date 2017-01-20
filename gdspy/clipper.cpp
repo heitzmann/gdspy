@@ -4493,7 +4493,7 @@ std::ostream& operator <<(std::ostream &s, const Paths &p)
  * GDSPY additions below this comment                                 *
  **********************************************************************/
 
-short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
+short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling, bool check_orientation)
 {
   PyObject *py_polygon, *py_point, *py_coord;
   long num = PySequence_Length(polyset);
@@ -4543,10 +4543,10 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling)
       Py_DECREF(py_point);
       paths[i][j].X = Round(scaling * x);
       paths[i][j].Y = Round(scaling * y);
-      if (j > 1)
+      if (check_orientation == true && j > 1)
         orientation += (paths[i][0].X - paths[i][j].X) * (paths[i][j-1].Y - paths[i][0].Y) - (paths[i][0].Y - paths[i][j].Y) * (paths[i][j-1].X - paths[i][0].X);
     }
-    if (orientation < 0)
+    if (check_orientation == true && orientation < 0)
     {
       reverse(paths[i].begin(), paths[i].end());
     }
@@ -4735,8 +4735,8 @@ static PyObject* clip(PyObject *self, PyObject *args)
     return NULL;
   }
 
-  if (parse_polygon_set(polyA, subj, scaling) != 0) return NULL;
-  if (parse_polygon_set(polyB, clip, scaling) != 0) return NULL;
+  if (parse_polygon_set(polyA, subj, scaling, true) != 0) return NULL;
+  if (parse_polygon_set(polyB, clip, scaling, true) != 0) return NULL;
 
   clpr.AddPaths(subj, ptSubject, true);
   clpr.AddPaths(clip, ptClip, true);
@@ -4786,7 +4786,7 @@ static PyObject* offset(PyObject *self, PyObject *args)
     return NULL;
   }
 
-  if (parse_polygon_set(polygons, subj, scaling) != 0) return NULL; 
+  if (parse_polygon_set(polygons, subj, scaling, true) != 0) return NULL; 
 
   if (joinFirst > 0)
   {
@@ -4825,8 +4825,8 @@ static PyObject* inside(PyObject *self, PyObject *args)
     return NULL;
   }
 
-  if (parse_polygon_set(pts, groups, scaling) != 0) return NULL;
-  if (parse_polygon_set(poly, polygons, scaling) != 0) return NULL;
+  if (parse_polygon_set(pts, groups, scaling, false) != 0) return NULL;
+  if (parse_polygon_set(poly, polygons, scaling, true) != 0) return NULL;
 
   unsigned long numgroups = groups.size();
   unsigned long numpolygons = polygons.size();
