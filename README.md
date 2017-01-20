@@ -18,8 +18,9 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 
 ### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 2.7 and 3.5)
+* [Python](http://www.python.org/) (tested with versions 2.7, 3.5 and 3.6)
 * [Numpy](http://numpy.scipy.org/)
+* [Python-future](http://python-future.org/) (only for Python 2)
 * C compiler (needed only if built from source)
 
 ### Linux / OS X
@@ -59,7 +60,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Introduction of `GdsLibrary` to allow user to work with multiple library simultaneously.
 * Deprecated `GdsImport` in favor of `GdsLibrary`.
 * Renamed `gds_print` to `write_gds` and `GdsPrint` to `GdsWriter`.
-* Development changed to Python 3 (Python 2.6 and above supported via [python-future](http://python-future.org/)).
+* Development changed to Python 3 (Python 2 supported via [python-future](http://python-future.org/)).
 * Added photonics example.
 * Added test suite.
 * Fixed rounding error in `fast_boolean`.
