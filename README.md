@@ -56,13 +56,14 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Version 1.1 (Jan 20, 2017)
+### Version GIT
 * Introduction of `GdsLibrary` to allow user to work with multiple library simultaneously.
 * Deprecated `GdsImport` in favor of `GdsLibrary`.
 * Renamed `gds_print` to `write_gds` and `GdsPrint` to `GdsWriter`.
 * Development changed to Python 3 (Python 2 supported via [python-future](http://python-future.org/)).
 * Added photonics example.
 * Added test suite.
+* Clipper library updated to last version.
 * Fixed `inside` function sometimes reversing the order of the output.
 * Fixed rounding error in `fast_boolean`.
 * Fixed argument `deep_copy` being inverted in `Cell.copy`.
