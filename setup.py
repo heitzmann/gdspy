@@ -53,10 +53,8 @@ setup(
         Extension('gdspy.clipper', ['gdspy/clipper.cpp'])
     ],
     provides=['gdspy'],
-    install_requires=[
-        'numpy',
-        'future; python_version < "3"',
-    ],
+    install_requires=['numpy'] + (['future'] if sys.version_info.major < 3
+                                  else []),
     setup_requires=setup_requires,
     tests_require=['pytest'],
     platforms='OS Independent',
