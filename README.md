@@ -56,7 +56,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Version 1.? (?)
+### Version 1.1 (Jan 20, 2017)
 * Introduction of `GdsLibrary` to allow user to work with multiple library simultaneously.
 * Deprecated `GdsImport` in favor of `GdsLibrary`.
 * Renamed `gds_print` to `write_gds` and `GdsPrint` to `GdsWriter`.

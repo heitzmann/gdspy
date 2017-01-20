@@ -1,6 +1,6 @@
 /**********************************************************************
  *                                                                    *
- *  Copyright 2009-2016 Lucas Heitzmann Gabrielli                     *
+ *  Copyright 2009-2017 Lucas Heitzmann Gabrielli                     *
  *                                                                    *
  *  This file is part of gdspy.  It is a modification of the clipper  *
  *  library by Angus Johnson, originally released under the Boost     *
