@@ -93,7 +93,7 @@ def _eight_byte_real(value):
     exponent = int(numpy.ceil(fexp))
     if fexp == exponent:
         exponent += 1
-    mantissa = int(value * 16 ** (14 - exponent))
+    mantissa = int(value * 16. ** (14 - exponent))
     byte1 += exponent + 64
     byte2 = (mantissa // 281474976710656)
     short3 = (mantissa % 281474976710656) // 4294967296
@@ -120,8 +120,8 @@ def _eight_byte_real_to_float(value):
     mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296
                 + long3) / 72057594037927936.0
     if short1 & 0x8000:
-        return -mantissa * 16 ** exponent
-    return mantissa * 16 ** exponent
+        return -mantissa * 16. ** exponent
+    return mantissa * 16. ** exponent
 
 
 class Polygon(object):
