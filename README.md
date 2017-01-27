@@ -56,6 +56,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.1.1 (Jan 27, 2017)
+* Patch to fix installation issue (missing README file in zip).
+
 ### Version 1.1 (Jan 20, 2017)
 * Introduction of `GdsLibrary` to allow user to work with multiple library simultaneously.
 * Deprecated `GdsImport` in favor of `GdsLibrary`.
