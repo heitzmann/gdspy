@@ -45,8 +45,9 @@ def test_writer_gds(tmpdir):
     lib1.read_gds(fname1, 1e-3, {'gw_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
-    assert set(lib1.cell_dict.keys()) == {'1', 'gw_rw_gds_2', 'gw_rw_gds_3',
-                                          'gw_rw_gds_4'}
+    assert set(lib1.cell_dict.keys()) == {
+        '1', 'gw_rw_gds_2', 'gw_rw_gds_3', 'gw_rw_gds_4'
+    }
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0

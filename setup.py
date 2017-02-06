@@ -53,23 +53,19 @@ setup(
         Extension('gdspy.clipper', ['gdspy/clipper.cpp'])
     ],
     provides=['gdspy'],
-    install_requires=['numpy'] + (['future'] if sys.version_info.major < 3
-                                  else []),
+    install_requires=['numpy'] + (['future']
+                                  if sys.version_info.major < 3 else []),
     setup_requires=setup_requires,
     tests_require=['pytest'],
     platforms='OS Independent',
     classifiers=[
-        'Development Status :: 4 - Beta',
-        'Environment :: Console',
+        'Development Status :: 4 - Beta', 'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Manufacturing',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Operating System :: OS Independent',
-        'Programming Language :: C',
-        'Programming Language :: C++',
-        'Programming Language :: Python',
+        'Operating System :: OS Independent', 'Programming Language :: C',
+        'Programming Language :: C++', 'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
     ],
-    zip_safe=False,
-)
+    zip_safe=False)

@@ -19,7 +19,6 @@
 #  <http://www.gnu.org/licenses/>.                                   #
 #                                                                    #
 ######################################################################
-
 """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
@@ -93,7 +92,7 @@ def _eight_byte_real(value):
     exponent = int(numpy.ceil(fexp))
     if fexp == exponent:
         exponent += 1
-    mantissa = int(value * 16. ** (14 - exponent))
+    mantissa = int(value * 16.**(14 - exponent))
     byte1 += exponent + 64
     byte2 = (mantissa // 281474976710656)
     short3 = (mantissa % 281474976710656) // 4294967296
@@ -117,11 +116,11 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256 - 64
-    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296
-                + long3) / 72057594037927936.0
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 + long3
+                ) / 72057594037927936.0
     if short1 & 0x8000:
-        return -mantissa * 16. ** exponent
-    return mantissa * 16. ** exponent
+        return -mantissa * 16.**exponent
+    return mantissa * 16.**exponent
 
 
 class Polygon(object):
@@ -166,9 +165,12 @@ class Polygon(object):
 
     def __init__(self, points, layer=0, datatype=0, verbose=True):
         if len(points) > 199 and verbose:
-            warnings.warn("[GDSPY] A polygon with more than 199 points was "
-                          "created (not officially supported by the GDSII "
-                          "format).", RuntimeWarning, stacklevel=2)
+            warnings.warn(
+                "[GDSPY] A polygon with more than 199 points was "
+                "created (not officially supported by the GDSII "
+                "format).",
+                RuntimeWarning,
+                stacklevel=2)
         self.layer = layer
         self.points = numpy.array(points)
         self.datatype = datatype
@@ -224,7 +226,8 @@ class Polygon(object):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        self.points = (self.points-c0)*ca + (self.points-c0)[:, ::-1]*sa + c0
+        self.points = (self.points - c0) * ca + (self.points - c0
+                                                 )[:, ::-1] * sa + c0
         return self
 
     def area(self, by_spec=False):
@@ -244,11 +247,10 @@ class Polygon(object):
         """
         poly_area = 0
         for ii in range(1, self.points.shape[0] - 1):
-            poly_area += (
-                    (self.points[0][0] - self.points[ii + 1][0])
-                    * (self.points[ii][1] - self.points[0][1])
-                    - (self.points[0][1] - self.points[ii + 1][1])
-                    * (self.points[ii][0] - self.points[0][0]))
+            poly_area += ((self.points[0][0] - self.points[ii + 1][0]) *
+                          (self.points[ii][1] - self.points[0][1]) -
+                          (self.points[0][1] - self.points[ii + 1][1]) *
+                          (self.points[ii][0] - self.points[0][0]))
         if by_spec:
             return {(self.layer, self.datatype): 0.5 * abs(poly_area)}
         else:
@@ -282,13 +284,15 @@ class Polygon(object):
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = _chop(
-                                out_polygons[ii],
-                                (pts0[len(pts0)//2]+pts0[len(pts0)//2+1])/2, 0)
+                            out_polygons[ii],
+                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
+                            2, 0)
                     else:
                         # Horizontal cuts
                         chopped = _chop(
-                                out_polygons[ii],
-                                (pts1[len(pts1)//2]+pts1[len(pts1)//2+1])/2, 1)
+                            out_polygons[ii],
+                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
+                            2, 1)
                     out_polygons.pop(ii)
                     out_polygons += chopped[0]
                     out_polygons += chopped[1]
@@ -323,16 +327,16 @@ class Polygon(object):
         """
         two_pi = 2 * numpy.pi
         vec = self.points.astype(float) - numpy.roll(self.points, 1, 0)
-        length = numpy.sqrt(numpy.sum(vec ** 2, 1))
+        length = numpy.sqrt(numpy.sum(vec**2, 1))
         ii = numpy.flatnonzero(length)
         if len(ii) < len(length):
             self.points = self.points[ii]
             vec = self.points - numpy.roll(self.points, 1, 0)
-            length = numpy.sqrt(numpy.sum(vec ** 2, 1))
+            length = numpy.sqrt(numpy.sum(vec**2, 1))
         vec[:, 0] = vec[:, 0] / length
         vec[:, 1] = vec[:, 1] / length
         dvec = numpy.roll(vec, -1, 0) - vec
-        norm = numpy.sqrt(numpy.sum(dvec ** 2, 1))
+        norm = numpy.sqrt(numpy.sum(dvec**2, 1))
         ii = numpy.flatnonzero(norm)
         dvec[ii, 0] = dvec[ii, 0] / norm[ii]
         dvec[ii, 1] = dvec[ii, 1] / norm[ii]
@@ -340,7 +344,7 @@ class Polygon(object):
         ct = numpy.cos(theta * 0.5)
         tt = numpy.tan(theta * 0.5)
         if not isinstance(radius, list):
-            radius = [radius]*len(self.points)
+            radius = [radius] * len(self.points)
         if not len(self.points) == len(radius):
             raise ValueError("[GDSPY] Fillet radius list length does not "
                              "match the number of points in the polygon.")
@@ -356,8 +360,10 @@ class Polygon(object):
                     a1 -= two_pi
                 elif a1 - a0 < -numpy.pi:
                     a1 += two_pi
-                n = max(int(numpy.ceil(abs(a1-a0)/two_pi*points_per_2pi)+0.5),
-                        2)
+                n = max(
+                    int(
+                        numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi) +
+                        0.5), 2)
                 a = numpy.linspace(a0, a1, n)
                 l = radius[ii] * tt[ii]
                 if l > 0.49 * length[ii]:
@@ -367,10 +373,9 @@ class Polygon(object):
                     r = radius[ii]
                 if l > 0.49 * length[ii + 1]:
                     r = 0.49 * length[ii + 1] / tt[ii]
-                new_points += list(
-                        r * dvec[ii] / ct[ii] + self.points[ii]
-                        + numpy.vstack((r * numpy.cos(a),
-                                        r * numpy.sin(a))).transpose())
+                new_points += list(r * dvec[ii] / ct[ii] + self.points[
+                    ii] + numpy.vstack((r * numpy.cos(a), r * numpy.sin(a)))
+                                   .transpose())
             else:
                 new_points.append(self.points[ii])
 
@@ -450,16 +455,19 @@ class PolygonSet(object):
             self.polygons[i] = numpy.array(polygons[i])
             if len(polygons[i]) > 199 and verbose:
                 verbose = False
-                warnings.warn("[GDSPY] A polygon with more than 199 points "
-                              "was created (not officially supported by the "
-                              "GDSII format).", RuntimeWarning, stacklevel=2)
+                warnings.warn(
+                    "[GDSPY] A polygon with more than 199 points "
+                    "was created (not officially supported by the "
+                    "GDSII format).",
+                    RuntimeWarning,
+                    stacklevel=2)
 
     def __str__(self):
         return ("PolygonSet ({} polygons, {} vertices, layers {}, datatypes "
-                "{})").format(len(self.polygons),
-                              sum([len(p) for p in self.polygons]),
-                              list(set(self.layers)),
-                              list(set(self.datatypes)))
+                "{})").format(
+                    len(self.polygons),
+                    sum([len(p) for p in self.polygons]),
+                    list(set(self.layers)), list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -505,17 +513,20 @@ class PolygonSet(object):
             if len(self.polygons[ii]) > 4094:
                 raise ValueError("[GDSPY] Polygons with more than 4094 are "
                                  "not supported by the GDSII format.")
-            data.append(struct.pack('>10h', 4, 0x0800, 6, 0x0D02,
-                                    self.layers[ii], 6, 0x0E02,
-                                    self.datatypes[ii],
-                                    12 + 8 * len(self.polygons[ii]), 0x1003))
-            data.extend(struct.pack('>2l', int(round(point[0] * multiplier)),
-                                    int(round(point[1] * multiplier)))
-                        for point in self.polygons[ii])
-            data.append(struct.pack(
-                    '>2l2h', int(round(self.polygons[ii][0][0] * multiplier)),
-                    int(round(self.polygons[ii][0][1] * multiplier)), 4,
-                    0x1100))
+            data.append(
+                struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6,
+                            0x0E02, self.datatypes[ii], 12 + 8 * len(
+                                self.polygons[ii]), 0x1003))
+            data.extend(
+                struct.pack('>2l',
+                            int(round(point[0] * multiplier)),
+                            int(round(point[1] * multiplier)))
+                for point in self.polygons[ii])
+            data.append(
+                struct.pack('>2l2h',
+                            int(round(self.polygons[ii][0][0] * multiplier)),
+                            int(round(self.polygons[ii][0][1] * multiplier)),
+                            4, 0x1100))
         return b''.join(data)
 
     def area(self, by_spec=False):
@@ -589,21 +600,25 @@ class PolygonSet(object):
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = _chop(
-                                self.polygons[ii],
-                                (pts0[len(pts0)//2]+pts0[len(pts0)//2+1])/2, 0)
+                            self.polygons[ii],
+                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
+                            2, 0)
                     else:
                         # Horizontal cuts
                         chopped = _chop(
-                                self.polygons[ii],
-                                (pts1[len(pts1)//2]+pts1[len(pts1)//2+1])/2, 1)
+                            self.polygons[ii],
+                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
+                            2, 1)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
-                    self.polygons += [numpy.array(x) for x in
-                                      chopped[0] + chopped[1]]
-                    self.layers += [layer]*(len(chopped[0]) + len(chopped[1]))
-                    self.datatypes += [datatype]*(len(chopped[0])
-                                                  + len(chopped[1]))
+                    self.polygons += [
+                        numpy.array(x) for x in chopped[0] + chopped[1]
+                    ]
+                    self.layers += [layer] * (
+                        len(chopped[0]) + len(chopped[1]))
+                    self.datatypes += [datatype] * (
+                        len(chopped[0]) + len(chopped[1]))
                 else:
                     ii += 1
         return self
@@ -638,17 +653,17 @@ class PolygonSet(object):
 
         for jj in range(len(self.polygons)):
             vec = self.polygons[jj].astype(float) - numpy.roll(
-                    self.polygons[jj], 1, 0)
-            length = numpy.sqrt(numpy.sum(vec ** 2, 1))
+                self.polygons[jj], 1, 0)
+            length = numpy.sqrt(numpy.sum(vec**2, 1))
             ii = numpy.flatnonzero(length)
             if len(ii) < len(length):
                 self.polygons[jj] = self.polygons[jj][ii]
                 vec = self.polygons[jj] - numpy.roll(self.polygons[jj], 1, 0)
-                length = numpy.sqrt(numpy.sum(vec ** 2, 1))
+                length = numpy.sqrt(numpy.sum(vec**2, 1))
             vec[:, 0] = vec[:, 0] / length
             vec[:, 1] = vec[:, 1] / length
             dvec = numpy.roll(vec, -1, 0) - vec
-            norm = numpy.sqrt(numpy.sum(dvec ** 2, 1))
+            norm = numpy.sqrt(numpy.sum(dvec**2, 1))
             ii = numpy.flatnonzero(norm)
             dvec[ii, 0] = dvec[ii, 0] / norm[ii]
             dvec[ii, 1] = dvec[ii, 1] / norm[ii]
@@ -667,8 +682,10 @@ class PolygonSet(object):
                         a1 -= two_pi
                     elif a1 - a0 < -numpy.pi:
                         a1 += two_pi
-                    n = max(int(numpy.ceil(abs(a1 - a0) / two_pi
-                                * points_per_2pi) + 0.5), 2)
+                    n = max(
+                        int(
+                            numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi)
+                            + 0.5), 2)
                     a = numpy.linspace(a0, a1, n)
                     l = radius * tt[ii]
                     if l > 0.49 * length[ii]:
@@ -678,10 +695,9 @@ class PolygonSet(object):
                         r = radius
                     if l > 0.49 * length[ii + 1]:
                         r = 0.49 * length[ii + 1] / tt[ii]
-                    new_points += list(
-                            r * dvec[ii] / ct[ii] + self.polygons[jj][ii]
-                            + numpy.vstack((r * numpy.cos(a),
-                                            r * numpy.sin(a))).transpose())
+                    new_points += list(r * dvec[ii] / ct[ii] + self.polygons[
+                        jj][ii] + numpy.vstack((r * numpy.cos(a), r *
+                                                numpy.sin(a))).transpose())
                 else:
                     new_points.append(self.polygons[jj][ii])
             self.polygons[jj] = numpy.array(new_points)
@@ -737,9 +753,9 @@ class Rectangle(Polygon):
 
     def __init__(self, point1, point2, layer=0, datatype=0):
         self.layer = layer
-        self.points = numpy.array([
-                [point1[0], point1[1]], [point1[0], point2[1]],
-                [point2[0], point2[1]], [point2[0], point1[1]]])
+        self.points = numpy.array(
+            [[point1[0], point1[1]], [point1[0], point2[1]],
+             [point2[0], point2[1]], [point2[0], point1[1]]])
         self.datatype = datatype
 
     def __str__(self):
@@ -798,37 +814,46 @@ class Round(PolygonSet):
     ...                       final_angle=0)
     """
 
-    def __init__(self, center, radius, inner_radius=0, initial_angle=0,
-                 final_angle=0, number_of_points=0.01, max_points=199,
-                 layer=0, datatype=0):
+    def __init__(self,
+                 center,
+                 radius,
+                 inner_radius=0,
+                 initial_angle=0,
+                 final_angle=0,
+                 number_of_points=0.01,
+                 max_points=199,
+                 layer=0,
+                 datatype=0):
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
-                    number_of_points = int(2 * radius * numpy.pi
-                                           / number_of_points + 0.5)
+                    number_of_points = int(2 * radius * numpy.pi /
+                                           number_of_points + 0.5)
                 else:
-                    number_of_points = int(abs(final_angle - initial_angle)
-                                           * radius/number_of_points + 0.5) + 2
+                    number_of_points = int(
+                        abs(final_angle - initial_angle) * radius /
+                        number_of_points + 0.5) + 2
             else:
                 if final_angle == initial_angle:
-                    number_of_points = 2 * int(2 * radius * numpy.pi
-                                               / number_of_points + 0.5) + 2
+                    number_of_points = 2 * int(2 * radius * numpy.pi /
+                                               number_of_points + 0.5) + 2
                 else:
-                    number_of_points = 2 * int(abs(final_angle - initial_angle)
-                                               * radius / number_of_points
-                                               + 0.5) + 2
+                    number_of_points = 2 * int(
+                        abs(final_angle - initial_angle) * radius /
+                        number_of_points + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         self.layers = [layer] * pieces
         self.datatypes = [datatype] * pieces
-        self.polygons = [numpy.zeros((number_of_points, 2)) for _ in
-                         range(pieces)]
+        self.polygons = [
+            numpy.zeros((number_of_points, 2)) for _ in range(pieces)
+        ]
         if final_angle == initial_angle and pieces > 1:
             final_angle += 2 * numpy.pi
         angles = numpy.linspace(initial_angle, final_angle, pieces + 1)
         for ii in range(pieces):
-            if angles[ii+1] == angles[ii]:
+            if angles[ii + 1] == angles[ii]:
                 if inner_radius <= 0:
                     angle = numpy.arange(number_of_points) * 2.0 * numpy.pi \
                             / number_of_points
@@ -851,7 +876,7 @@ class Round(PolygonSet):
                         * inner_radius + center[1]
             else:
                 if inner_radius <= 0:
-                    angle = numpy.linspace(angles[ii], angles[ii+1],
+                    angle = numpy.linspace(angles[ii], angles[ii + 1],
                                            number_of_points - 1)
                     self.polygons[ii][1:, 0] = numpy.cos(angle)
                     self.polygons[ii][1:, 1] = numpy.sin(angle)
@@ -860,12 +885,12 @@ class Round(PolygonSet):
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
-                    angle = numpy.linspace(angles[ii], angles[ii+1], n1)
+                    angle = numpy.linspace(angles[ii], angles[ii + 1], n1)
                     self.polygons[ii][:n1, 0] = numpy.cos(angle) * radius \
                         + center[0]
                     self.polygons[ii][:n1, 1] = numpy.sin(angle) * radius \
                         + center[1]
-                    angle = numpy.linspace(angles[ii+1], angles[ii], n2)
+                    angle = numpy.linspace(angles[ii + 1], angles[ii], n2)
                     self.polygons[ii][n1:, 0] = numpy.cos(angle) \
                         * inner_radius + center[0]
                     self.polygons[ii][n1:, 1] = numpy.sin(angle) \
@@ -922,42 +947,38 @@ class Text(PolygonSet):
                (3, 3), (3, 4), (4, 4), (4, 5), (3, 5), (3, 6), (3, 7), (4, 7),
                (5, 7), (5, 8), (4, 8), (3, 8), (3, 9), (2, 9), (2, 8), (1, 8),
                (1, 7), (2, 7), (2, 6), (1, 6), (1, 5), (2, 5), (2, 4), (2, 3),
-               (1, 3), (0, 3)],
-              [(0, 6), (1, 6), (1, 7), (0, 7)],
+               (1, 3), (0, 3)], [(0, 6), (1, 6), (1, 7), (0, 7)],
               [(4, 3), (5, 3), (5, 4), (4, 4)]],
-        '%': [[(0, 2), (1, 2), (1, 3), (1, 4), (0, 4), (0, 3)],
-              [(0, 7), (1, 7), (2, 7), (2, 8), (2, 9), (1, 9), (0, 9), (0, 8)],
-              [(1, 4), (2, 4), (2, 5), (1, 5)],
-              [(2, 5), (3, 5), (3, 6), (2, 6)],
-              [(3, 2), (4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (3, 4), (3, 3)],
-              [(3, 6), (4, 6), (4, 7), (3, 7)],
-              [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
-        '&': [[(0, 3), (1, 3), (1, 4), (1, 5), (0, 5), (0, 4)],
-              [(0, 6), (1, 6), (1, 7), (1, 8), (0, 8), (0, 7)],
-              [(1, 2), (2, 2), (3, 2), (3, 3), (2, 3), (1, 3)],
-              [(1, 5), (2, 5), (3, 5), (3, 6), (3, 7), (3, 8), (2, 8), (2, 7),
-               (2, 6), (1, 6)],
-              [(1, 8), (2, 8), (2, 9), (1, 9)],
-              [(3, 3), (4, 3), (4, 4), (4, 5), (3, 5), (3, 4)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
-              [(4, 5), (5, 5), (5, 6), (4, 6)]],
+        '%':
+        [[(0, 2), (1, 2), (1, 3), (1, 4), (0, 4), (0, 3)],
+         [(0, 7), (1, 7), (2, 7), (2, 8), (2, 9), (1, 9), (0, 9), (0, 8)],
+         [(1, 4), (2, 4), (2, 5), (1, 5)], [(2, 5), (3, 5), (3, 6), (2, 6)],
+         [(3, 2), (4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (3, 4), (3, 3)],
+         [(3, 6), (4, 6), (4, 7), (3, 7)],
+         [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
+        '&':
+        [[(0, 3), (1, 3), (1, 4), (1, 5), (0, 5), (0, 4)],
+         [(0, 6), (1, 6), (1, 7), (1, 8), (0, 8), (0, 7)],
+         [(1, 2), (2, 2), (3, 2), (3, 3), (2, 3), (1, 3)], [
+             (1, 5), (2, 5), (3, 5), (3, 6), (3, 7), (3, 8), (2, 8), (2, 7),
+             (2, 6), (1, 6)
+         ], [(1, 8), (2, 8), (2, 9), (1, 9)],
+         [(3, 3), (4, 3), (4, 4), (4, 5), (3, 5), (3, 4)],
+         [(4, 2), (5, 2), (5, 3), (4, 3)], [(4, 5), (5, 5), (5, 6), (4, 6)]],
         "'": [[(2, 7), (3, 7), (3, 8), (3, 9), (2, 9), (2, 8)]],
-        '(': [[(1, 4), (2, 4), (2, 5), (2, 6), (2, 7), (1, 7), (1, 6), (1, 5)],
-              [(2, 3), (3, 3), (3, 4), (2, 4)],
-              [(2, 7), (3, 7), (3, 8), (2, 8)],
-              [(3, 2), (4, 2), (4, 3), (3, 3)],
-              [(3, 8), (4, 8), (4, 9), (3, 9)]],
-        ')': [[(3, 4), (4, 4), (4, 5), (4, 6), (4, 7), (3, 7), (3, 6), (3, 5)],
-              [(1, 2), (2, 2), (2, 3), (1, 3)],
-              [(1, 8), (2, 8), (2, 9), (1, 9)],
-              [(2, 3), (3, 3), (3, 4), (2, 4)],
-              [(2, 7), (3, 7), (3, 8), (2, 8)]],
-        '*': [[(0, 2), (1, 2), (1, 3), (0, 3)],
-              [(0, 4), (1, 4), (1, 3), (2, 3), (2, 2), (3, 2), (3, 3), (4, 3),
-               (4, 4), (5, 4), (5, 5), (4, 5), (4, 6), (3, 6), (3, 7), (2, 7),
-               (2, 6), (1, 6), (1, 5), (0, 5)],
-              [(0, 6), (1, 6), (1, 7), (0, 7)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
+        '(':
+        [[(1, 4), (2, 4), (2, 5), (2, 6), (2, 7), (1, 7), (1, 6), (1, 5)],
+         [(2, 3), (3, 3), (3, 4), (2, 4)], [(2, 7), (3, 7), (3, 8), (2, 8)],
+         [(3, 2), (4, 2), (4, 3), (3, 3)], [(3, 8), (4, 8), (4, 9), (3, 9)]],
+        ')':
+        [[(3, 4), (4, 4), (4, 5), (4, 6), (4, 7), (3, 7), (3, 6), (3, 5)],
+         [(1, 2), (2, 2), (2, 3), (1, 3)], [(1, 8), (2, 8), (2, 9), (1, 9)],
+         [(2, 3), (3, 3), (3, 4), (2, 4)], [(2, 7), (3, 7), (3, 8), (2, 8)]],
+        '*': [[(0, 2), (1, 2), (1, 3), (0, 3)], [
+            (0, 4), (1, 4), (1, 3), (2, 3), (2, 2), (3, 2), (3, 3), (4, 3),
+            (4, 4), (5, 4), (5, 5), (4, 5), (4, 6), (3, 6), (3, 7), (2, 7),
+            (2, 6), (1, 6), (1, 5), (0, 5)
+        ], [(0, 6), (1, 6), (1, 7), (0, 7)], [(4, 2), (5, 2), (5, 3), (4, 3)],
               [(4, 6), (5, 6), (5, 7), (4, 7)]],
         '+': [[(0, 4), (1, 4), (2, 4), (2, 3), (2, 2), (3, 2), (3, 3), (3, 4),
                (4, 4), (5, 4), (5, 5), (4, 5), (3, 5), (3, 6), (3, 7), (2, 7),
@@ -990,9 +1011,8 @@ class Text(PolygonSet):
               [(3, 5), (4, 5), (4, 6), (3, 6)],
               [(4, 6), (5, 6), (5, 7), (5, 8), (4, 8), (4, 7)]],
         '3': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3),
-               (1, 3), (0, 3)],
-              [(0, 8), (1, 8), (2, 8), (3, 8), (4, 8), (4, 9), (3, 9), (2, 9),
-               (1, 9), (0, 9)],
+               (1, 3), (0, 3)], [(0, 8), (1, 8), (2, 8), (3, 8), (4, 8),
+                                 (4, 9), (3, 9), (2, 9), (1, 9), (0, 9)],
               [(1, 5), (2, 5), (3, 5), (4, 5), (4, 6), (3, 6), (2, 6), (1, 6)],
               [(4, 3), (5, 3), (5, 4), (5, 5), (4, 5), (4, 4)],
               [(4, 6), (5, 6), (5, 7), (5, 8), (4, 8), (4, 7)]],
@@ -1028,32 +1048,29 @@ class Text(PolygonSet):
               [(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3), (1, 3)],
               [(1, 5), (2, 5), (3, 5), (4, 5), (4, 4), (4, 3), (5, 3), (5, 4),
                (5, 5), (5, 6), (5, 7), (5, 8), (4, 8), (4, 7), (4, 6), (3, 6),
-               (2, 6), (1, 6)],
-              [(1, 8), (2, 8), (3, 8), (4, 8), (4, 9), (3, 9), (2, 9),
-               (1, 9)]],
+               (2, 6), (1, 6)], [(1, 8), (2, 8), (3, 8), (4, 8), (4, 9),
+                                 (3, 9), (2, 9), (1, 9)]],
         ':': [[(2, 2), (3, 2), (3, 3), (2, 3)],
               [(2, 5), (3, 5), (3, 6), (2, 6)]],
         ';': [[(1, 0), (2, 0), (2, 1), (1, 1)],
               [(2, 1), (3, 1), (3, 2), (3, 3), (2, 3), (2, 2)],
               [(2, 4), (3, 4), (3, 5), (2, 5)]],
-        '<': [[(0, 5), (1, 5), (1, 6), (0, 6)],
-              [(1, 4), (2, 4), (2, 5), (1, 5)],
-              [(1, 6), (2, 6), (2, 7), (1, 7)],
-              [(2, 3), (3, 3), (4, 3), (4, 4), (3, 4), (2, 4)],
-              [(2, 7), (3, 7), (4, 7), (4, 8), (3, 8), (2, 8)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
-              [(4, 8), (5, 8), (5, 9), (4, 9)]],
+        '<':
+        [[(0, 5), (1, 5), (1, 6), (0, 6)], [(1, 4), (2, 4), (2, 5), (1, 5)],
+         [(1, 6), (2, 6), (2, 7), (1, 7)],
+         [(2, 3), (3, 3), (4, 3), (4, 4), (3, 4), (2, 4)],
+         [(2, 7), (3, 7), (4, 7), (4, 8), (3, 8), (2, 8)],
+         [(4, 2), (5, 2), (5, 3), (4, 3)], [(4, 8), (5, 8), (5, 9), (4, 9)]],
         '=': [[(0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (5, 3), (5, 4), (4, 4),
                (3, 4), (2, 4), (1, 4), (0, 4)],
               [(0, 5), (1, 5), (2, 5), (3, 5), (4, 5), (5, 5), (5, 6), (4, 6),
                (3, 6), (2, 6), (1, 6), (0, 6)]],
-        '>': [[(0, 2), (1, 2), (1, 3), (0, 3)],
-              [(0, 8), (1, 8), (1, 9), (0, 9)],
-              [(1, 3), (2, 3), (3, 3), (3, 4), (2, 4), (1, 4)],
-              [(1, 7), (2, 7), (3, 7), (3, 8), (2, 8), (1, 8)],
-              [(3, 4), (4, 4), (4, 5), (3, 5)],
-              [(3, 6), (4, 6), (4, 7), (3, 7)],
-              [(4, 5), (5, 5), (5, 6), (4, 6)]],
+        '>':
+        [[(0, 2), (1, 2), (1, 3), (0, 3)], [(0, 8), (1, 8), (1, 9), (0, 9)],
+         [(1, 3), (2, 3), (3, 3), (3, 4), (2, 4), (1, 4)],
+         [(1, 7), (2, 7), (3, 7), (3, 8), (2, 8), (1, 8)],
+         [(3, 4), (4, 4), (4, 5), (3, 5)], [(3, 6), (4, 6), (4, 7), (3, 7)],
+         [(4, 5), (5, 5), (5, 6), (4, 6)]],
         '?': [[(0, 7), (1, 7), (1, 8), (0, 8)],
               [(1, 8), (2, 8), (3, 8), (4, 8), (4, 9), (3, 9), (2, 9), (1, 9)],
               [(2, 2), (3, 2), (3, 3), (2, 3)],
@@ -1065,9 +1082,8 @@ class Text(PolygonSet):
               [(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3), (1, 3)],
               [(1, 8), (2, 8), (3, 8), (4, 8), (4, 9), (3, 9), (2, 9), (1, 9)],
               [(2, 4), (3, 4), (4, 4), (4, 5), (3, 5), (3, 6), (3, 7), (2, 7),
-               (2, 6), (2, 5)],
-              [(4, 5), (5, 5), (5, 6), (5, 7), (5, 8), (4, 8), (4, 7),
-               (4, 6)]],
+               (2, 6), (2, 5)], [(4, 5), (5, 5), (5, 6), (5, 7), (5, 8),
+                                 (4, 8), (4, 7), (4, 6)]],
         'A': [[(0, 2), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (4, 4), (4, 3),
                (4, 2), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7), (5, 8),
                (4, 8), (4, 7), (4, 6), (4, 5), (3, 5), (2, 5), (1, 5), (1, 6),
@@ -1084,16 +1100,15 @@ class Text(PolygonSet):
         'C': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (0, 8),
                (0, 7), (0, 6), (0, 5), (0, 4)],
               [(1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3), (3, 3),
-               (2, 3), (1, 3)],
-              [(1, 8), (2, 8), (3, 8), (4, 8), (5, 8), (5, 9), (4, 9), (3, 9),
-               (2, 9), (1, 9)]],
+               (2, 3), (1, 3)], [(1, 8), (2, 8), (3, 8), (4, 8), (5, 8),
+                                 (5, 9), (4, 9), (3, 9), (2, 9), (1, 9)]],
         'D': [[(0, 2), (1, 2), (2, 2), (3, 2), (3, 3), (2, 3), (1, 3), (1, 4),
                (1, 5), (1, 6), (1, 7), (1, 8), (2, 8), (3, 8), (3, 9), (2, 9),
                (1, 9), (0, 9), (0, 8), (0, 7), (0, 6), (0, 5), (0, 4), (0, 3)],
               [(3, 3), (4, 3), (4, 4), (3, 4)],
-              [(3, 7), (4, 7), (4, 8), (3, 8)],
-              [(4, 4), (5, 4), (5, 5), (5, 6), (5, 7), (4, 7), (4, 6),
-               (4, 5)]],
+              [(3, 7), (4, 7), (4, 8), (3, 8)], [(4, 4), (5, 4), (5, 5),
+                                                 (5, 6), (5, 7), (4, 7),
+                                                 (4, 6), (4, 5)]],
         'E': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3),
                (3, 3), (2, 3), (1, 3), (1, 4), (1, 5), (2, 5), (3, 5), (4, 5),
                (4, 6), (3, 6), (2, 6), (1, 6), (1, 7), (1, 8), (2, 8), (3, 8),
@@ -1124,15 +1139,13 @@ class Text(PolygonSet):
                (3, 3), (4, 3), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8), (5, 8),
                (5, 9), (4, 9), (3, 9), (2, 9), (1, 9), (0, 9)],
               [(1, 2), (2, 2), (3, 2), (3, 3), (2, 3), (1, 3)]],
-        'K': [[(0, 2), (1, 2), (1, 3), (1, 4), (1, 5), (2, 5), (2, 6), (1, 6),
-               (1, 7), (1, 8), (1, 9), (0, 9), (0, 8), (0, 7), (0, 6), (0, 5),
-               (0, 4), (0, 3)],
-              [(2, 4), (3, 4), (3, 5), (2, 5)],
-              [(2, 6), (3, 6), (3, 7), (2, 7)],
-              [(3, 3), (4, 3), (4, 4), (3, 4)],
-              [(3, 7), (4, 7), (4, 8), (3, 8)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
-              [(4, 8), (5, 8), (5, 9), (4, 9)]],
+        'K':
+        [[(0, 2), (1, 2), (1, 3), (1, 4), (1, 5), (2, 5), (2, 6), (1, 6),
+          (1, 7), (1, 8), (1, 9), (0, 9), (0, 8), (0, 7), (0, 6), (0, 5),
+          (0, 4), (0, 3)], [(2, 4), (3, 4), (3, 5), (2, 5)],
+         [(2, 6), (3, 6), (3, 7), (2, 7)], [(3, 3), (4, 3), (4, 4), (3, 4)],
+         [(3, 7), (4, 7), (4, 8), (3, 8)], [(4, 2), (5, 2), (5, 3), (4, 3)],
+         [(4, 8), (5, 8), (5, 9), (4, 9)]],
         'L': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3),
                (3, 3), (2, 3), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8),
                (1, 9), (0, 9), (0, 8), (0, 7), (0, 6), (0, 5), (0, 4),
@@ -1180,8 +1193,8 @@ class Text(PolygonSet):
               [(0, 6), (1, 6), (1, 7), (1, 8), (0, 8), (0, 7)],
               [(1, 5), (2, 5), (3, 5), (4, 5), (4, 6), (3, 6), (2, 6), (1, 6)],
               [(1, 8), (2, 8), (3, 8), (4, 8), (5, 8), (5, 9), (4, 9), (3, 9),
-               (2, 9), (1, 9)],
-              [(4, 3), (5, 3), (5, 4), (5, 5), (4, 5), (4, 4)]],
+               (2, 9),
+               (1, 9)], [(4, 3), (5, 3), (5, 4), (5, 5), (4, 5), (4, 4)]],
         'T': [[(0, 8), (1, 8), (2, 8), (2, 7), (2, 6), (2, 5), (2, 4), (2, 3),
                (2, 2), (3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (3, 7), (3, 8),
                (4, 8), (5, 8), (5, 9), (4, 9), (3, 9), (2, 9), (1, 9),
@@ -1205,15 +1218,14 @@ class Text(PolygonSet):
               [(3, 2), (4, 2), (4, 3), (3, 3)],
               [(4, 3), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7), (5, 8), (5, 9),
                (4, 9), (4, 8), (4, 7), (4, 6), (4, 5), (4, 4)]],
-        'X': [[(0, 2), (1, 2), (1, 3), (1, 4), (0, 4), (0, 3)],
-              [(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)],
-              [(1, 4), (2, 4), (2, 5), (1, 5)],
-              [(1, 6), (2, 6), (2, 7), (1, 7)],
-              [(2, 5), (3, 5), (3, 6), (2, 6)],
-              [(3, 4), (4, 4), (4, 5), (3, 5)],
-              [(3, 6), (4, 6), (4, 7), (3, 7)],
-              [(4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (4, 3)],
-              [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
+        'X':
+        [[(0, 2), (1, 2), (1, 3), (1, 4), (0, 4), (0, 3)],
+         [(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)],
+         [(1, 4), (2, 4), (2, 5), (1, 5)], [(1, 6), (2, 6), (2, 7), (1, 7)],
+         [(2, 5), (3, 5), (3, 6), (2, 6)], [(3, 4), (4, 4), (4, 5), (3, 5)],
+         [(3, 6), (4, 6), (4, 7), (3, 7)],
+         [(4, 2), (5, 2), (5, 3), (5, 4), (4, 4), (4, 3)],
+         [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
         'Y': [[(0, 7), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8)],
               [(1, 5), (2, 5), (2, 6), (2, 7), (1, 7), (1, 6)],
               [(2, 2), (3, 2), (3, 3), (3, 4), (3, 5), (2, 5), (2, 4), (2, 3)],
@@ -1222,8 +1234,8 @@ class Text(PolygonSet):
         'Z': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3),
                (3, 3), (2, 3), (1, 3), (1, 4), (0, 4), (0, 3)],
               [(0, 8), (1, 8), (2, 8), (3, 8), (4, 8), (4, 7), (5, 7), (5, 8),
-               (5, 9), (4, 9), (3, 9), (2, 9), (1, 9), (0, 9)],
-              [(1, 4), (2, 4), (2, 5), (1, 5)],
+               (5, 9), (4, 9), (3, 9), (2, 9), (1, 9),
+               (0, 9)], [(1, 4), (2, 4), (2, 5), (1, 5)],
               [(2, 5), (3, 5), (3, 6), (2, 6)],
               [(3, 6), (4, 6), (4, 7), (3, 7)]],
         '[': [[(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3), (2, 4),
@@ -1239,11 +1251,11 @@ class Text(PolygonSet):
                (4, 7), (4, 8), (4, 9), (3, 9), (2, 9), (1, 9), (1, 8), (2, 8),
                (3, 8), (3, 7), (3, 6), (3, 5), (3, 4), (3, 3), (2, 3),
                (1, 3)]],
-        '^': [[(0, 6), (1, 6), (1, 7), (0, 7)],
-              [(1, 7), (2, 7), (2, 8), (1, 8)],
-              [(2, 8), (3, 8), (3, 9), (2, 9)],
-              [(3, 7), (4, 7), (4, 8), (3, 8)],
-              [(4, 6), (5, 6), (5, 7), (4, 7)]],
+        '^': [
+            [(0, 6), (1, 6), (1, 7), (0, 7)], [(1, 7), (2, 7), (2, 8), (1, 8)],
+            [(2, 8), (3, 8), (3, 9), (2, 9)], [(3, 7), (4, 7), (4, 8), (3, 8)],
+            [(4, 6), (5, 6), (5, 7), (4, 7)]
+        ],
         '_': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3),
                (3, 3), (2, 3), (1, 3), (0, 3)]],
         '`': [[(1, 8), (2, 8), (2, 9), (1, 9)],
@@ -1262,9 +1274,8 @@ class Text(PolygonSet):
                (4, 4)]],
         'c': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (0, 6), (0, 5), (0, 4)],
               [(1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (4, 3), (3, 3),
-               (2, 3), (1, 3)],
-              [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (5, 7), (4, 7), (3, 7),
-               (2, 7), (1, 7)]],
+               (2, 3), (1, 3)], [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6),
+                                 (5, 7), (4, 7), (3, 7), (2, 7), (1, 7)]],
         'd': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (0, 6), (0, 5), (0, 4)],
               [(1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (5, 3), (5, 4), (5, 5),
                (5, 6), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8), (4, 7), (3, 7),
@@ -1285,9 +1296,8 @@ class Text(PolygonSet):
               [(1, 0), (2, 0), (3, 0), (4, 0), (4, 1), (3, 1), (2, 1), (1, 1)],
               [(1, 2), (2, 2), (3, 2), (4, 2), (4, 1), (5, 1), (5, 2), (5, 3),
                (5, 4), (5, 5), (5, 6), (4, 6), (4, 5), (4, 4), (4, 3), (3, 3),
-               (2, 3), (1, 3)],
-              [(1, 6), (2, 6), (3, 6), (4, 6), (4, 7), (3, 7), (2, 7),
-               (1, 7)]],
+               (2, 3), (1, 3)], [(1, 6), (2, 6), (3, 6), (4, 6), (4, 7),
+                                 (3, 7), (2, 7), (1, 7)]],
         'h': [[(0, 2), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (2, 6), (3, 6),
                (4, 6), (4, 7), (3, 7), (2, 7), (1, 7), (1, 8), (1, 9), (0, 9),
                (0, 8), (0, 7), (0, 6), (0, 5), (0, 4), (0, 3)],
@@ -1300,27 +1310,25 @@ class Text(PolygonSet):
               [(1, 6), (2, 6), (2, 5), (2, 4), (2, 3), (2, 2), (2, 1), (3, 1),
                (3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (3, 7), (2, 7), (1, 7)],
               [(2, 8), (3, 8), (3, 9), (2, 9)]],
-        'k': [[(0, 2), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (3, 5), (2, 5),
-               (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8), (0, 7),
-               (0, 6), (0, 5), (0, 4), (0, 3)],
-              [(3, 3), (4, 3), (4, 4), (3, 4)],
-              [(3, 5), (4, 5), (4, 6), (3, 6)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
-              [(4, 6), (5, 6), (5, 7), (4, 7)]],
+        'k': [
+            [(0, 2), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (3, 5), (2, 5),
+             (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (0, 9), (0, 8), (0, 7),
+             (0, 6), (0, 5), (0, 4), (0, 3)], [(3, 3), (4, 3), (4, 4), (3, 4)],
+            [(3, 5), (4, 5), (4, 6), (3, 6)], [(4, 2), (5, 2), (5, 3), (4, 3)],
+            [(4, 6), (5, 6), (5, 7), (4, 7)]
+        ],
         'l': [[(1, 8), (2, 8), (2, 7), (2, 6), (2, 5), (2, 4), (2, 3), (2, 2),
                (3, 2), (4, 2), (4, 3), (3, 3), (3, 4), (3, 5), (3, 6), (3, 7),
                (3, 8), (3, 9), (2, 9), (1, 9)]],
         'm': [[(0, 2), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (2, 6), (2, 5),
                (2, 4), (2, 3), (2, 2), (3, 2), (3, 3), (3, 4), (3, 5), (3, 6),
                (4, 6), (4, 7), (3, 7), (2, 7), (1, 7), (0, 7), (0, 6), (0, 5),
-               (0, 4), (0, 3)],
-              [(4, 2), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (4, 6), (4, 5),
-               (4, 4), (4, 3)]],
+               (0, 4), (0, 3)], [(4, 2), (5, 2), (5, 3), (5, 4), (5, 5),
+                                 (5, 6), (4, 6), (4, 5), (4, 4), (4, 3)]],
         'n': [[(0, 2), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (2, 6), (3, 6),
                (4, 6), (4, 7), (3, 7), (2, 7), (1, 7), (0, 7), (0, 6), (0, 5),
-               (0, 4), (0, 3)],
-              [(4, 2), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (4, 6), (4, 5),
-               (4, 4), (4, 3)]],
+               (0, 4), (0, 3)], [(4, 2), (5, 2), (5, 3), (5, 4), (5, 5),
+                                 (5, 6), (4, 6), (4, 5), (4, 4), (4, 3)]],
         'o': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (0, 6), (0, 5), (0, 4)],
               [(1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3), (1, 3)],
               [(1, 6), (2, 6), (3, 6), (4, 6), (4, 7), (3, 7), (2, 7), (1, 7)],
@@ -1342,8 +1350,7 @@ class Text(PolygonSet):
                (2, 6), (1, 6), (1, 7), (0, 7), (0, 6), (0, 5), (0, 4), (0, 3)],
               [(3, 6), (4, 6), (5, 6), (5, 7), (4, 7), (3, 7)]],
         's': [[(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (4, 3), (3, 3), (2, 3),
-               (1, 3), (0, 3)],
-              [(0, 5), (1, 5), (1, 6), (0, 6)],
+               (1, 3), (0, 3)], [(0, 5), (1, 5), (1, 6), (0, 6)],
               [(1, 4), (2, 4), (3, 4), (4, 4), (4, 5), (3, 5), (2, 5), (1, 5)],
               [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (5, 7), (4, 7), (3, 7),
                (2, 7), (1, 7)], [(4, 3), (5, 3), (5, 4), (4, 4)]],
@@ -1362,21 +1369,17 @@ class Text(PolygonSet):
               [(3, 3), (4, 3), (4, 4), (4, 5), (3, 5), (3, 4)],
               [(4, 5), (5, 5), (5, 6), (5, 7), (4, 7), (4, 6)]],
         'w': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (0, 7), (0, 6),
-               (0, 5), (0, 4)],
-              [(1, 2), (2, 2), (2, 3), (1, 3)],
+               (0, 5), (0, 4)], [(1, 2), (2, 2), (2, 3), (1, 3)],
               [(2, 3), (3, 3), (3, 4), (3, 5), (3, 6), (2, 6), (2, 5), (2, 4)],
               [(3, 2), (4, 2), (4, 3), (3, 3)],
               [(4, 3), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7), (4, 7), (4, 6),
                (4, 5), (4, 4)]],
-        'x': [[(0, 2), (1, 2), (1, 3), (0, 3)],
-              [(0, 6), (1, 6), (1, 7), (0, 7)],
-              [(1, 3), (2, 3), (2, 4), (1, 4)],
-              [(1, 5), (2, 5), (2, 6), (1, 6)],
-              [(2, 4), (3, 4), (3, 5), (2, 5)],
-              [(3, 3), (4, 3), (4, 4), (3, 4)],
-              [(3, 5), (4, 5), (4, 6), (3, 6)],
-              [(4, 2), (5, 2), (5, 3), (4, 3)],
-              [(4, 6), (5, 6), (5, 7), (4, 7)]],
+        'x':
+        [[(0, 2), (1, 2), (1, 3), (0, 3)], [(0, 6), (1, 6), (1, 7), (0, 7)],
+         [(1, 3), (2, 3), (2, 4), (1, 4)], [(1, 5), (2, 5), (2, 6), (1, 6)],
+         [(2, 4), (3, 4), (3, 5), (2, 5)], [(3, 3), (4, 3), (4, 4), (3, 4)],
+         [(3, 5), (4, 5), (4, 6), (3, 6)], [(4, 2), (5, 2), (5, 3), (4, 3)],
+         [(4, 6), (5, 6), (5, 7), (4, 7)]],
         'y': [[(0, 3), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (0, 7), (0, 6),
                (0, 5), (0, 4)],
               [(1, 0), (2, 0), (3, 0), (4, 0), (4, 1), (3, 1), (2, 1), (1, 1)],
@@ -1406,8 +1409,14 @@ class Text(PolygonSet):
               [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
     }
 
-    def __init__(self, text, size, position=(0, 0), horizontal=True, angle=0,
-                 layer=0, datatype=0):
+    def __init__(self,
+                 text,
+                 size,
+                 position=(0, 0),
+                 horizontal=True,
+                 angle=0,
+                 layer=0,
+                 datatype=0):
         self.polygons = []
         posX = 0
         posY = 0
@@ -1490,7 +1499,10 @@ class Path(PolygonSet):
         is the real length of the path.
     """
 
-    def __init__(self, width, initial_point=(0, 0), number_of_paths=1,
+    def __init__(self,
+                 width,
+                 initial_point=(0, 0),
+                 number_of_paths=1,
                  distance=0):
         self.x = initial_point[0]
         self.y = initial_point[1]
@@ -1505,13 +1517,15 @@ class Path(PolygonSet):
 
     def __str__(self):
         if self.n > 1:
-            return ("Path (x{}, end at ({}, {}) towards {}, length {}, "
-                    "width {}, {} apart, {} polygons, {} vertices, layers {}, "
-                    "datatypes {})").format(
-                        self.n, self.x, self.y, self.direction, self.length,
-                        self.w * 2, self.distance, len(self.polygons),
-                        sum([len(p) for p in self.polygons]),
-                        list(set(self.layers)), list(set(self.datatypes)))
+            return (
+                "Path (x{}, end at ({}, {}) towards {}, length {}, "
+                "width {}, {} apart, {} polygons, {} vertices, layers {}, "
+                "datatypes {})").format(self.n, self.x, self.y, self.direction,
+                                        self.length, self.w * 2, self.distance,
+                                        len(self.polygons),
+                                        sum([len(p) for p in self.polygons]),
+                                        list(set(self.layers)),
+                                        list(set(self.datatypes)))
         else:
             return ("Path (end at ({}, {}) towards {}, length {}, width {}, "
                     "{} polygons, {} vertices, layers {}, datatypes {})")\
@@ -1549,8 +1563,14 @@ class Path(PolygonSet):
                          for points in self.polygons]
         return self
 
-    def segment(self, length, direction=None, final_width=None,
-                final_distance=None, axis_offset=0, layer=0, datatype=0):
+    def segment(self,
+                length,
+                direction=None,
+                final_width=None,
+                final_distance=None,
+                axis_offset=0,
+                layer=0,
+                datatype=0):
         """
         Add a straight section to the path.
 
@@ -1604,8 +1624,8 @@ class Path(PolygonSet):
             sa = numpy.sin(direction)
         old_x = self.x
         old_y = self.y
-        self.x += length*ca + axis_offset*sa
-        self.y += length*sa - axis_offset*ca
+        self.x += length * ca + axis_offset * sa
+        self.y += length * sa - axis_offset * ca
         old_w = self.w
         old_distance = self.distance
         if final_width is not None:
@@ -1616,29 +1636,39 @@ class Path(PolygonSet):
             for ii in range(self.n):
                 d0 = ii * self.distance - (self.n - 1) * self.distance * 0.5
                 old_d0 = ii * old_distance - (self.n - 1) * old_distance * 0.5
-                self.polygons.append(numpy.array([
-                    (old_x+(old_d0-old_w)*sa, old_y-(old_d0-old_w)*ca),
-                    (old_x+(old_d0+old_w)*sa, old_y-(old_d0+old_w)*ca),
-                    (self.x+(d0+self.w)*sa, self.y-(d0+self.w)*ca),
-                    (self.x+(d0-self.w)*sa, self.y-(d0-self.w)*ca)]))
+                self.polygons.append(
+                    numpy.array([(old_x + (old_d0 - old_w) * sa, old_y - (
+                        old_d0 - old_w) * ca), (old_x + (old_d0 + old_w) * sa,
+                                                old_y - (old_d0 + old_w) * ca),
+                                 (self.x + (d0 + self.w) * sa, self.y -
+                                  (d0 + self.w) * ca), (self.x + (
+                                      d0 - self.w) * sa, self.y - (d0 - self.w)
+                                                        * ca)]))
                 if self.w == 0:
                     self.polygons[-1] = self.polygons[-1][:-1, :]
                 if old_w == 0:
                     self.polygons[-1] = self.polygons[-1][1:, :]
-            self.length += numpy.sqrt(length ** 2 + axis_offset ** 2)
+            self.length += numpy.sqrt(length**2 + axis_offset**2)
             if isinstance(layer, list):
                 self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
             else:
                 self.layers += [layer] * self.n
             if isinstance(datatype, list):
-                self.datatypes += (datatype * (self.n // len(datatype)
-                                   + 1))[:self.n]
+                self.datatypes += (datatype *
+                                   (self.n // len(datatype) + 1))[:self.n]
             else:
                 self.datatypes += [datatype] * self.n
         return self
 
-    def arc(self, radius, initial_angle, final_angle, number_of_points=0.01,
-            max_points=199, final_width=None, final_distance=None, layer=0,
+    def arc(self,
+            radius,
+            initial_angle,
+            final_angle,
+            number_of_points=0.01,
+            max_points=199,
+            final_width=None,
+            final_distance=None,
+            layer=0,
             datatype=0):
         """
         Add a curved section to the path.
@@ -1684,10 +1714,10 @@ class Path(PolygonSet):
         polygon.
         """
         warn = True
-        cx = self.x - radius*numpy.cos(initial_angle)
-        cy = self.y - radius*numpy.sin(initial_angle)
-        self.x = cx + radius*numpy.cos(final_angle)
-        self.y = cy + radius*numpy.sin(final_angle)
+        cx = self.x - radius * numpy.cos(initial_angle)
+        cy = self.y - radius * numpy.sin(initial_angle)
+        self.x = cx + radius * numpy.cos(final_angle)
+        self.y = cy + radius * numpy.sin(final_angle)
         if final_angle > initial_angle:
             self.direction = final_angle + numpy.pi * 0.5
         else:
@@ -1699,11 +1729,10 @@ class Path(PolygonSet):
         if final_distance is not None:
             self.distance = final_distance
         if isinstance(number_of_points, float):
-            number_of_points = 2 * int(abs(
-                    (final_angle - initial_angle) * (
-                        radius + max(old_distance, self.distance)
-                        * (self.n - 1) * 0.5 + max(old_w, self.w))
-                    / number_of_points) + 0.5) + 2
+            number_of_points = 2 * int(
+                abs((final_angle - initial_angle) * (radius + max(
+                    old_distance, self.distance) * (self.n - 1) * 0.5 + max(
+                        old_w, self.w)) / number_of_points) + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1720,12 +1749,12 @@ class Path(PolygonSet):
                         - (self.n - 1) * distances[jj] * 0.5
                     pts2 = number_of_points // 2
                     pts1 = number_of_points - pts2
-                    ang = numpy.linspace(angles[jj], angles[jj+1], pts1)
+                    ang = numpy.linspace(angles[jj], angles[jj + 1], pts1)
                     rad = numpy.linspace(old_r0 + widths[jj],
-                                         r0 + widths[jj+1], pts1)
+                                         r0 + widths[jj + 1], pts1)
                     self.polygons[-1][:pts1, 0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][:pts1, 1] = numpy.sin(ang) * rad + cy
-                    if widths[jj+1] == 0:
+                    if widths[jj + 1] == 0:
                         pts1 -= 1
                         pts2 += 1
                     if widths[jj] == 0:
@@ -1733,30 +1762,40 @@ class Path(PolygonSet):
                             numpy.array(self.polygons[-1][1:pts1, :])
                         pts1 -= 1
                         pts2 += 1
-                    ang = numpy.linspace(angles[jj+1], angles[jj], pts2)
-                    rad = numpy.linspace(r0 - widths[jj+1],
+                    ang = numpy.linspace(angles[jj + 1], angles[jj], pts2)
+                    rad = numpy.linspace(r0 - widths[jj + 1],
                                          old_r0 - widths[jj], pts2)
                     if (rad[0] <= 0 or rad[-1] <= 0) and warn:
-                        warnings.warn("[GDSPY] Path arc with width larger "
-                                      "than radius created: possible self-"
-                                      "intersecting polygon.", stacklevel=2)
+                        warnings.warn(
+                            "[GDSPY] Path arc with width larger "
+                            "than radius created: possible self-"
+                            "intersecting polygon.",
+                            stacklevel=2)
                         warn = False
                     self.polygons[-1][pts1:, 0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][pts1:, 1] = numpy.sin(ang) * rad + cy
-                self.length += abs((angles[jj+1] - angles[jj])*radius)
+                self.length += abs((angles[jj + 1] - angles[jj]) * radius)
                 if isinstance(layer, list):
-                    self.layers += (layer * (self.n//len(layer) + 1))[:self.n]
+                    self.layers += (layer *
+                                    (self.n // len(layer) + 1))[:self.n]
                 else:
                     self.layers += [layer] * self.n
                 if isinstance(datatype, list):
-                    self.datatypes += (datatype * (self.n // len(datatype)
-                                       + 1))[:self.n]
+                    self.datatypes += (datatype *
+                                       (self.n // len(datatype) + 1))[:self.n]
                 else:
                     self.datatypes += [datatype] * self.n
         return self
 
-    def turn(self, radius, angle, number_of_points=0.01, max_points=199,
-             final_width=None, final_distance=None, layer=0, datatype=0):
+    def turn(self,
+             radius,
+             angle,
+             number_of_points=0.01,
+             max_points=199,
+             final_width=None,
+             final_distance=None,
+             layer=0,
+             datatype=0):
         """
         Add a curved section to the path.
 
@@ -1835,13 +1874,19 @@ class Path(PolygonSet):
                  number_of_points, max_points, final_width, final_distance,
                  layer, datatype)
         if exact:
-            self.direction = _directions_list[int(round(self.direction
-                                                        / _halfpi)) % 4]
+            self.direction = _directions_list[int(
+                round(self.direction / _halfpi)) % 4]
         return self
 
-    def parametric(self, curve_function, curve_derivative=None,
-                   number_of_evaluations=99, max_points=199, final_width=None,
-                   final_distance=None, layer=0, datatype=0):
+    def parametric(self,
+                   curve_function,
+                   curve_derivative=None,
+                   number_of_evaluations=99,
+                   max_points=199,
+                   final_width=None,
+                   final_distance=None,
+                   layer=0,
+                   datatype=0):
         """
         Add a parametric curve to the path.
 
@@ -1944,17 +1989,19 @@ class Path(PolygonSet):
             uu = numpy.linspace(boundaries[kk], boundaries[kk + 1],
                                 number_of_evaluations)
             width = numpy.array([final_width(u) for u in uu]).reshape(
-                    number_of_evaluations, 1) * 0.5
+                number_of_evaluations, 1) * 0.5
             dist = numpy.array([final_distance(u) for u in uu]).reshape(
-                    number_of_evaluations, 1)
+                number_of_evaluations, 1)
             x0 = numpy.array([curve_function(u) for u in uu]) + orgn
             dx = numpy.array([curve_derivative(u) for u in uu])
-            dx = dx[:, ::-1] * refl / numpy.sqrt((dx * dx).sum(1)).reshape(
-                    number_of_evaluations, 1)
-            self.length += numpy.sqrt(((x0[1:, :]-x0[:-1, :])**2).sum(1)).sum()
+            dx = dx[:, ::-1] * refl / numpy.sqrt(
+                (dx * dx).sum(1)).reshape(number_of_evaluations, 1)
+            self.length += numpy.sqrt((
+                (x0[1:, :] - x0[:-1, :])**2).sum(1)).sum()
             for ii in range(self.n):
-                p1 = x0 + dx*(dist*(ii - (self.n - 1)*0.5) + width)
-                p2 = (x0 + dx*(dist*(ii - (self.n - 1)*0.5) - width))[::-1, :]
+                p1 = x0 + dx * (dist * (ii - (self.n - 1) * 0.5) + width)
+                p2 = (x0 + dx * (dist * (ii -
+                                         (self.n - 1) * 0.5) - width))[::-1, :]
                 if width[number_of_evaluations - 1, 0] == 0:
                     p2 = p2[1:]
                 if width[0, 0] == 0:
@@ -1965,8 +2012,8 @@ class Path(PolygonSet):
             else:
                 self.layers += [layer] * self.n
             if isinstance(datatype, list):
-                self.datatypes += (datatype * (self.n // len(datatype)
-                                   + 1))[:self.n]
+                self.datatypes += (datatype *
+                                   (self.n // len(datatype) + 1))[:self.n]
             else:
                 self.datatypes += [datatype] * self.n
         self.x = x0[-1, 0]
@@ -2031,16 +2078,24 @@ class L1Path(PolygonSet):
     >>> myCell.add(l1path)
     """
 
-    def __init__(self, initial_point, direction, width, length, turn,
-                 number_of_paths=1, distance=0, max_points=199, layer=0,
+    def __init__(self,
+                 initial_point,
+                 direction,
+                 width,
+                 length,
+                 turn,
+                 number_of_paths=1,
+                 distance=0,
+                 max_points=199,
+                 layer=0,
                  datatype=0):
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
             datatype = [datatype]
         layer = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
-        datatype = (datatype * (number_of_paths // len(datatype)
-                    + 1))[:number_of_paths]
+        datatype = (datatype *
+                    (number_of_paths // len(datatype) + 1))[:number_of_paths]
         w = width * 0.5
         points = max_points // 2 - 1
         paths = [[[], []] for ii in range(number_of_paths)]
@@ -2086,42 +2141,42 @@ class L1Path(PolygonSet):
             if direction == 0:
                 for ii in range(number_of_paths):
                     d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
-                    paths[ii][0].append((
-                            self.x + length[jj] - (d0 - w) * turn[jj],
-                            paths[ii][0][-1][1]))
-                    paths[ii][1].append((
-                            self.x + length[jj] - (d0 + w) * turn[jj],
-                            paths[ii][1][-1][1]))
+                    paths[ii][0].append(
+                        (self.x + length[jj] - (d0 - w) * turn[jj],
+                         paths[ii][0][-1][1]))
+                    paths[ii][1].append(
+                        (self.x + length[jj] - (d0 + w) * turn[jj],
+                         paths[ii][1][-1][1]))
                 self.x += length[jj]
             elif direction == 1:
                 for ii in range(number_of_paths):
                     d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
-                    paths[ii][0].append((
-                            paths[ii][0][-1][0],
-                            self.y + length[jj] - (d0 - w) * turn[jj]))
-                    paths[ii][1].append((
-                            paths[ii][1][-1][0],
-                            self.y + length[jj] - (d0 + w) * turn[jj]))
+                    paths[ii][0].append(
+                        (paths[ii][0][-1][0],
+                         self.y + length[jj] - (d0 - w) * turn[jj]))
+                    paths[ii][1].append(
+                        (paths[ii][1][-1][0],
+                         self.y + length[jj] - (d0 + w) * turn[jj]))
                 self.y += length[jj]
             elif direction == 2:
                 for ii in range(number_of_paths):
                     d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
-                    paths[ii][0].append((
-                            self.x - length[jj] - (d0 + w) * turn[jj],
-                            paths[ii][0][-1][1]))
-                    paths[ii][1].append((
-                            self.x - length[jj] - (d0 - w) * turn[jj],
-                            paths[ii][1][-1][1]))
+                    paths[ii][0].append(
+                        (self.x - length[jj] - (d0 + w) * turn[jj],
+                         paths[ii][0][-1][1]))
+                    paths[ii][1].append(
+                        (self.x - length[jj] - (d0 - w) * turn[jj],
+                         paths[ii][1][-1][1]))
                 self.x -= length[jj]
             elif direction == 3:
                 for ii in range(number_of_paths):
                     d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
-                    paths[ii][0].append((
-                            paths[ii][0][-1][0],
-                            self.y - length[jj] - (d0 + w) * turn[jj]))
-                    paths[ii][1].append((
-                            paths[ii][1][-1][0],
-                            self.y - length[jj] - (d0 - w) * turn[jj]))
+                    paths[ii][0].append(
+                        (paths[ii][0][-1][0],
+                         self.y - length[jj] - (d0 + w) * turn[jj]))
+                    paths[ii][1].append(
+                        (paths[ii][1][-1][0],
+                         self.y - length[jj] - (d0 - w) * turn[jj]))
                 self.y -= length[jj]
             if points == 0:
                 for p in paths:
@@ -2143,8 +2198,8 @@ class L1Path(PolygonSet):
                                     min_dist = abs(y1 - y2)
                         p0 = (p[0][-1][0], y0)
                         p1 = (p[1][-1][0], y0)
-                    self.polygons.append(numpy.array(p[0][:-1] + [p0, p1]
-                                                     + p[1][-2::-1]))
+                    self.polygons.append(
+                        numpy.array(p[0][:-1] + [p0, p1] + p[1][-2::-1]))
                     p[0] = [p0, p[0][-1]]
                     p[1] = [p1, p[1][-1]]
                 self.layers += layer
@@ -2186,9 +2241,10 @@ class L1Path(PolygonSet):
     def __str__(self):
         return ("L1Path (end at ({}, {}) towards {}, {} polygons, {}"
                 "vertices, layers {}, datatypes {})").format(
-                        self.x, self.y, self.direction, len(self.polygons),
-                        sum([len(p) for p in self.polygons]),
-                        list(set(self.layers)), list(set(self.datatypes)))
+                    self.x, self.y, self.direction,
+                    len(self.polygons),
+                    sum([len(p) for p in self.polygons]),
+                    list(set(self.layers)), list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -2263,8 +2319,16 @@ class PolyPath(PolygonSet):
     greater than 1.
     """
 
-    def __init__(self, points, width, number_of_paths=1, distance=0, corners=0,
-                 ends=0, max_points=199, layer=0, datatype=0):
+    def __init__(self,
+                 points,
+                 width,
+                 number_of_paths=1,
+                 distance=0,
+                 corners=0,
+                 ends=0,
+                 max_points=199,
+                 layer=0,
+                 datatype=0):
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
@@ -2275,7 +2339,7 @@ class PolyPath(PolygonSet):
             width = numpy.array([width * 0.5])
         len_w = len(width)
         if not hasattr(distance, '__iter__'):
-            distance = (distance,)
+            distance = (distance, )
         len_d = len(distance)
         self.polygons = []
         self.layers = []
@@ -2287,8 +2351,8 @@ class PolyPath(PolygonSet):
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
-            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1)
-                                                      % len_w]
+            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) %
+                                                      len_w]
         elif ends == 1:
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
@@ -2301,19 +2365,23 @@ class PolyPath(PolygonSet):
             j1d = (points.shape[0] - 1) % len_d
             d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
             self.polygons.extend((Round(
-                    points[0, :] + v0 * (ii * distance[0] - d0), width[0],
-                    initial_angle=angle0, final_angle=angle0 + numpy.pi,
-                    number_of_points=33).polygons[0] for ii in
-                    range(number_of_paths)))
+                points[0, :] + v0 * (ii * distance[0] - d0),
+                width[0],
+                initial_angle=angle0,
+                final_angle=angle0 + numpy.pi,
+                number_of_points=33).polygons[0]
+                                  for ii in range(number_of_paths)))
             self.polygons.extend((Round(
-                    points[-1, :] + v1 * (ii * distance[j1d] - d1), width[j1w],
-                    initial_angle=angle1, final_angle=angle1 + numpy.pi,
-                    number_of_points=33).polygons[0]) for ii in
-                    range(number_of_paths))
-            self.layers += ((layer * (number_of_paths // len(layer)
-                             + 1))[:number_of_paths]) * 2
-            self.datatypes += ((datatype * (number_of_paths // len(datatype)
-                                + 1))[:number_of_paths]) * 2
+                points[-1, :] + v1 * (ii * distance[j1d] - d1),
+                width[j1w],
+                initial_angle=angle1,
+                final_angle=angle1 + numpy.pi,
+                number_of_points=33).polygons[0])
+                                 for ii in range(number_of_paths))
+            self.layers += ((layer * (
+                number_of_paths // len(layer) + 1))[:number_of_paths]) * 2
+            self.datatypes += ((datatype * (
+                number_of_paths // len(datatype) + 1))[:number_of_paths]) * 2
         v = points[1, :] - points[0, :]
         v = numpy.array((-v[1], v[0])) / numpy.sqrt(numpy.sum(v * v))
         d0 = 0.5 * (number_of_paths - 1) * distance[0]
@@ -2321,8 +2389,10 @@ class PolyPath(PolygonSet):
         paths = [[[points[0, :] + (ii * distance[0] - d0 - width[0]) * v],
                   [points[0, :] + (ii * distance[0] - d0 + width[0]) * v]]
                  for ii in range(number_of_paths)]
-        p1 = [(points[1, :] + (ii*distance[1 % len_d]-d1-width[1 % len_w]) * v,
-               points[1, :] + (ii*distance[1 % len_d]-d1+width[1 % len_w]) * v)
+        p1 = [(points[1, :] +
+               (ii * distance[1 % len_d] - d1 - width[1 % len_w]) * v,
+               points[1, :] +
+               (ii * distance[1 % len_d] - d1 + width[1 % len_w]) * v)
               for ii in range(number_of_paths)]
         for jj in range(1, points.shape[0] - 1):
             j0d = jj % len_d
@@ -2337,21 +2407,23 @@ class PolyPath(PolygonSet):
             p1 = []
             pp = []
             for ii in range(number_of_paths):
-                pp.append((
-                        points[jj, :] + (ii*distance[j0d]-d0-width[j0w]) * v,
-                        points[jj, :] + (ii*distance[j0d]-d0+width[j0w]) * v))
-                p1.append((
-                        points[jj+1, :] + (ii*distance[j1d]-d1-width[j1w])*v,
-                        points[jj+1, :] + (ii*distance[j1d]-d1+width[j1w])*v))
+                pp.append((points[jj, :] +
+                           (ii * distance[j0d] - d0 - width[j0w]) * v,
+                           points[jj, :] +
+                           (ii * distance[j0d] - d0 + width[j0w]) * v))
+                p1.append((points[jj + 1, :] +
+                           (ii * distance[j1d] - d1 - width[j1w]) * v,
+                           points[jj + 1, :] +
+                           (ii * distance[j1d] - d1 + width[j1w]) * v))
                 for kk in (0, 1):
                     p0m = paths[ii][kk][-1] - p0[ii][kk]
                     p1p = pp[ii][kk] - p1[ii][kk]
                     vec = p0m[0] * p1p[1] - p1p[0] * p0m[1]
                     if abs(vec) > 1e-30:
                         p = numpy.array((1, -1)) * (
-                                p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1]
-                                * p0[ii][kk] + p0m * p1p
-                                * (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
+                            p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1] *
+                            p0[ii][kk] + p0m * p1p *
+                            (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
                         if corners > 0 and numpy.sum((p - pp[ii][kk])*p1p) > 0\
                                 and numpy.sum((p - p0[ii][kk])*p0m) < 0:
                             paths[ii][kk].append(p0[ii][kk])
@@ -2361,27 +2433,28 @@ class PolyPath(PolygonSet):
                 if len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points:
                     if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
                         paths[ii][1] = paths[ii][1][1:]
-                    if numpy.sum((paths[ii][0][-1]-paths[ii][1][-1])**2) == 0:
-                        self.polygons.append(numpy.array(paths[ii][0]
-                                             + paths[ii][1][-2::-1]))
+                    if numpy.sum(
+                        (paths[ii][0][-1] - paths[ii][1][-1])**2) == 0:
+                        self.polygons.append(
+                            numpy.array(paths[ii][0] + paths[ii][1][-2::-1]))
                     else:
-                        self.polygons.append(numpy.array(paths[ii][0]
-                                             + paths[ii][1][::-1]))
+                        self.polygons.append(
+                            numpy.array(paths[ii][0] + paths[ii][1][::-1]))
                     paths[ii][0] = paths[ii][0][-1:]
                     paths[ii][1] = paths[ii][1][-1:]
                     self.layers.append(layer[ii % len(layer)])
                     self.datatypes.append(datatype[ii % len(datatype)])
         for ii in range(number_of_paths):
-            if numpy.sum((paths[ii][0][0] - paths[ii][1][0]) ** 2) == 0:
+            if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
                 paths[ii][1] = paths[ii][1][1:]
-            if numpy.sum((p1[ii][0] - p1[ii][1]) ** 2) != 0:
+            if numpy.sum((p1[ii][0] - p1[ii][1])**2) != 0:
                 paths[ii][0].append(p1[ii][0])
             paths[ii][1].append(p1[ii][1])
         self.polygons += [numpy.array(pol[0] + pol[1][::-1]) for pol in paths]
-        self.layers += (layer * (number_of_paths // len(layer)
-                        + 1))[:number_of_paths]
-        self.datatypes += (datatype * (number_of_paths // len(datatype)
-                           + 1))[:number_of_paths]
+        self.layers += (layer *
+                        (number_of_paths // len(layer) + 1))[:number_of_paths]
+        self.datatypes += (datatype * (
+            number_of_paths // len(datatype) + 1))[:number_of_paths]
 
     def __str__(self):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})"\
@@ -2442,27 +2515,52 @@ class Label(object):
     >>> myCell.add(label)
     """
 
-    _anchor = {'nw': 0,     'top left': 0,       'upper left': 0,
-               'n': 1,      'top center': 1,     'upper center': 1,
-               'ne': 2,     'top right': 2,      'upper right': 2,
-               'w': 4,      'middle left': 4,
-               'o': 5,      'middle center': 5,
-               'e': 6,      'middle right': 6,
-               'sw': 8,     'bottom left': 8,    'lower left': 8,
-               's': 9,      'bottom center': 9,  'lower center': 9,
-               'se': 10,    'bottom right': 10,  'lower right': 10}
+    _anchor = {
+        'nw': 0,
+        'top left': 0,
+        'upper left': 0,
+        'n': 1,
+        'top center': 1,
+        'upper center': 1,
+        'ne': 2,
+        'top right': 2,
+        'upper right': 2,
+        'w': 4,
+        'middle left': 4,
+        'o': 5,
+        'middle center': 5,
+        'e': 6,
+        'middle right': 6,
+        'sw': 8,
+        'bottom left': 8,
+        'lower left': 8,
+        's': 9,
+        'bottom center': 9,
+        'lower center': 9,
+        'se': 10,
+        'bottom right': 10,
+        'lower right': 10
+    }
 
-    def __init__(self, text, position, anchor='o', rotation=None,
-                 magnification=None, x_reflection=False, layer=0, texttype=0):
+    def __init__(self,
+                 text,
+                 position,
+                 anchor='o',
+                 rotation=None,
+                 magnification=None,
+                 x_reflection=False,
+                 layer=0,
+                 texttype=0):
         self.layer = layer
         self.text = text
         self.position = position
         try:
             self.anchor = Label._anchor[anchor.lower()]
         except:
-            warnings.warn("[GDSPY] Label anchors must be one of: '"
-                          + "', '".join(Label._anchor.keys())
-                          + "'.", stacklevel=2)
+            warnings.warn(
+                "[GDSPY] Label anchors must be one of: '" +
+                "', '".join(Label._anchor.keys()) + "'.",
+                stacklevel=2)
             self.anchor = 0
         self.rotation = rotation
         self.magnification = magnification
@@ -2512,10 +2610,10 @@ class Label(object):
                     + _eight_byte_real(self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
         return data + struct.pack(
-                '>2h2l2h', 12, 0x1003,
-                int(round(self.position[0] * multiplier)),
-                int(round(self.position[1] * multiplier)), 4 + len(text),
-                0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
+            '>2h2l2h', 12, 0x1003,
+            int(round(self.position[0] * multiplier)),
+            int(round(self.position[1] * multiplier)), 4 + len(text),
+            0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
     def translate(self, dx, dy):
         """
@@ -2539,7 +2637,7 @@ class Label(object):
         >>> text = text.translate(2, 0)
         >>> myCell.add(text)
         """
-        self.position = (dx+self.position[0], dy+self.position[1])
+        self.position = (dx + self.position[0], dy + self.position[1])
 
         return self
 
@@ -2578,7 +2676,7 @@ class Cell(object):
 
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(
-                self.name, len(self.elements), len(self.labels))
+            self.name, len(self.elements), len(self.labels))
 
     def to_gds(self, multiplier):
         """
@@ -2751,8 +2849,8 @@ class Cell(object):
         """
         if len(self.elements) == 0:
             return None
-        if not (self._bb_valid and all(ref._bb_valid for ref in
-                                       self.get_dependencies(True))):
+        if not (self._bb_valid and all(
+                ref._bb_valid for ref in self.get_dependencies(True))):
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
             for element in self.elements:
@@ -2803,8 +2901,10 @@ class Cell(object):
             bb = self.get_bounding_box()
             if bb is None:
                 return {} if by_spec else []
-            pts = [numpy.array([(bb[0, 0], bb[0, 1]), (bb[0, 0], bb[1, 1]),
-                                (bb[1, 0], bb[1, 1]), (bb[1, 0], bb[0, 1])])]
+            pts = [
+                numpy.array([(bb[0, 0], bb[0, 1]), (bb[0, 0], bb[1, 1]),
+                             (bb[1, 0], bb[1, 1]), (bb[1, 0], bb[0, 1])])
+            ]
             polygons = {self.name: pts} if by_spec else pts
         else:
             if by_spec:
@@ -2820,14 +2920,16 @@ class Cell(object):
                         for ii in range(len(element.polygons)):
                             key = (element.layers[ii], element.datatypes[ii])
                             if key in polygons:
-                                polygons[key].append(numpy.array(
-                                        element.polygons[ii]))
+                                polygons[key].append(
+                                    numpy.array(element.polygons[ii]))
                             else:
-                                polygons[key] = [numpy.array(
-                                        element.polygons[ii])]
+                                polygons[key] = [
+                                    numpy.array(element.polygons[ii])
+                                ]
                     else:
-                        cell_polygons = element.get_polygons(
-                                True, None if depth is None else depth - 1)
+                        cell_polygons = element.get_polygons(True, None
+                                                             if depth is None
+                                                             else depth - 1)
                         for kk in cell_polygons.keys():
                             if kk in polygons:
                                 polygons[kk] += cell_polygons[kk]
@@ -2842,8 +2944,9 @@ class Cell(object):
                         for points in element.polygons:
                             polygons.append(numpy.array(points))
                     else:
-                        polygons += element.get_polygons(
-                                depth=None if depth is None else depth - 1)
+                        polygons += element.get_polygons(depth=None
+                                                         if depth is None else
+                                                         depth - 1)
         return polygons
 
     def get_dependencies(self, recursive=False):
@@ -2865,8 +2968,8 @@ class Cell(object):
             if isinstance(element, CellReference) or isinstance(element,
                                                                 CellArray):
                 if recursive:
-                    dependencies.update(element.ref_cell.get_dependencies(
-                        True))
+                    dependencies.update(
+                        element.ref_cell.get_dependencies(True))
                 dependencies.add(element.ref_cell)
         return dependencies
 
@@ -2897,17 +3000,23 @@ class Cell(object):
                     self.add(PolygonSet(poly_dic[ld], *ld, verbose=False))
             elif single_layer is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype,
-                                        verbose=False))
+                    self.add(
+                        PolygonSet(
+                            poly_dic[ld],
+                            ld[0],
+                            single_datatype,
+                            verbose=False))
             else:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1],
-                                        verbose=False))
+                    self.add(
+                        PolygonSet(
+                            poly_dic[ld], single_layer, ld[1], verbose=False))
         else:
             polygons = self.get_polygons()
             self.elements = []
-            self.add(PolygonSet(polygons, single_layer, single_datatype,
-                                verbose=False))
+            self.add(
+                PolygonSet(
+                    polygons, single_layer, single_datatype, verbose=False))
         return self
 
 
@@ -2932,8 +3041,13 @@ class CellReference(object):
         If ``False`` a warning is issued when the referenced cell is not found.
     """
 
-    def __init__(self, ref_cell, origin=(0, 0), rotation=None,
-                 magnification=None, x_reflection=False, ignore_missing=False):
+    def __init__(self,
+                 ref_cell,
+                 origin=(0, 0),
+                 rotation=None,
+                 magnification=None,
+                 x_reflection=False,
+                 ignore_missing=False):
         self.origin = origin
         self.ref_cell = current_library.cell_dict.get(ref_cell, ref_cell)
         self.rotation = rotation
@@ -2950,8 +3064,8 @@ class CellReference(object):
             name = self.ref_cell
         return ("CellReference (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, "
                 "magnification {3}, reflection {4})").format(
-                        name, self.origin, self.rotation, self.magnification,
-                        self.x_reflection)
+                    name, self.origin, self.rotation, self.magnification,
+                    self.x_reflection)
 
     def __repr__(self):
         if isinstance(self.ref_cell, Cell):
@@ -3111,8 +3225,7 @@ class CellReference(object):
             key = (self.ref_cell, self.rotation, self.magnification,
                    self.x_reflection)
         deps = self.ref_cell.get_dependencies(True)
-        if not (self.ref_cell._bb_valid
-                and all(ref._bb_valid for ref in deps)
+        if not (self.ref_cell._bb_valid and all(ref._bb_valid for ref in deps)
                 and key in _bounding_boxes):
             for ref in deps:
                 ref.get_bounding_box()
@@ -3183,8 +3296,15 @@ class CellArray(object):
         If ``False`` a warning is issued when the referenced cell is not found.
     """
 
-    def __init__(self, ref_cell, columns, rows, spacing, origin=(0, 0),
-                 rotation=None, magnification=None, x_reflection=False,
+    def __init__(self,
+                 ref_cell,
+                 columns,
+                 rows,
+                 spacing,
+                 origin=(0, 0),
+                 rotation=None,
+                 magnification=None,
+                 x_reflection=False,
                  ignore_missing=False):
         self.columns = columns
         self.rows = rows
@@ -3216,9 +3336,8 @@ class CellArray(object):
             name = self.ref_cell
         return ("CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, "
                 "{3[1]}), {5}, {6}, {7})").format(
-                        name, self.columns, self.rows, self.origin,
-                        self.spacing, self.rotation, self.magnification,
-                        self.x_reflection)
+                    name, self.columns, self.rows, self.origin, self.spacing,
+                    self.rotation, self.magnification, self.x_reflection)
 
     def to_gds(self, multiplier):
         """
@@ -3351,8 +3470,8 @@ class CellArray(object):
                 polygons[kk] = []
                 for ii in range(self.columns):
                     for jj in range(self.rows):
-                        spc = numpy.array([self.spacing[0] * ii,
-                                           self.spacing[1] * jj])
+                        spc = numpy.array(
+                            [self.spacing[0] * ii, self.spacing[1] * jj])
                         for points in cell_polygons[kk]:
                             if self.magnification:
                                 polygons[kk].append(points * mag + spc)
@@ -3370,8 +3489,8 @@ class CellArray(object):
             polygons = []
             for ii in range(self.columns):
                 for jj in range(self.rows):
-                    spc = numpy.array([self.spacing[0] * ii,
-                                       self.spacing[1] * jj])
+                    spc = numpy.array(
+                        [self.spacing[0] * ii, self.spacing[1] * jj])
                     for points in cell_polygons:
                         if self.magnification:
                             polygons.append(points * mag + spc)
@@ -3402,8 +3521,7 @@ class CellArray(object):
                self.x_reflection, self.columns, self.rows, self.spacing[0],
                self.spacing[1])
         deps = self.ref_cell.get_dependencies(True)
-        if not (self.ref_cell._bb_valid
-                and all(ref._bb_valid for ref in deps)
+        if not (self.ref_cell._bb_valid and all(ref._bb_valid for ref in deps)
                 and key in _bounding_boxes):
             for ref in deps:
                 ref.get_bounding_box()
@@ -3466,21 +3584,21 @@ class GdsLibrary(object):
         Dictionary of cells in this library, indexed by name.
     """
 
-    _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR',
-                    'STRNAME', 'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF',
-                    'TEXT', 'LAYER', 'DATATYPE', 'WIDTH', 'XY', 'ENDEL',
-                    'SNAME', 'COLROW', 'TEXTNODE', 'NODE', 'TEXTTYPE',
-                    'PRESENTATION', 'SPACING', 'STRING', 'STRANS', 'MAG',
-                    'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS',
-                    'PATHTYPE', 'GENERATIONS', 'ATTRTABLE', 'STYPTABLE',
-                    'STRTYPE', 'ELFLAGS', 'ELKEY', 'LINKTYPE', 'LINKKEYS',
-                    'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX', 'BOXTYPE',
-                    'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE',
-                    'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS',
-                    'LIBDIRSIZE', 'SRFNAME', 'LIBSECUR')
+    _record_name = (
+        'HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR', 'STRNAME',
+        'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF', 'TEXT', 'LAYER',
+        'DATATYPE', 'WIDTH', 'XY', 'ENDEL', 'SNAME', 'COLROW', 'TEXTNODE',
+        'NODE', 'TEXTTYPE', 'PRESENTATION', 'SPACING', 'STRING', 'STRANS',
+        'MAG', 'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS', 'PATHTYPE',
+        'GENERATIONS', 'ATTRTABLE', 'STYPTABLE', 'STRTYPE', 'ELFLAGS', 'ELKEY',
+        'LINKTYPE', 'LINKKEYS', 'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX',
+        'BOXTYPE', 'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE',
+        'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS', 'LIBDIRSIZE',
+        'SRFNAME', 'LIBSECUR')
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
-    _import_anchors = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's',
-                       'se']
+    _import_anchors = [
+        'nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'
+    ]
 
     def __init__(self, name='library'):
         self.name = name
@@ -3520,7 +3638,6 @@ class GdsLibrary(object):
                                      "in library.".format(c.name))
                 self.cell_dict[c.name] = c
 
-
     def write_gds(self, outfile, cells=None, unit=1.0e-6, precision=1.0e-9):
         """
         Write the GDSII library to a file.
@@ -3558,15 +3675,13 @@ class GdsLibrary(object):
             close = False
         now = datetime.datetime.today()
         name = self.name if len(self.name) % 2 == 0 else (self.name + '\0')
-        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
-                                  now.year, now.month, now.day, now.hour,
-                                  now.minute, now.second, now.year, now.month,
-                                  now.day, now.hour, now.minute, now.second,
-                                  4+len(name), 0x0206)
-                      + name.encode('ascii')
-                      + struct.pack('>2h', 20, 0x0305)
-                      + _eight_byte_real(precision / unit)
-                      + _eight_byte_real(precision))
+        outfile.write(
+            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
+                        now.month, now.day, now.hour, now.minute, now.second,
+                        now.year, now.month, now.day, now.hour, now.minute,
+                        now.second, 4 + len(name), 0x0206) + name.encode(
+                            'ascii') + struct.pack('>2h', 20, 0x0305) +
+            _eight_byte_real(precision / unit) + _eight_byte_real(precision))
         if cells is None:
             cells = self.cell_dict.values()
         else:
@@ -3577,7 +3692,12 @@ class GdsLibrary(object):
         if close:
             outfile.close()
 
-    def read_gds(self, infile, unit=None, rename={}, layers={}, datatypes={},
+    def read_gds(self,
+                 infile,
+                 unit=None,
+                 rename={},
+                 layers={},
+                 datatypes={},
                  texttypes={}):
         """
         Read a GDSII file into this library.
@@ -3638,9 +3758,11 @@ class GdsLibrary(object):
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
                 if record[1][0] < 0 and record[0] not in emitted_warnings:
-                    warnings.warn("[GDSPY] Paths with absolute width value "
-                                  "are not supported.  Scaling these paths "
-                                  "will also scale their width.", stacklevel=2)
+                    warnings.warn(
+                        "[GDSPY] Paths with absolute width value "
+                        "are not supported.  Scaling these paths "
+                        "will also scale their width.",
+                        stacklevel=2)
                     emitted_warnings.append(record[0])
             # ENDEL
             elif record[0] == 0x11:
@@ -3707,9 +3829,11 @@ class GdsLibrary(object):
             elif record[0] == 0x21:
                 if record[1][0] > 2:
                     if 0x21 not in emitted_warnings:
-                        warnings.warn("[GDSPY] Path ends with custom size are "
-                                      "not supported.", RuntimeWarning,
-                                      stacklevel=2)
+                        warnings.warn(
+                            "[GDSPY] Path ends with custom size are "
+                            "not supported.",
+                            RuntimeWarning,
+                            stacklevel=2)
                         emitted_warnings.append(0x21)
                 else:
                     kwargs['ends'] = record[1][0]
@@ -3723,11 +3847,12 @@ class GdsLibrary(object):
             # Not supported
             elif record[0] not in emitted_warnings and record[0] \
                     not in GdsLibrary._unused_records:
-                warnings.warn("[GDSPY] Record type {0} ({1:02X}) is not "
-                              "supported."
-                              .format(GdsLibrary._record_name[record[0]],
-                                      record[0]),
-                              RuntimeWarning, stacklevel=2)
+                warnings.warn(
+                    "[GDSPY] Record type {0} ({1:02X}) is not "
+                    "supported.".format(GdsLibrary._record_name[record[0]],
+                                        record[0]),
+                    RuntimeWarning,
+                    stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
@@ -3756,20 +3881,25 @@ class GdsLibrary(object):
         data = None
         if size > 4:
             if data_type == 0x01:
-                data = numpy.array(struct.unpack('>{0}H'.format((size-4) // 2),
-                                                 stream.read(size - 4)),
-                                   dtype='uint')
+                data = numpy.array(
+                    struct.unpack('>{0}H'.format((size - 4) // 2),
+                                  stream.read(size - 4)),
+                    dtype='uint')
             elif data_type == 0x02:
-                data = numpy.array(struct.unpack('>{0}h'.format((size-4) // 2),
-                                                 stream.read(size - 4)),
-                                   dtype=int)
+                data = numpy.array(
+                    struct.unpack('>{0}h'.format((size - 4) // 2),
+                                  stream.read(size - 4)),
+                    dtype=int)
             elif data_type == 0x03:
-                data = numpy.array(struct.unpack('>{0}l'.format((size-4) // 4),
-                                                 stream.read(size - 4)),
-                                   dtype=int)
+                data = numpy.array(
+                    struct.unpack('>{0}l'.format((size - 4) // 4),
+                                  stream.read(size - 4)),
+                    dtype=int)
             elif data_type == 0x05:
-                data = numpy.array([_eight_byte_real_to_float(stream.read(8))
-                                    for _ in range((size - 4) // 8)])
+                data = numpy.array([
+                    _eight_byte_real_to_float(stream.read(8))
+                    for _ in range((size - 4) // 8)
+                ])
             else:
                 data = stream.read(size - 4)
                 if str is not bytes:
@@ -3919,15 +4049,13 @@ class GdsWriter(object):
         now = datetime.datetime.today()
         if len(name) % 2 != 0:
             name = name + '\0'
-        self._outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
-                                        now.year, now.month, now.day, now.hour,
-                                        now.minute, now.second, now.year,
-                                        now.month, now.day, now.hour,
-                                        now.minute, now.second, 4+len(name),
-                                        0x0206) + name.encode('ascii')
-                            + struct.pack('>2h', 20, 0x0305)
-                            + _eight_byte_real(precision / unit)
-                            + _eight_byte_real(precision))
+        self._outfile.write(
+            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
+                        now.month, now.day, now.hour, now.minute, now.second,
+                        now.year, now.month, now.day, now.hour, now.minute,
+                        now.second, 4 + len(name), 0x0206) + name.encode(
+                            'ascii') + struct.pack('>2h', 20, 0x0305) +
+            _eight_byte_real(precision / unit) + _eight_byte_real(precision))
 
     def write_cell(self, cell):
         """
@@ -3990,16 +4118,18 @@ def _chop(polygon, position, axis):
     while i < len(cross):
         if cross[i - 1] * cross[i] < 0:
             if axis == 0:
-                polygon.insert(i, [position, polygon[i - 1][1]
-                                   + (position - polygon[i - 1][0])
-                                   * float(polygon[i][1] - polygon[i - 1][1])
-                                   / (polygon[i][0] - polygon[i - 1][0])])
+                polygon.insert(i, [
+                    position, polygon[i - 1][1] +
+                    (position - polygon[i - 1][0]
+                     ) * float(polygon[i][1] - polygon[i - 1][1]) /
+                    (polygon[i][0] - polygon[i - 1][0])
+                ])
             else:
-                polygon.insert(i, [polygon[i - 1][0]
-                                   + (position - polygon[i - 1][1])
-                                   * float(polygon[i][0] - polygon[i - 1][0])
-                                   / (polygon[i][1] - polygon[i - 1][1]),
-                                   position])
+                polygon.insert(i, [
+                    polygon[i - 1][0] + (position - polygon[i - 1][1]) *
+                    float(polygon[i][0] - polygon[i - 1][0]) /
+                    (polygon[i][1] - polygon[i - 1][1]), position
+                ])
             cross.insert(i, 0)
             bnd[1 * (cross[i + 1] > 0)].append(i)
             i += 2
@@ -4114,8 +4244,15 @@ def slice(objects, position, axis, layer=0, datatype=0):
     return result
 
 
-def offset(polygons, distance, join='miter', tolerance=2, precision=0.001,
-           join_first=False, max_points=199, layer=0, datatype=0):
+def offset(polygons,
+           distance,
+           join='miter',
+           tolerance=2,
+           precision=0.001,
+           join_first=False,
+           max_points=199,
+           layer=0,
+           datatype=0):
     """
     Shrink or expand a polygon or polygon set.
 
@@ -4174,13 +4311,17 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001,
                 poly += obj.get_polygons()
             else:
                 poly.append(obj)
-    result = clipper.offset(poly, distance, join, tolerance, 1/precision,
-                            1 if join_first else 0)
+    result = clipper.offset(poly, distance, join, tolerance, 1 / precision, 1
+                            if join_first else 0)
     return None if len(result) == 0 else \
         PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
 
 
-def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
+def boolean(polygons,
+            operation,
+            max_points=199,
+            layer=0,
+            datatype=0,
             eps=1e-13):
     """
     This function is deprecated in favor of 'fast_boolean'.
@@ -4239,9 +4380,12 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
     ...     lambda cir, tri: cir and not tri)
     >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
     """
-    warnings.warn("[GDSPY] Function boolean is deprecated and it will be "
-                  "removed in a future version.  Please use 'fast_boolean' "
-                  "instead.", FutureWarning, stacklevel=2)
+    warnings.warn(
+        "[GDSPY] Function boolean is deprecated and it will be "
+        "removed in a future version.  Please use 'fast_boolean' "
+        "instead.",
+        FutureWarning,
+        stacklevel=2)
     poly = []
     indices = [0]
     special_function = False
@@ -4262,17 +4406,23 @@ def boolean(polygons, operation, max_points=199, layer=0, datatype=0,
             poly.append(obj)
             indices.append(indices[-1] + 1)
     if special_function:
-        result = boolext.clip(poly, lambda *p: operation(
-                *[sum(p[indices[ia]:indices[ia + 1]]) for ia in
-                  range(len(indices) - 1)]), eps)
+        result = boolext.clip(poly, lambda *p: operation(* [
+            sum(p[indices[ia]:indices[ia + 1]]) for ia in range(
+                len(indices) - 1)
+        ]), eps)
     else:
         result = boolext.clip(poly, operation, eps)
     return None if result is None else PolygonSet(result, layer, datatype,
                                                   False).fracture(max_points)
 
 
-def fast_boolean(operandA, operandB, operation, precision=0.001,
-                 max_points=199, layer=0, datatype=0):
+def fast_boolean(operandA,
+                 operandB,
+                 operation,
+                 precision=0.001,
+                 max_points=199,
+                 layer=0,
+                 datatype=0):
     """
     Execute any boolean operation between 2 polygons or polygon sets.
 
@@ -4330,7 +4480,7 @@ def fast_boolean(operandA, operandB, operation, precision=0.001,
                     poly.append(inobj)
     if len(polyB) == 0:
         polyB.append(polyA.pop())
-    result = clipper.clip(polyA, polyB, operation, 1/precision)
+    result = clipper.clip(polyA, polyB, operation, 1 / precision)
     return None if len(result) == 0 else \
         PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
 
@@ -4385,9 +4535,9 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         pts = points
         sc = 1 if short_circuit == 'any' else -1
     else:
-        pts = (points,)
+        pts = (points, )
         sc = 0
-    return clipper.inside(pts, poly, sc, 1/precision)
+    return clipper.inside(pts, poly, sc, 1 / precision)
 
 
 def copy(obj, dx, dy):
@@ -4422,7 +4572,10 @@ def copy(obj, dx, dy):
     return newObj
 
 
-def write_gds(outfile, cells=None, name='library', unit=1.0e-6,
+def write_gds(outfile,
+              cells=None,
+              name='library',
+              unit=1.0e-6,
               precision=1.0e-9):
     """
     Write the current GDSII library to a file.
@@ -4467,23 +4620,29 @@ This variable can be freely overwritten by the user with a new instance of
 
 class GdsImport(GdsLibrary):
     def __init__(self, *args, **kwargs):
-        warnings.warn("[GDSPY] GdsImport has been deprecated in favor of "
-                      "GdsLibrary and it will be removed in future versions.",
-                      FutureWarning, stacklevel=2)
+        warnings.warn(
+            "[GDSPY] GdsImport has been deprecated in favor of "
+            "GdsLibrary and it will be removed in future versions.",
+            FutureWarning,
+            stacklevel=2)
         super().__init__()
         super().read_gds(*args, **kwargs)
 
 
 class GdsPrint(GdsWriter):
     def __init__(self, *args, **kwargs):
-        warnings.warn("[GDSPY] GdsPrint has been renamed to GdsWriter and "
-                      "it will be removed in future versions.",
-                      FutureWarning, stacklevel=2)
+        warnings.warn(
+            "[GDSPY] GdsPrint has been renamed to GdsWriter and "
+            "it will be removed in future versions.",
+            FutureWarning,
+            stacklevel=2)
         super().__init__(*args, **kwargs)
 
 
 def gds_print(*args, **kwargs):
-    warnings.warn("[GDSPY] gds_print has been renamed to write_gds and "
-                  "it will be removed in future versions.",
-                  FutureWarning, stacklevel=2)
+    warnings.warn(
+        "[GDSPY] gds_print has been renamed to write_gds and "
+        "it will be removed in future versions.",
+        FutureWarning,
+        stacklevel=2)
     write_gds(*args, **kwargs)

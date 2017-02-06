@@ -73,7 +73,7 @@ def test_copy():
     c3 = c1.copy(name, True)
     assert c3.elements == c1.elements and c3.elements is not c1.elements
     assert c3.labels == c1.labels and c3.labels is not c1.labels
-    
+
     c4 = c1.copy('c_copy_1', False, True)
     assert c4.elements != c1.elements
     assert c4.labels != c1.labels
@@ -100,8 +100,8 @@ def test_flatten_00(tree):
     c3.flatten()
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].layers == [0] * 6
-                or c3.elements[i].layers == [1] * 6)
+        assert (c3.elements[i].layers == [0] * 6 or
+                c3.elements[i].layers == [1] * 6)
         assert c3.elements[i].layers == c3.elements[i].datatypes
 
 
@@ -110,8 +110,8 @@ def test_flatten_01(tree):
     c3.flatten(None, 2)
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].layers == [0] * 6
-                or c3.elements[i].layers == [1] * 6)
+        assert (c3.elements[i].layers == [0] * 6 or
+                c3.elements[i].layers == [1] * 6)
         assert c3.elements[i].datatypes == [2] * 6
 
 
@@ -120,8 +120,8 @@ def test_flatten_10(tree):
     c3.flatten(2)
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].datatypes == [0] * 6
-                or c3.elements[i].datatypes == [1] * 6)
+        assert (c3.elements[i].datatypes == [0] * 6 or
+                c3.elements[i].datatypes == [1] * 6)
         assert c3.elements[i].layers == [2] * 6
 
 

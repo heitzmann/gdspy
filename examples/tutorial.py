@@ -25,18 +25,15 @@ import gdspy
 
 print('Using gdspy module version ' + gdspy.__version__)
 
-
 # ------------------------------------------------------------------ #
 #      POLYGONS
 # ------------------------------------------------------------------ #
-
 
 # First we need a cell to add the polygons to.
 poly_cell = gdspy.Cell('POLYGONS')
 
 # We define the polygon through its vertices.
-points = [(0, 0), (2, 2), (2, 6), (-6, 6), (-6, -6), (-4, -4), (-4, 4),
-          (0, 4)]
+points = [(0, 0), (2, 2), (2, 6), (-6, 6), (-6, -6), (-4, -4), (-4, 4), (0, 4)]
 
 # Create the polygon on layer 1.
 poly1 = gdspy.Polygon(points, 1)
@@ -62,15 +59,18 @@ poly_cell.add(gdspy.Round((27, 2), 2, layer=2))
 
 # The Round class is quite versatile: it provides circles, pie slices,
 # rings and ring sections, like this one in layer 2.
-poly_cell.add(gdspy.Round((23.5, 7), 15, inner_radius=14,
-                          initial_angle=-2.0 * numpy.pi / 3.0,
-                          final_angle=-numpy.pi / 3.0, layer=2))
-
+poly_cell.add(
+    gdspy.Round(
+        (23.5, 7),
+        15,
+        inner_radius=14,
+        initial_angle=-2.0 * numpy.pi / 3.0,
+        final_angle=-numpy.pi / 3.0,
+        layer=2))
 
 # ------------------------------------------------------------------ #
 #      PATHS
 # ------------------------------------------------------------------ #
-
 
 path_cell = gdspy.Cell('PATHS')
 
@@ -103,8 +103,7 @@ path_cell.add(path1)
 
 # We can also create parallel paths simultaneously.  Start 2 paths with
 # width 0.5 each,nd pitch 1, originating where our last path ended.
-path2 = gdspy.Path(0.5, (path1.x, path1.y), number_of_paths=2,
-                   distance=1)
+path2 = gdspy.Path(0.5, (path1.x, path1.y), number_of_paths=2, distance=1)
 
 # Add a straight segment to the paths gradually increasing their
 # distance to 1.5, in the direction in which the last path ended.
@@ -113,8 +112,8 @@ path2.segment(3, path1.direction, final_distance=1.5, **spec)
 
 # Path commands can be concatenated.  Add a turn and a tapper segment
 # in one expression, followed by a final turn.
-path2.turn(2, -2.0 * numpy.pi / 3.0, **spec).segment(4, final_distance=1,
-                                                     **spec)
+path2.turn(2, -2.0 * numpy.pi / 3.0, **spec).segment(
+    4, final_distance=1, **spec)
 path2.turn(4, numpy.pi / 6.0, **spec)
 path_cell.add(path2)
 
@@ -151,14 +150,18 @@ def dspiral_dt(t):
     dy_dt = -numpy.cos(theta)
     return (dx_dt, dy_dt)
 
+
 # Add the parametric spiral to the path in layer 3.  Note that we can
 # still tapper the width (linearly or with a taper function).  To make
 # the curve smoother, we increase the number of evaluations of the
 # function (fracture will be performed automatically to ensure polygons
 # with less than 200 points).
-path3.parametric(spiral, dspiral_dt,
-                 final_width=lambda t: 0.1 + abs(0.4 * (1 - 2 * t)**3),
-                 number_of_evaluations=600, layer=3)
+path3.parametric(
+    spiral,
+    dspiral_dt,
+    final_width=lambda t: 0.1 + abs(0.4 * (1 - 2 * t)**3),
+    number_of_evaluations=600,
+    layer=3)
 path_cell.add(path3)
 
 # Polygonal paths are defined by the points they pass through.  The
@@ -176,8 +179,8 @@ path_cell.add(path3)
 points = [(20, 12), (24, 8), (24, 4), (24, -2)]
 widths = [0.5] * (len(points) - 1) + [1.5]
 distances = [0.8] * (len(points) - 1) + [2.4]
-polypath = gdspy.PolyPath(points, widths, number_of_paths=5,
-                          distance=distances, layer=[4, 5])
+polypath = gdspy.PolyPath(
+    points, widths, number_of_paths=5, distance=distances, layer=[4, 5])
 
 # We can round the corners of any Polygon or PolygonSet with the fillet
 # method. Here we use a radius of 0.2.
@@ -192,15 +195,20 @@ path_cell.add(polypath)
 # segments immediately after the turn.
 lengths = [4] * 8
 turns = [-1, -1, 1, 1, -1, -2, 1, 0.5]
-l1path = gdspy.L1Path((-1, -11), '+y', 0.5, lengths, turns,
-                      number_of_paths=3, distance=0.7, layer=6)
+l1path = gdspy.L1Path(
+    (-1, -11),
+    '+y',
+    0.5,
+    lengths,
+    turns,
+    number_of_paths=3,
+    distance=0.7,
+    layer=6)
 path_cell.add(l1path)
-
 
 # ------------------------------------------------------------------ #
 #      POLYGON OPERATIONS
 # ------------------------------------------------------------------ #
-
 
 # Boolean operations can be executed with either gdspy polygons or
 # point lists).  The operations are union, intersection, subtraction,
@@ -209,8 +217,9 @@ oper_cell = gdspy.Cell('OPERATIONS')
 
 # Here we subtract the previously created spiral from a rectangle with
 # the 'not' operation.
-oper_cell.add(gdspy.fast_boolean(gdspy.Rectangle((10, -4), (17, 4)), path3,
-                                 'not', layer=1))
+oper_cell.add(
+    gdspy.fast_boolean(
+        gdspy.Rectangle((10, -4), (17, 4)), path3, 'not', layer=1))
 
 # Polygon offset (inset and outset) can be used, for instance, to
 # define safety margins around shapes.
@@ -227,11 +236,9 @@ merged = gdspy.fast_boolean(path4, None, 'or', max_points=0)
 # Offset the path shape by 0.5 and add it to the cell.
 oper_cell.add(gdspy.offset(merged, 1, layer=8))
 
-
 # ------------------------------------------------------------------ #
 #      SLICING POLYGONS
 # ------------------------------------------------------------------ #
-
 
 # If there is the need to cut a polygon or set of polygons, it's better
 # to use the slice function than set up a boolean operation, since it
@@ -248,18 +255,16 @@ slice_cell.add(result[1])
 
 # If the cut needs to be at an angle we can rotate the geometry, slice
 # it, and rotate back.
-original = gdspy.PolyPath([(12, 0), (12, 8), (28, 8), (28, -8),
-                           (12, -8), (12, 0)], 1, 3, 2)
+original = gdspy.PolyPath([(12, 0), (12, 8), (28, 8), (28, -8), (12, -8),
+                           (12, 0)], 1, 3, 2)
 original.rotate(numpy.pi / 3, center=(20, 0))
 result = gdspy.slice(original, 7, 1, layer=2)
 result[0].rotate(-numpy.pi / 3, center=(20, 0))
 slice_cell.add(result[0])
 
-
 # ------------------------------------------------------------------ #
 #      REFERENCES AND TEXT
 # ------------------------------------------------------------------ #
-
 
 # Cells can contain references to other cells.
 ref_cell = gdspy.Cell('REFS')
@@ -268,26 +273,26 @@ ref_cell.add(gdspy.CellReference(poly_cell, (25, 0), rotation=180))
 
 # References can be whole arrays. Add an array of the operations cell
 # with 2 lines and 3 columns and 1st element at (25, 10).
-ref_cell.add(gdspy.CellArray('OPERATIONS', 3, 2, (35, 30), (25, 10),
-                             magnification=1.5))
+ref_cell.add(
+    gdspy.CellArray('OPERATIONS', 3, 2, (35, 30), (25, 10), magnification=1.5))
 
 # Text are also sets of polygons. They have edges parallel to 'x' and
 # 'y' only.
-ref_cell.add(gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
-                        (-7, -35), layer=6))
+ref_cell.add(
+    gdspy.Text(
+        'Created with gsdpy ' + gdspy.__version__, 7, (-7, -35), layer=6))
 
 # Labels are special text objects which don't define any actual
 # geometry, but can be used to annotate the drawing.  Rotation,
 # magnification and reflection of the text are not supported by the
 # included GUI, but they are included in the resulting GDSII file.
-ref_cell.add(gdspy.Label('Created with gdspy ' + gdspy.__version__,
-                         (-7, -36), 'nw', layer=6))
-
+ref_cell.add(
+    gdspy.Label(
+        'Created with gdspy ' + gdspy.__version__, (-7, -36), 'nw', layer=6))
 
 # ------------------------------------------------------------------ #
 #      Translation
 # ------------------------------------------------------------------ #
-
 
 trans_cell = gdspy.Cell('TRANS')
 
@@ -303,64 +308,61 @@ rect3 = gdspy.copy(rect2, 0, 3)
 trans_cell.add(rect2)
 trans_cell.add(rect3)
 
-
 # Reference Cells are also translatable, and thus copyable.
 ref1 = gdspy.CellReference(poly_cell, (25, 0), rotation=180)
 ref2 = gdspy.copy(ref1, 30, 30)
 trans_cell.add(ref1)
 trans_cell.add(ref2)
 
-
 # Same goes for Labels & Text
-text1 = gdspy.Text('Created with gsdpy ' + gdspy.__version__, 7,
-                   (-7, -35), layer=6)
+text1 = gdspy.Text(
+    'Created with gsdpy ' + gdspy.__version__, 7, (-7, -35), layer=6)
 text2 = gdspy.copy(text1, 0, -20)
-label1 = gdspy.Label('Created with gdspy ' + gdspy.__version__,
-                     (-7, -36), 'nw', layer=6)
+label1 = gdspy.Label(
+    'Created with gdspy ' + gdspy.__version__, (-7, -36), 'nw', layer=6)
 label2 = gdspy.copy(label1, 0, -20)
 trans_cell.add(text1)
 trans_cell.add(text2)
 trans_cell.add(label1)
 trans_cell.add(label2)
 
-
 # ------------------------------------------------------------------ #
 #      OUTPUT
 # ------------------------------------------------------------------ #
-
 
 # Output the layout to a GDSII file (default to all created cells).
 # Set the units we used to micrometers and the precision to nanometers.
 gdspy.write_gds('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
 
-
 # ------------------------------------------------------------------ #
 #      IMPORT
 # ------------------------------------------------------------------ #
 
-
 # Import the file we just created, and extract the cell 'POLYGONS'. To
 # avoid naming conflict, we will rename all cells.
 gdsii = gdspy.GdsLibrary()
-gdsii.read_gds('tutorial.gds',
-               rename={'POLYGONS': 'IMPORT_POLY',
-                       'PATHS': 'IMPORT_PATHS',
-                       'OPERATIONS': 'IMPORT_OPER',
-                       'SLICE': 'IMPORT_SLICE',
-                       'REFS': 'IMPORT_REFS',
-                       'TRANS': 'IMPORT_TRANS'},
-               layers={1: 7, 2: 8, 3: 9})
+gdsii.read_gds(
+    'tutorial.gds',
+    rename={
+        'POLYGONS': 'IMPORT_POLY',
+        'PATHS': 'IMPORT_PATHS',
+        'OPERATIONS': 'IMPORT_OPER',
+        'SLICE': 'IMPORT_SLICE',
+        'REFS': 'IMPORT_REFS',
+        'TRANS': 'IMPORT_TRANS'
+    },
+    layers={1: 7,
+            2: 8,
+            3: 9})
 
 # Now we extract the cells we want to actually include in our current
 # structure. Note that the referenced cells will be automatically
 # extracted as well.
 gdsii.extract('IMPORT_REFS')
 
-
 # ------------------------------------------------------------------ #
 #      VIEWER
 # ------------------------------------------------------------------ #
-
 
 # View the layout using a GUI.  Full description of the controls can
 # be found in the online help at http://gdspy.sourceforge.net/

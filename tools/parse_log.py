@@ -29,7 +29,7 @@ from matplotlib import pyplot
 pts = {}
 segs = {}
 
-f1,a1 = pyplot.subplots(1,1)
+f1, a1 = pyplot.subplots(1, 1)
 notes1 = []
 
 with open('log.txt', 'r') as fin:
@@ -38,8 +38,8 @@ with open('log.txt', 'r') as fin:
             data = fin.readline().strip().split()
             while len(data) > 0:
                 lbl = data[0][-7:-1]
-                x,y = [float(i) for i in data[1].split(',')]
-                pts[lbl] = numpy.array((x,y))
+                x, y = [float(i) for i in data[1].split(',')]
+                pts[lbl] = numpy.array((x, y))
                 p, = a1.plot(x, y, '+')
                 #a = a1.annotate(lbl, xy=(x,y), xycoords='data', ha='center')
                 #a.set_visible(False)
@@ -70,15 +70,17 @@ with open('log.txt', 'r') as fin:
                 #notes1.append((p,a))
                 data = fin.readline().strip().split()
 
+
 def on_move1(event):
     redraw = False
-    for obj,note in notes1:
+    for obj, note in notes1:
         vis = (obj.contains(event)[0] == True)
         if vis != note.get_visible():
             redraw = True
             note.set_visible(vis)
     if redraw:
         pyplot.draw()
+
 
 #f1.canvas.mpl_connect('motion_notify_event', on_move1)
 a1.grid(False)

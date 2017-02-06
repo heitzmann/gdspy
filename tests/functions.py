@@ -43,18 +43,20 @@ def test_f_8b():
 def test_twoway():
     f = gdspy._eight_byte_real_to_float
     g = gdspy._eight_byte_real
-    for x in [0, 1.5, -numpy.pi, 1/3.0e12, -1.0e12/7, 1.1e75, -0.9e-78]:
+    for x in [0, 1.5, -numpy.pi, 1 / 3.0e12, -1.0e12 / 7, 1.1e75, -0.9e-78]:
         assert x == f(g(x))
     for _ in range(10000):
-        x = 10**(numpy.random.random()*150-75)
+        x = 10**(numpy.random.random() * 150 - 75)
         assert x == f(g(x))
 
 
 def test_inside():
-    polygons = [gdspy.Round((0, 0), 10, inner_radius=5, number_of_points=180),
-                gdspy.Rectangle((20, -10), (40, 10)),
-                gdspy.Rectangle((-10, 0), (10, 20))]
-    assert gdspy.inside([(0, 0)], polygons) == (True,)
+    polygons = [
+        gdspy.Round((0, 0), 10, inner_radius=5, number_of_points=180),
+        gdspy.Rectangle((20, -10), (40, 10)), gdspy.Rectangle((-10, 0),
+                                                              (10, 20))
+    ]
+    assert gdspy.inside([(0, 0)], polygons) == (True, )
     assert gdspy.inside([(0, 0), (0, 30), (30, 0), (0, -1)], polygons) == \
         (True, False, True, False)
     assert gdspy.inside([[(0, 0), (0, 30), (30, 0), (0, -1)],
@@ -68,20 +70,20 @@ def test_inside():
 def test_copy():
     p = gdspy.Rectangle((0, 0), (1, 1))
     q = gdspy.copy(p, 1, -1)
-    assert set(p.points[:,0]) == {0, 1}
-    assert set(p.points[:,1]) == {0, 1}
-    assert set(q.points[:,0]) == {1, 2}
-    assert set(q.points[:,1]) == {-1, 0}
+    assert set(p.points[:, 0]) == {0, 1}
+    assert set(p.points[:, 1]) == {0, 1}
+    assert set(q.points[:, 0]) == {1, 2}
+    assert set(q.points[:, 1]) == {-1, 0}
     p = gdspy.PolygonSet([[(0, 0), (1, 0), (0, 1)], [(2, 2), (3, 2), (2, 3)]])
     q = gdspy.copy(p, 1, -1)
-    assert set(p.polygons[0][:,0]) == {0, 1}
-    assert set(p.polygons[0][:,1]) == {0, 1}
-    assert set(q.polygons[0][:,0]) == {1, 2}
-    assert set(q.polygons[0][:,1]) == {-1, 0}
-    assert set(p.polygons[1][:,0]) == {2, 3}
-    assert set(p.polygons[1][:,1]) == {2, 3}
-    assert set(q.polygons[1][:,0]) == {3, 4}
-    assert set(q.polygons[1][:,1]) == {1, 2}
+    assert set(p.polygons[0][:, 0]) == {0, 1}
+    assert set(p.polygons[0][:, 1]) == {0, 1}
+    assert set(q.polygons[0][:, 0]) == {1, 2}
+    assert set(q.polygons[0][:, 1]) == {-1, 0}
+    assert set(p.polygons[1][:, 0]) == {2, 3}
+    assert set(p.polygons[1][:, 1]) == {2, 3}
+    assert set(q.polygons[1][:, 0]) == {3, 4}
+    assert set(q.polygons[1][:, 1]) == {1, 2}
     l = gdspy.Label('text', (0, 1))
     m = gdspy.copy(l, -1, 1)
     assert l.position == (0, 1)
@@ -94,7 +96,6 @@ def test_copy():
     d = gdspy.copy(c, -1, 1)
     assert c.origin == (0, 1)
     assert d.origin == (-1, 2)
-
 
 
 def test_write_gds(tmpdir):
@@ -115,8 +116,9 @@ def test_write_gds(tmpdir):
     lib1.read_gds(fname1, 1e-3, {'fu_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
-    assert set(lib1.cell_dict.keys()) == {'1', 'fu_rw_gds_2', 'fu_rw_gds_3',
-                                          'fu_rw_gds_4'}
+    assert set(lib1.cell_dict.keys()) == {
+        '1', 'fu_rw_gds_2', 'fu_rw_gds_3', 'fu_rw_gds_4'
+    }
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
