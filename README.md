@@ -1,6 +1,6 @@
 # GDSPY README
 
-[![GPLv3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+[![Boost Software License - Version 1.0](https://img.shields.io/github/license/heitzmann/gdspy.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)
 
 Gdspy is a Python  module for creating/importing/merging GDSII stream files.
