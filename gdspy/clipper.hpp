@@ -49,6 +49,10 @@
 //use_deprecated: Enables temporary support for the obsolete functions
 //#define use_deprecated  
 
+// Begin of GDSPY additions
+#define _USE_MATH_DEFINES
+// End of GDSPY additions
+
 #include <vector>
 #include <list>
 #include <set>

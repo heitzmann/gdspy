@@ -38,13 +38,13 @@
 *                                                                              *
 *******************************************************************************/
 
-// Begin of GDSPY additional headers
+// Begin of GDSPY additions
+#define _USE_MATH_DEFINES
 #include <Python.h>
-#define DEBUG 1
 #ifdef DEBUG
 #include <iostream>
 #endif //DEBUG
-// End of GDSPY additional headers
+// End of GDSPY additions
 
 #include "clipper.hpp"
 #include <cmath>
