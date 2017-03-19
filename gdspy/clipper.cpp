@@ -1,10 +1,10 @@
 /*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  6.4.0                                                           *
-* Date      :  2 July 2015                                                     *
+* Version   :  6.4.2                                                           *
+* Date      :  27 February 2017                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2015                                         *
+* Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
 * License:                                                                     *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
@@ -40,6 +40,10 @@
 
 // Begin of GDSPY additional headers
 #include <Python.h>
+#define DEBUG 1
+#ifdef DEBUG
+#include <iostream>
+#endif //DEBUG
 // End of GDSPY additional headers
 
 #include "clipper.hpp"
@@ -183,7 +187,7 @@ int PolyTree::Total() const
 // PolyNode methods ...
 //------------------------------------------------------------------------------
 
-PolyNode::PolyNode(): Childs(), Parent(0), Index(0), m_IsOpen(false)
+PolyNode::PolyNode(): Parent(0), Index(0), m_IsOpen(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -1870,7 +1874,7 @@ OutPt* Clipper::AddLocalMinPoly(TEdge *e1, TEdge *e2, const IntPoint &Pt)
         prevE = e->PrevInAEL;
   }
 
-  if (prevE && prevE->OutIdx >= 0)
+  if (prevE && prevE->OutIdx >= 0 && prevE->Top.Y < Pt.Y && e->Top.Y < Pt.Y) 
   {
     cInt xPrev = TopX(*prevE, Pt.Y);
     cInt xE = TopX(*e, Pt.Y);
@@ -2717,7 +2721,11 @@ void Clipper::ProcessHorizontal(TEdge *horzEdge)
 
     if (horzEdge->OutIdx >= 0 && !IsOpen)  //note: may be done multiple times
 		{
-            op1 = AddOutPt(horzEdge, e->Curr);
+#ifdef use_xyz
+			if (dir == dLeftToRight) SetZ(e->Curr, *horzEdge, *e);
+			else SetZ(e->Curr, *e, *horzEdge);
+#endif      
+			op1 = AddOutPt(horzEdge, e->Curr);
 			TEdge* eNextHorz = m_SortedEdges;
 			while (eNextHorz)
 			{
@@ -3043,7 +3051,10 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
       {
         e->Curr.X = TopX( *e, topY );
         e->Curr.Y = topY;
-      }
+#ifdef use_xyz
+		e->Curr.Z = topY == e->Top.Y ? e->Top.Z : (topY == e->Bot.Y ? e->Bot.Z : 0);
+#endif
+	  }
 
       //When StrictlySimple and 'e' is being touched by another edge, then
       //make sure both edges have a vertex here ...
@@ -3667,7 +3678,7 @@ void Clipper::FixupFirstLefts3(OutRec* OldOutRec, OutRec* NewOutRec)
   {
     OutRec* outRec = m_PolyOuts[i];
     OutRec* firstLeft = ParseFirstLeft(outRec->FirstLeft);
-    if (outRec->Pts && outRec->FirstLeft == OldOutRec)
+    if (outRec->Pts && firstLeft == OldOutRec)
       outRec->FirstLeft = NewOutRec;
   }
 }
@@ -4635,6 +4646,9 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling, bool ch
 
   for (long i = 0; i < num; ++i)
   {
+#ifdef DEBUG
+    std::cout << std::endl << "Polygon " << i << std::endl;
+#endif //DEBUG
     if ((py_polygon = PySequence_ITEM(polyset, i)) == NULL)
     {
       return -1;
@@ -4677,12 +4691,18 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling, bool ch
       Py_DECREF(py_point);
       paths[i][j].X = Round(scaling * x);
       paths[i][j].Y = Round(scaling * y);
+#ifdef DEBUG
+      std::cout << paths[i][j].X << "," << paths[i][j].Y << std::endl;
+#endif //DEBUG
       if (check_orientation == true && j > 1)
         orientation += (paths[i][0].X - paths[i][j].X) * (paths[i][j-1].Y - paths[i][0].Y) - (paths[i][0].Y - paths[i][j].Y) * (paths[i][j-1].X - paths[i][0].X);
     }
     if (check_orientation == true && orientation < 0)
     {
       reverse(paths[i].begin(), paths[i].end());
+#ifdef DEBUG
+      std::cout << "Reversed" << std::endl;
+#endif //DEBUG
     }
 
     Py_DECREF(py_polygon);
@@ -4768,12 +4788,27 @@ void tree2paths(PolyTree &tree, Paths &out)
   PolyNode *node = tree.GetFirst();
   // Rough estimate for the number of polygons
   out.reserve(tree.ChildCount());
+#ifdef DEBUG
+        std::cout << std::endl << "Output tree" << std::endl;
+#endif //DEBUG
   while (node)
   {
     if (!node->IsHole())
     {
-      if (node->ChildCount() > 0) link_holes(node, out);
-      else out.push_back(node->Contour);
+      if (node->ChildCount() > 0)
+      {
+#ifdef DEBUG
+        std::cout << "Hole" << std::endl;
+#endif //DEBUG
+        link_holes(node, out);
+      }
+      else
+      {
+#ifdef DEBUG
+        std::cout << "Polygon" << std::endl;
+#endif //DEBUG
+        out.push_back(node->Contour);
+      }
     }
     node = node->GetNext();
   }
@@ -4788,6 +4823,9 @@ PyObject* build_polygon_tuple(Paths &polygons, double scaling)
   if ((result = PyTuple_New(polygons.size())) == NULL) return NULL;
   for (Paths::size_type i = 0; i < polygons.size(); ++i)
   {
+#ifdef DEBUG
+    std::cout << std::endl << "Result " << i << std::endl;
+#endif //DEBUG
     Path poly = polygons[i];
     PyObject *polyt = PyTuple_New(poly.size());
     if (polyt == NULL)
@@ -4800,6 +4838,9 @@ PyObject* build_polygon_tuple(Paths &polygons, double scaling)
       PyObject *pt = PyTuple_New(2);
       PyObject *x = PyFloat_FromDouble(poly[j].X / scaling);
       PyObject *y = PyFloat_FromDouble(poly[j].Y / scaling);
+#ifdef DEBUG
+      std::cout << poly[j].X << "," << poly[j].Y << std::endl;
+#endif //DEBUG
       if (pt == NULL || x == NULL || y == NULL)
       {
         Py_DECREF(result);

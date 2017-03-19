@@ -56,6 +56,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.1.2 (Mar 19, 2017)
+* Update clipper library to 6.4.2 to fix bugs introduced in the last update.
+
 ### Version 1.1.1 (Jan 27, 2017)
 * Patch to fix installation issue (missing README file in zip).
 

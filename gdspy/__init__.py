@@ -46,7 +46,7 @@ from gdspy import boolext
 from gdspy import clipper
 from gdspy.viewer import LayoutViewer
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 _halfpi = 0.5 * numpy.pi
 _directions_dict = {'+x': 0, '+y': 0.5, '-x': 1, '-y': -0.5}
