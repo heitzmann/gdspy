@@ -4621,7 +4621,7 @@ def gdsii_hash(filename, engine=None):
     with open(filename, 'rb') as fin:
         data = fin.read()
     contents = []
-    pos = 0
+    start = pos = 0
     while pos < len(data):
         size, rec = struct.unpack('>HH', data[pos:pos+4])
         if rec == 0x0502:
