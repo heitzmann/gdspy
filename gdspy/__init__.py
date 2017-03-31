@@ -41,6 +41,7 @@ import datetime
 import warnings
 import numpy
 import copy as libCopy
+import hashlib
 
 from gdspy import boolext
 from gdspy import clipper
@@ -4593,6 +4594,45 @@ def write_gds(outfile,
     """
     current_library.name = name
     current_library.write_gds(outfile, cells, unit, precision)
+
+
+def gdsii_hash(filename, engine=None):
+    """
+    Calculate the a hash value for a GDSII file.
+
+    The hash is generated based only on the contents of the cells in the
+    GDSII library, ignoring any timestamp records present in the file
+    structure.
+
+    Parameters
+    ----------
+    filename : string
+        Full path to the GDSII file.
+    engine : hashlib-like engine
+        The engine that executes the hashing algorithm.  It must provide
+        the methods ``update`` and ``hexdigest`` as defined in the hashlib
+        module.  If ``None``, the dafault ``hashlib.sha1()`` is used.
+
+    Returns
+    -------
+    out : string
+        The hash correponding to the library contents in hex format.
+    """
+    with open(filename, 'rb') as fin:
+        data = fin.read()
+    contents = []
+    pos = 0
+    while pos < len(data):
+        size, rec = struct.unpack('>HH', data[pos:pos+4])
+        if rec == 0x0502:
+            start = pos + 28
+        elif rec == 0x0700:
+            contents.append(data[start:pos])
+        pos += size
+    h = hashlib.sha1() if engine is None else engine
+    for x in sorted(contents):
+        h.update(x)
+    return h.hexdigest()
 
 
 current_library = GdsLibrary()

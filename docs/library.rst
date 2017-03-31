@@ -77,6 +77,13 @@ write_gds
 
 .. autofunction:: gdspy.write_gds
 
+
+gdsii_hash
+==========
+
+.. autofunction:: gdspy.gdsii_hash
+
+
 **********
 Attributes
 **********
