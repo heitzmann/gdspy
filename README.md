@@ -2,6 +2,7 @@
 
 [![Boost Software License - Version 1.0](https://img.shields.io/github/license/heitzmann/gdspy.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)
+[![Downloads](https://img.shields.io/github/downloads/heitzmann/gdspy/total.svg)](https://github.com/heitzmann/gdspy/releases)
 
 Gdspy is a Python  module for creating/importing/merging GDSII stream files.
 It includes key libraries for creating complex CAD layouts:
@@ -239,7 +240,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added `L1Path` class for Manhattan geometry (L1 norm) paths.
 
 ### Version 0.1.8 (May 10, 2010)
-* [![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)Removed the argument `fill` from `gds_view` and added a more flexible one: `style`.
+* Removed the argument `fill` from `gds_view` and added a more flexible one: `style`.
 * Fixed a rounding error on the `boolean` operator affecting polygons with holes.
 * Added a rotate method to `PolygonSet`.
 * Added a warning when `PolygonSet` has more than 199 points
