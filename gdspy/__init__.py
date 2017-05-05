@@ -266,10 +266,8 @@ class Polygon(object):
             ii = 0
             while ii < len(out_polygons):
                 if len(out_polygons[ii]) > max_points:
-                    pts0 = [x[0] for x in out_polygons[ii]]
-                    pts1 = [x[1] for x in out_polygons[ii]]
-                    pts0.sort()
-                    pts1.sort()
+                    pts0 = sorted(out_polygons[ii][:,0])
+                    pts1 = sorted(out_polygons[ii][:,1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = _chop(
@@ -283,8 +281,8 @@ class Polygon(object):
                             (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
                             2, 1)
                     out_polygons.pop(ii)
-                    out_polygons += chopped[0]
-                    out_polygons += chopped[1]
+                    out_polygons.extend(numpy.array(x) for x in
+                                        chopped[0] + chopped[1])
                 else:
                     ii += 1
         return PolygonSet(out_polygons, self.layer, self.datatype)
@@ -582,10 +580,8 @@ class PolygonSet(object):
             ii = 0
             while ii < len(self.polygons):
                 if len(self.polygons[ii]) > max_points:
-                    pts0 = [x[0] for x in self.polygons[ii]]
-                    pts1 = [x[1] for x in self.polygons[ii]]
-                    pts0.sort()
-                    pts1.sort()
+                    pts0 = sorted(self.polygons[ii][:,0])
+                    pts1 = sorted(self.polygons[ii][:,1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = _chop(
@@ -601,9 +597,8 @@ class PolygonSet(object):
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
-                    self.polygons += [
-                        numpy.array(x) for x in chopped[0] + chopped[1]
-                    ]
+                    self.polygons.extend(numpy.array(x) for x in
+                                         chopped[0] + chopped[1])
                     self.layers += [layer] * (
                         len(chopped[0]) + len(chopped[1]))
                     self.datatypes += [datatype] * (
