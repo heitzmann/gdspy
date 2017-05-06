@@ -2715,6 +2715,9 @@ class Cell(object):
         if deep_copy:
             new_cell.elements = libCopy.deepcopy(self.elements)
             new_cell.labels = libCopy.deepcopy(self.labels)
+            for ref in new_cell.get_dependencies(True):
+                if ref._bb_valid:
+                    ref._bb_valid = False
         else:
             new_cell.elements = list(self.elements)
             new_cell.labels = list(self.labels)
