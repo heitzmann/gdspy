@@ -73,8 +73,8 @@ def test_copy():
     assert set(q.polygons[1][:, 1]) == {1, 2}
     l = gdspy.Label('text', (0, 1))
     m = gdspy.copy(l, -1, 1)
-    assert l.position == (0, 1)
-    assert m.position == (-1, 2)
+    assert l.position[0] == 0 and l.position[1] == 1
+    assert m.position[0] == -1 and m.position[1] == 2
     c = gdspy.CellReference('empty', (0, 1), ignore_missing=True)
     d = gdspy.copy(c, -1, 1)
     assert c.origin == (0, 1)

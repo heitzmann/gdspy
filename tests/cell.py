@@ -70,11 +70,13 @@ def test_copy():
 def tree():
     p1 = gdspy.Polygon(((0, 0), (0, 1), (1, 0)), 0, 0)
     p2 = gdspy.Polygon(((2, 0), (2, 1), (1, 0)), 1, 1)
-    l = gdspy.Label('label', (0, 0), layer=10)
+    l1 = gdspy.Label('label1', (0, 0), layer=11)
+    l2 = gdspy.Label('label2', (2, 1), layer=12)
     c1 = gdspy.Cell('tree_' + unique())
     c1.add(p1)
-    c1.add(l)
+    c1.add(l1)
     c2 = gdspy.Cell('tree_' + unique())
+    c2.add(l2)
     c2.add(p2)
     c2.add(gdspy.CellReference(c1))
     c3 = gdspy.Cell('tree_' + unique())
@@ -90,16 +92,19 @@ def test_flatten_00(tree):
         assert (c3.elements[i].layers == [0] * 6 or
                 c3.elements[i].layers == [1] * 6)
         assert c3.elements[i].layers == c3.elements[i].datatypes
+    assert len(c3.labels) == 12
 
 
 def test_flatten_01(tree):
     c3, c2, c1 = tree
-    c3.flatten(None, 2)
+    c3.flatten(None, 2, 3)
     assert len(c3.elements) == 2
     for i in range(2):
         assert (c3.elements[i].layers == [0] * 6 or
                 c3.elements[i].layers == [1] * 6)
         assert c3.elements[i].datatypes == [2] * 6
+    assert len(c3.labels) == 12
+    assert all(lbl.texttype == 3 for lbl in c3.labels)
 
 
 def test_flatten_10(tree):
@@ -110,14 +115,19 @@ def test_flatten_10(tree):
         assert (c3.elements[i].datatypes == [0] * 6 or
                 c3.elements[i].datatypes == [1] * 6)
         assert c3.elements[i].layers == [2] * 6
+    assert len(c3.labels) == 12
+    assert all(lbl.layer == 2 for lbl in c3.labels)
 
 
 def test_flatten_11(tree):
     c3, c2, c1 = tree
-    c3.flatten(2, 3)
+    c3.flatten(2, 3, 4)
     assert len(c3.elements) == 1
     assert c3.elements[0].layers == [2] * 12
     assert c3.elements[0].datatypes == [3] * 12
+    assert len(c3.labels) == 12
+    assert all(lbl.layer == 2 for lbl in c3.labels)
+    assert all(lbl.texttype == 4 for lbl in c3.labels)
 
 
 def test_bb(tree):
@@ -137,7 +147,7 @@ def test_bb(tree):
 
 
 def test_layers(tree):
-    assert tree[0].get_layers() == {0, 1, 10}
+    assert tree[0].get_layers() == {0, 1, 11, 12}
 
 
 def test_datatypes(tree):

@@ -7,13 +7,15 @@
 #                                                                    #
 ######################################################################
 
+import pytest
 import gdspy
 import numpy
 
 
 def test_noreference():
     name = 'cr_noreference'
-    ref = gdspy.CellReference(name, (1, -1), 90, 2, True)
+    with pytest.warns(UserWarning):
+        ref = gdspy.CellReference(name, (1, -1), 90, 2, True)
     ref.translate(-1, 1)
     assert ref.ref_cell == name
     assert ref.area() == 0

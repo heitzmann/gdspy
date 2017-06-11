@@ -2537,7 +2537,7 @@ class Label(object):
                  texttype=0):
         self.layer = layer
         self.text = text
-        self.position = position
+        self.position = numpy.array(position)
         try:
             self.anchor = Label._anchor[anchor.lower()]
         except:
@@ -2550,6 +2550,12 @@ class Label(object):
         self.magnification = magnification
         self.x_reflection = x_reflection
         self.texttype = texttype
+
+    def __repr__(self):
+        return ("Label(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4}, {5}, {6})")\
+                .format(self.text, self.position, self.rotation,
+                        self.magnification, self.x_reflection, self.layer,
+                        self.texttype)
 
     def __str__(self):
         return ("Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, "
@@ -2621,7 +2627,8 @@ class Label(object):
         >>> text = text.translate(2, 0)
         >>> myCell.add(text)
         """
-        self.position = (dx + self.position[0], dy + self.position[1])
+        self.position = numpy.array((dx + self.position[0],
+                                     dy + self.position[1]))
 
         return self
 
@@ -2936,6 +2943,32 @@ class Cell(object):
                                                          depth - 1)
         return polygons
 
+    def get_labels(self, depth=None):
+        """
+        Returns a list with a copy of the labels in this cell.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to retrieve
+            labels from.
+
+        Returns
+        -------
+        out : list of ``Label``
+            List containing the labels in this cell and its references.
+        """
+        labels = libCopy.deepcopy(self.labels)
+        if depth is None or depth >= 0:
+            for element in self.elements:
+                if isinstance(element, CellReference):
+                    labels.extend(element.get_labels(None if depth is None else
+                                                     depth - 1))
+                elif isinstance(element, CellArray):
+                    labels.extend(element.get_labels(None if depth is None else
+                                                     depth - 1))
+        return labels
+
     def get_dependencies(self, recursive=False):
         """
         Returns a list of the cells included in this cell as references.
@@ -2960,10 +2993,11 @@ class Cell(object):
                 dependencies.add(element.ref_cell)
         return dependencies
 
-    def flatten(self, single_layer=None, single_datatype=None):
+    def flatten(self, single_layer=None, single_datatype=None,
+                single_texttype=None):
         """
         Flatten all ``CellReference`` and ``CellArray`` elements in this cell
-        into real polygons, instead of references.
+        into real polygons and labels, instead of references.
 
         Parameters
         ----------
@@ -2973,12 +3007,22 @@ class Cell(object):
         single_datatype : integer or None
             If not ``None``, all polygons will be transfered to the datatype
             indicated by this number.
+        single_datatype : integer or None
+            If not ``None``, all labels will be transfered to the texttype
+            indicated by this number.
 
         Returns
         -------
         out : ``Cell``
             This cell.
         """
+        self.labels = self.get_labels()
+        if single_layer is not None:
+            for lbl in self.labels:
+                lbl.layer = single_layer
+        if single_texttype is not None:
+            for lbl in self.labels:
+                lbl.texttype = single_texttype
         if single_layer is None or single_datatype is None:
             poly_dic = self.get_polygons(True)
             self.elements = []
@@ -3192,6 +3236,45 @@ class CellReference(object):
                 if self.origin is not None:
                     polygons[ii] = polygons[ii] + orgn
         return polygons
+
+    def get_labels(self, depth=None):
+        """
+        Returns a list of labels created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to retrieve
+            labels from.
+
+        Returns
+        -------
+        out : list of ``Label``
+            List containing the labels in this cell and its references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.rotation is not None:
+            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
+            st = numpy.sin(self.rotation * numpy.pi / 180.0)
+            st = numpy.array([-st, st])
+        if self.x_reflection:
+            xrefl = numpy.array([1, -1], dtype=int)
+        if self.magnification is not None:
+            mag = numpy.array([self.magnification, self.magnification])
+        if self.origin is not None:
+            orgn = numpy.array(self.origin)
+        labels = self.ref_cell.get_labels(depth=depth)
+        for lbl in labels:
+            if self.x_reflection:
+                lbl.position = lbl.position * xrefl
+            if self.magnification is not None:
+                lbl.position = lbl.position * mag
+            if self.rotation is not None:
+                lbl.position = lbl.position * ct + lbl.position * st
+            if self.origin is not None:
+                lbl.position = lbl.position + orgn
+        return labels
 
     def get_bounding_box(self):
         """
@@ -3491,6 +3574,54 @@ class CellArray(object):
                         if self.origin is not None:
                             polygons[-1] = polygons[-1] + orgn
         return polygons
+
+    def get_labels(self, depth=None):
+        """
+        Returns a list of labels created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to retrieve
+            labels from.
+
+        Returns
+        -------
+        out : list of ``Label``
+            List containing the labels in this cell and its references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.rotation is not None:
+            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
+            st = numpy.sin(self.rotation * numpy.pi / 180.0)
+            st = numpy.array([-st, st])
+        if self.magnification is not None:
+            mag = numpy.array([self.magnification, self.magnification])
+        if self.origin is not None:
+            orgn = numpy.array(self.origin)
+        if self.x_reflection:
+            xrefl = numpy.array([1, -1], dtype=int)
+        cell_labels = self.ref_cell.get_labels(depth=depth)
+        labels = []
+        for ii in range(self.columns):
+            for jj in range(self.rows):
+                spc = numpy.array(
+                    [self.spacing[0] * ii, self.spacing[1] * jj])
+                for clbl in cell_labels:
+                    lbl = libCopy.deepcopy(clbl)
+                    if self.magnification:
+                        lbl.position = lbl.position * mag + spc
+                    else:
+                        lbl.position = lbl.position + spc
+                    if self.x_reflection:
+                        lbl.position = lbl.position * xrefl
+                    if self.rotation is not None:
+                        lbl.position = lbl.position * ct  + lbl.position * st
+                    if self.origin is not None:
+                        lbl.position = lbl.position + orgn
+                    labels.append(lbl)
+        return labels
 
     def get_bounding_box(self):
         """
