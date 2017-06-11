@@ -3205,7 +3205,7 @@ class CellReference(object):
             st = numpy.sin(self.rotation * numpy.pi / 180.0)
             st = numpy.array([-st, st])
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype=int)
+            xrefl = numpy.array([1, -1], dtype='int')
         if self.magnification is not None:
             mag = numpy.array([self.magnification, self.magnification])
         if self.origin is not None:
@@ -3259,7 +3259,7 @@ class CellReference(object):
             st = numpy.sin(self.rotation * numpy.pi / 180.0)
             st = numpy.array([-st, st])
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype=int)
+            xrefl = numpy.array([1, -1], dtype='int')
         if self.magnification is not None:
             mag = numpy.array([self.magnification, self.magnification])
         if self.origin is not None:
@@ -3532,7 +3532,7 @@ class CellArray(object):
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype=int)
+            xrefl = numpy.array([1, -1], dtype='int')
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
@@ -3601,7 +3601,7 @@ class CellArray(object):
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype=int)
+            xrefl = numpy.array([1, -1], dtype='int')
         cell_labels = self.ref_cell.get_labels(depth=depth)
         labels = []
         for ii in range(self.columns):
@@ -4007,12 +4007,12 @@ class GdsLibrary(object):
                 data = numpy.array(
                     struct.unpack('>{0}h'.format((size - 4) // 2),
                                   stream.read(size - 4)),
-                    dtype=int)
+                    dtype='int')
             elif data_type == 0x03:
                 data = numpy.array(
                     struct.unpack('>{0}l'.format((size - 4) // 4),
                                   stream.read(size - 4)),
-                    dtype=int)
+                    dtype='int')
             elif data_type == 0x05:
                 data = numpy.array([
                     _eight_byte_real_to_float(stream.read(8))
@@ -4266,7 +4266,7 @@ def _chop(polygon, position, axis):
     bnd = (numpy.array(bnd[0]), numpy.array(bnd[1]))
     bnd = (list(bnd[0][numpy.argsort(numpy.array(polygon)[bnd[0], 1 - axis])]),
            list(bnd[1][numpy.argsort(numpy.array(polygon)[bnd[1], 1 - axis])]))
-    cross = numpy.ones(len(polygon), dtype=int)
+    cross = numpy.ones(len(polygon), dtype='int')
     cross[bnd[0]] = -2
     cross[bnd[1]] = -1
     i = 0
