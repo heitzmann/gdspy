@@ -45,7 +45,6 @@ import hashlib
 
 from gdspy import boolext
 from gdspy import clipper
-from gdspy.viewer import LayoutViewer
 
 __version__ = '1.1.2'
 
