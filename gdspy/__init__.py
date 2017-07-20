@@ -45,6 +45,10 @@ import hashlib
 
 from gdspy import boolext
 from gdspy import clipper
+try:
+    from gdspy.viewer import LayoutViewer
+except ImportError as e:
+    warnings.warn("[GDSPY] LayoutViewer not available: " + str(e), category=ImportWarning, stacklevel=2)
 
 __version__ = '1.1.2'
 
