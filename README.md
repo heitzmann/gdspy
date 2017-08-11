@@ -57,6 +57,14 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Next
+* Added new `gdsii_hash` function.
+* Added `precision` parameter to `_chop`, `Polygon.fracture`, `Polygon.fillet`, `PolygonSet.fracture`, `PolygonSet.fillet`, and `slice`.
+* Included labels in flatten operations (added `get_labels` to `Cell`, `CellReference`, and `CellArray`).
+* Fixed bug in the bounding box cache of reference copies.
+* Fixed bug in `_chop` that affected `Polygon.fracture`, `PolygonSet.fracture`, and `slice`.
+* Other minor bug fixes.
+
 ### Version 1.1.2 (Mar 19, 2017)
 * Update clipper library to 6.4.2 to fix bugs introduced in the last update.
 * License change to Boost Software License v1.0.

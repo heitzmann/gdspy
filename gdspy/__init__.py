@@ -248,7 +248,7 @@ class Polygon(object):
         else:
             return 0.5 * abs(poly_area)
 
-    def fracture(self, max_points=199):
+    def fracture(self, max_points=199, precision=1e-3):
         """
         Slice this polygon in the horizontal and vertical directions so that
         each resulting piece has at most ``max_points``.
@@ -258,6 +258,8 @@ class Polygon(object):
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
             than 4).
+        precision : float
+            Desired precision for rounding vertice coordinates.
 
         Returns
         -------
@@ -276,13 +278,13 @@ class Polygon(object):
                         chopped = _chop(
                             out_polygons[ii],
                             (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0)
+                            2, 0, precision)
                     else:
                         # Horizontal cuts
                         chopped = _chop(
                             out_polygons[ii],
                             (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1)
+                            2, 1, precision)
                     out_polygons.pop(ii)
                     out_polygons.extend(numpy.array(x) for x in
                                         chopped[0] + chopped[1])
@@ -290,7 +292,8 @@ class Polygon(object):
                     ii += 1
         return PolygonSet(out_polygons, self.layer, self.datatype)
 
-    def fillet(self, radius, points_per_2pi=128, max_points=199):
+    def fillet(self, radius, points_per_2pi=128, max_points=199,
+               precision=1e-3):
         """
         Round the corners of this polygon and fractures it into polygons with
         less vertices if necessary.
@@ -307,6 +310,8 @@ class Polygon(object):
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
             than 4).
+        precision : float
+            Desired precision for rounding vertice coordinates.
 
         Returns
         -------
@@ -371,7 +376,7 @@ class Polygon(object):
 
         self.points = numpy.array(new_points)
         if len(self.points) > max_points:
-            return self.fracture()
+            return self.fracture(max_points, precision)
         else:
             return self
 
@@ -562,7 +567,7 @@ class PolygonSet(object):
                 path_area += 0.5 * abs(poly_area)
         return path_area
 
-    def fracture(self, max_points=199):
+    def fracture(self, max_points=199, precision=1e-3):
         """
         Slice these polygons in the horizontal and vertical directions so that
         each resulting piece has at most ``max_points``.  This operation occurs
@@ -573,6 +578,8 @@ class PolygonSet(object):
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
             than 4).
+        precision : float
+            Desired precision for rounding vertice coordinates.
 
         Returns
         -------
@@ -590,13 +597,13 @@ class PolygonSet(object):
                         chopped = _chop(
                             self.polygons[ii],
                             (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0)
+                            2, 0, precision)
                     else:
                         # Horizontal cuts
                         chopped = _chop(
                             self.polygons[ii],
                             (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1)
+                            2, 1, precision)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
@@ -610,7 +617,8 @@ class PolygonSet(object):
                     ii += 1
         return self
 
-    def fillet(self, radius, points_per_2pi=128, max_points=199):
+    def fillet(self, radius, points_per_2pi=128, max_points=199,
+               precision=1e-3):
         """
         Round the corners of these polygons and fractures them into polygons
         with less vertices if necessary.
@@ -629,6 +637,8 @@ class PolygonSet(object):
         max_points : integer
             Maximal number of points in each resulting polygon (must be greater
             than 4).
+        precision : float
+            Desired precision for rounding vertice coordinates.
 
         Returns
         -------
@@ -692,7 +702,7 @@ class PolygonSet(object):
                 fracture = True
 
         if fracture:
-            self.fracture(max_points)
+            self.fracture(max_points, precision)
         return self
 
     def translate(self, dx, dy):
@@ -4209,7 +4219,7 @@ class GdsWriter(object):
             self._outfile.close()
 
 
-def _chop(polygon, position, axis):
+def _chop(polygon, position, axis, precision):
     """
     Slice polygon at a given position along a given axis.
 
@@ -4221,6 +4231,8 @@ def _chop(polygon, position, axis):
         Position to perform the slicing operation along the specified axis.
     axis : 0 or 1
         Axis along which the polygon will be sliced.
+    precision : float
+        Desired precision for rounding vertice coordinates.
 
     Returns
     -------
@@ -4229,78 +4241,24 @@ def _chop(polygon, position, axis):
         contains the polygons left before the slicing position, and the second,
         the polygons left after that position.
     """
-    out_polygons = ([], [])
-    polygon = list(polygon)
-    while polygon[-1][axis] == position:
-        polygon = [polygon[-1]] + polygon[:-1]
-    cross = list(numpy.sign(numpy.array(polygon)[:, axis] - position))
-    bnd = ([], [])
-    i = 0
-    while i < len(cross):
-        if cross[i - 1] * cross[i] < 0:
-            if axis == 0:
-                polygon.insert(i, [
-                    position, polygon[i - 1][1] +
-                    (position - polygon[i - 1][0]
-                     ) * float(polygon[i][1] - polygon[i - 1][1]) /
-                    (polygon[i][0] - polygon[i - 1][0])
-                ])
-            else:
-                polygon.insert(i, [
-                    polygon[i - 1][0] + (position - polygon[i - 1][1]) *
-                    float(polygon[i][0] - polygon[i - 1][0]) /
-                    (polygon[i][1] - polygon[i - 1][1]), position
-                ])
-            cross.insert(i, 0)
-            bnd[1 * (cross[i + 1] > 0)].append(i)
-            i += 2
-        elif cross[i] == 0:
-            j = i + 1
-            while cross[j] == 0:
-                j += 1
-            if cross[i - 1] * cross[j] < 0:
-                bnd[1 * (cross[j] > 0)].append(j - 1)
-            i = j + 1
-        else:
-            i += 1
-    if len(bnd[0]) == 0:
-        out_polygons[1 * (numpy.sum(cross) > 0)].append(polygon)
-        return out_polygons
-    bnd = (numpy.array(bnd[0]), numpy.array(bnd[1]))
-    bnd = (list(bnd[0][numpy.argsort(numpy.array(polygon)[bnd[0], 1 - axis])]),
-           list(bnd[1][numpy.argsort(numpy.array(polygon)[bnd[1], 1 - axis])]))
-    cross = numpy.ones(len(polygon), dtype='int')
-    cross[bnd[0]] = -2
-    cross[bnd[1]] = -1
-    i = 0
-    while i < len(polygon):
-        if cross[i] > 0 and polygon[i][axis] != position:
-            start = i
-            side = 1 * (polygon[i][axis] > position)
-            out_polygons[side].append([polygon[i]])
-            cross[i] = 0
-            nxt = i + 1
-            if nxt == len(polygon):
-                nxt = 0
-            boundary = True
-            while nxt != start:
-                out_polygons[side][-1].append(polygon[nxt])
-                if cross[nxt] > 0:
-                    cross[nxt] = 0
-                if cross[nxt] < 0 and boundary:
-                    j = bnd[cross[nxt] + 2].index(nxt)
-                    nxt = bnd[-cross[nxt] - 1][j]
-                    boundary = False
-                else:
-                    nxt += 1
-                    if nxt == len(polygon):
-                        nxt = 0
-                    boundary = True
-        i += 1
-    return out_polygons
+    x0 = polygon[:, 0].min()
+    x1 = polygon[:, 0].max()
+    y0 = polygon[:, 1].min()
+    y1 = polygon[:, 1].max()
+    if axis == 0:
+        out1 = clipper.clip([[(x0, y0), (position, y0), (position, y1),
+                              (x0, y1)]], [polygon], 'and', 1 / precision)
+        out2 = clipper.clip([[(x1, y1), (position, y1), (position, y0),
+                              (x1, y0)]], [polygon], 'and', 1 / precision)
+    else:
+        out1 = clipper.clip([[(x1, y0), (x1, position), (x0, position),
+                              (x0, y0)]], [polygon], 'and', 1 / precision)
+        out2 = clipper.clip([[(x0, y1), (x0, position), (x1, position),
+                              (x1, y1)]], [polygon], 'and', 1 / precision)
+    return (out1, out2)
 
 
-def slice(objects, position, axis, layer=0, datatype=0):
+def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     """
     Slice polygons and polygon sets at given positions along an axis.
 
@@ -4355,7 +4313,7 @@ def slice(objects, position, axis, layer=0, datatype=0):
     for i, p in enumerate(position):
         nxt_polygons = []
         for pol in polygons:
-            (pol1, pol2) = _chop(pol, p, axis)
+            (pol1, pol2) = _chop(pol, p, axis, precision)
             result[i] += pol1
             nxt_polygons += pol2
         polygons = nxt_polygons
@@ -4435,7 +4393,8 @@ def offset(polygons,
     result = clipper.offset(poly, distance, join, tolerance, 1 / precision, 1
                             if join_first else 0)
     return None if len(result) == 0 else \
-        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
+        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points,
+                                                                    precision)
 
 
 def boolean(polygons,
@@ -4603,7 +4562,8 @@ def fast_boolean(operandA,
         polyB.append(polyA.pop())
     result = clipper.clip(polyA, polyB, operation, 1 / precision)
     return None if len(result) == 0 else \
-        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points)
+        PolygonSet(result, layer, datatype, verbose=False).fracture(max_points,
+                                                                    precision)
 
 
 def inside(points, polygons, short_circuit='any', precision=0.001):
