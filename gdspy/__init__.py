@@ -4315,7 +4315,7 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
         for pol in polygons:
             (pol1, pol2) = _chop(pol, p, axis, precision)
             result[i] += pol1
-            nxt_polygons += pol2
+            nxt_polygons.extend(numpy.array(p2) for p2 in pol2)
         polygons = nxt_polygons
     result[-1] = polygons
     for i in range(len(result)):
