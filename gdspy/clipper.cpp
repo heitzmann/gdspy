@@ -4638,12 +4638,72 @@ std::ostream& operator <<(std::ostream &s, const Paths &p)
  * GDSPY additions below this comment                                 *
  **********************************************************************/
 
+short parse_polygon(PyObject *py_polygon, Path &path, double scaling, bool check_orientation)
+{
+  /* Parse a complete polygon */
+  PyObject *py_point, *py_coord;
+  long num_points = PySequence_Length(py_polygon);
+  cInt orientation = 0;
+
+  if (!PySequence_Check(py_polygon))
+  {
+    Py_DECREF(py_polygon);
+    PyErr_SetString(PyExc_TypeError, "Polygon must be a sequence.");
+    return -1;
+  }
+
+  path.resize(num_points);
+  for (long j = 0; j < num_points; ++j)
+  {
+    if ((py_point = PySequence_ITEM(py_polygon, j)) == NULL)
+    {
+      Py_DECREF(py_polygon);
+      return -1;
+    }
+    if ((py_coord = PySequence_GetItem(py_point, 0)) == NULL)
+    {
+      Py_DECREF(py_point);
+      Py_DECREF(py_polygon);
+      return -1;
+    }
+    double x = PyFloat_AsDouble(py_coord);
+    Py_DECREF(py_coord);
+
+    if ((py_coord = PySequence_GetItem(py_point, 1)) == NULL)
+    {
+      Py_DECREF(py_point);
+      Py_DECREF(py_polygon);
+      return -1;
+    }
+    double y = PyFloat_AsDouble(py_coord);
+    Py_DECREF(py_coord);
+    Py_DECREF(py_point);
+    path[j].X = Round(scaling * x);
+    path[j].Y = Round(scaling * y);
+#ifdef DEBUG
+    std::cout << path[j].X << "," << path[j].Y << std::endl;
+#endif //DEBUG
+    if (check_orientation == true && j > 1)
+      orientation += (path[0].X - path[j].X) * (path[j-1].Y - path[0].Y) - (path[0].Y - path[j].Y) * (path[j-1].X - path[0].X);
+  }
+  if (check_orientation == true && orientation < 0)
+  {
+    reverse(path.begin(), path.end());
+#ifdef DEBUG
+    std::cout << "Reversed" << std::endl;
+#endif //DEBUG
+  }
+
+  return 0;
+}
+
+
 short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling, bool check_orientation)
 {
-  PyObject *py_polygon, *py_point, *py_coord;
+  PyObject *py_polygon;
   long num = PySequence_Length(polyset);
-  paths.resize(num);
 
+  paths.resize(num);
   for (long i = 0; i < num; ++i)
   {
 #ifdef DEBUG
@@ -4653,56 +4713,11 @@ short parse_polygon_set(PyObject *polyset, Paths &paths, double scaling, bool ch
     {
       return -1;
     }
-    if (!PySequence_Check(py_polygon))
+
+    if (parse_polygon(py_polygon, paths[i], scaling, check_orientation) != 0)
     {
       Py_DECREF(py_polygon);
-      PyErr_SetString(PyExc_TypeError, "Elements of the first argument must be sequences.");
       return -1;
-    }
-
-    /* Parse a complete polygon */
-    long num_points = PySequence_Length(py_polygon);
-    cInt orientation = 0;
-    paths[i].resize(num_points);
-    for (long j = 0; j < num_points; ++j)
-    {
-      if ((py_point = PySequence_ITEM(py_polygon, j)) == NULL)
-      {
-        Py_DECREF(py_polygon);
-        return -1;
-      }
-      if ((py_coord = PySequence_GetItem(py_point, 0)) == NULL)
-      {
-        Py_DECREF(py_point);
-        Py_DECREF(py_polygon);
-        return -1;
-      }
-      double x = PyFloat_AsDouble(py_coord);
-      Py_DECREF(py_coord);
-
-      if ((py_coord = PySequence_GetItem(py_point, 1)) == NULL)
-      {
-        Py_DECREF(py_point);
-        Py_DECREF(py_polygon);
-        return -1;
-      }
-      double y = PyFloat_AsDouble(py_coord);
-      Py_DECREF(py_coord);
-      Py_DECREF(py_point);
-      paths[i][j].X = Round(scaling * x);
-      paths[i][j].Y = Round(scaling * y);
-#ifdef DEBUG
-      std::cout << paths[i][j].X << "," << paths[i][j].Y << std::endl;
-#endif //DEBUG
-      if (check_orientation == true && j > 1)
-        orientation += (paths[i][0].X - paths[i][j].X) * (paths[i][j-1].Y - paths[i][0].Y) - (paths[i][0].Y - paths[i][j].Y) * (paths[i][j-1].X - paths[i][0].X);
-    }
-    if (check_orientation == true && orientation < 0)
-    {
-      reverse(paths[i].begin(), paths[i].end());
-#ifdef DEBUG
-      std::cout << "Reversed" << std::endl;
-#endif //DEBUG
     }
 
     Py_DECREF(py_polygon);
@@ -5114,6 +5129,70 @@ static PyObject* inside(PyObject *self, PyObject *args)
   return result;
 }
 
+static PyObject* chop(PyObject *self, PyObject *args)
+{
+  PyObject *polygon;
+  unsigned char axis;
+  double position, scaling;
+
+  PyObject *resultitem, *returntuple;
+  Paths result;
+  Paths subj(1), clip(1);
+  PolyTree solution;
+  Clipper clpr;
+  cInt pos;
+  cInt bb[4];
+
+  if (!PyArg_ParseTuple(args, "OdBd:_chop", &polygon, &position, &axis, &scaling)) return NULL;
+
+  if (parse_polygon(polygon, subj[0], scaling, true) != 0) return NULL;
+
+  bounding_box(subj[0], bb);
+
+  pos = Round(scaling * position);
+  clip[0].reserve(4);
+  if (axis == 0)
+  {
+    clip[0].push_back(IntPoint(bb[0], bb[2]));
+    clip[0].push_back(IntPoint(pos, bb[2]));
+    clip[0].push_back(IntPoint(pos, bb[3]));
+    clip[0].push_back(IntPoint(bb[0], bb[3]));
+  }
+  else
+  {
+    clip[0].push_back(IntPoint(bb[0], bb[2]));
+    clip[0].push_back(IntPoint(bb[1], bb[2]));
+    clip[0].push_back(IntPoint(bb[1], pos));
+    clip[0].push_back(IntPoint(bb[0], pos));
+  }
+
+  clpr.AddPaths(subj, ptSubject, true);
+  clpr.AddPaths(clip, ptClip, true);
+
+  if ((returntuple = PyTuple_New(2)) == NULL) return NULL;
+
+  clpr.Execute(ctIntersection, solution, pftNonZero, pftNonZero);
+  tree2paths(solution, result);
+  if ((resultitem = build_polygon_tuple(result, scaling)) == NULL)
+  {
+    Py_DECREF(returntuple);
+    return NULL;
+  }
+  PyTuple_SET_ITEM(returntuple, 0, resultitem);
+
+  clpr.Execute(ctDifference, solution, pftNonZero, pftNonZero);
+  result.clear();
+  tree2paths(solution, result);
+  if ((resultitem = build_polygon_tuple(result, scaling)) == NULL)
+  {
+    Py_DECREF(returntuple);
+    return NULL;
+  }
+  PyTuple_SET_ITEM(returntuple, 1, resultitem);
+
+  return returntuple;
+}
+
 } // extern "C"
 
 static const char doc[] = "\
@@ -5203,6 +5282,29 @@ Returns\n\
 out : list\n\
     List of booleans indicating if each of the points or point groups\n\
     is inside the set of polygons."},
+  {"_chop", chop, METH_VARARGS,\
+"Slice polygon at given positions along an axis.\n\n\
+Parameters\n\
+----------\n\
+polygon : array-like[N][2]\n\
+    Coordinates of the vertices of the polygon.\n\
+position : number or list of numbers\n\
+    Positions to perform the slicing operation along the specified\n\
+    axis.\n\
+axis : 0 or 1\n\
+    Axis along which the polygon will be sliced.\n\
+scaling : float\n\
+    Because *clipper* uses integer coordinates internally, it is\n\
+    useful to scale polygon coordinates before any operation and\n\
+    rescale the result back to the original size. For example, a\n\
+    value of 100 will preserve the first 2 decimal places of all\n\
+    coordinates.\n\n\
+Returns\n\
+-------\n\
+out : tuple[2]\n\
+    Each element is a list of polygons (array-like[N][2]).  The first\n\
+    list contains the polygons left before the slicing position, and\n\
+    the second, the polygons left after that position."},
   {NULL, NULL, 0, NULL}
 };
 

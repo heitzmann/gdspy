@@ -275,16 +275,16 @@ class Polygon(object):
                     pts1 = sorted(out_polygons[ii][:,1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
-                        chopped = _chop(
+                        chopped = clipper._chop(
                             out_polygons[ii],
                             (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, precision)
+                            2, 0, 1 / precision)
                     else:
                         # Horizontal cuts
-                        chopped = _chop(
+                        chopped = clipper._chop(
                             out_polygons[ii],
                             (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, precision)
+                            2, 1, 1 / precision)
                     out_polygons.pop(ii)
                     out_polygons.extend(numpy.array(x) for x in
                                         chopped[0] + chopped[1])
@@ -594,16 +594,16 @@ class PolygonSet(object):
                     pts1 = sorted(self.polygons[ii][:,1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
-                        chopped = _chop(
+                        chopped = clipper._chop(
                             self.polygons[ii],
                             (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, precision)
+                            2, 0, 1 / precision)
                     else:
                         # Horizontal cuts
-                        chopped = _chop(
+                        chopped = clipper._chop(
                             self.polygons[ii],
                             (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, precision)
+                            2, 1, 1 / precision)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
@@ -4219,45 +4219,6 @@ class GdsWriter(object):
             self._outfile.close()
 
 
-def _chop(polygon, position, axis, precision):
-    """
-    Slice polygon at a given position along a given axis.
-
-    Parameters
-    ----------
-    polygon : array-like[N][2]
-        Coordinates of the vertices of the polygon.
-    position : number
-        Position to perform the slicing operation along the specified axis.
-    axis : 0 or 1
-        Axis along which the polygon will be sliced.
-    precision : float
-        Desired precision for rounding vertice coordinates.
-
-    Returns
-    -------
-    out : tuple[2]
-        Each element is a list of polygons (array-like[N][2]).  The first list
-        contains the polygons left before the slicing position, and the second,
-        the polygons left after that position.
-    """
-    x0 = polygon[:, 0].min()
-    x1 = polygon[:, 0].max()
-    y0 = polygon[:, 1].min()
-    y1 = polygon[:, 1].max()
-    if axis == 0:
-        out1 = clipper.clip([[(x0, y0), (position, y0), (position, y1),
-                              (x0, y1)]], [polygon], 'and', 1 / precision)
-        out2 = clipper.clip([[(x1, y1), (position, y1), (position, y0),
-                              (x1, y0)]], [polygon], 'and', 1 / precision)
-    else:
-        out1 = clipper.clip([[(x1, y0), (x1, position), (x0, position),
-                              (x0, y0)]], [polygon], 'and', 1 / precision)
-        out2 = clipper.clip([[(x0, y1), (x0, position), (x1, position),
-                              (x1, y1)]], [polygon], 'and', 1 / precision)
-    return (out1, out2)
-
-
 def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     """
     Slice polygons and polygon sets at given positions along an axis.
@@ -4313,7 +4274,7 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     for i, p in enumerate(position):
         nxt_polygons = []
         for pol in polygons:
-            (pol1, pol2) = _chop(pol, p, axis, precision)
+            (pol1, pol2) = clipper._chop(pol, p, axis, 1 / precision)
             result[i] += pol1
             nxt_polygons.extend(numpy.array(p2) for p2 in pol2)
         polygons = nxt_polygons
