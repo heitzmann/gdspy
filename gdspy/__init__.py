@@ -155,6 +155,8 @@ class Polygon(object):
     >>> myCell.add(triangle)
     """
 
+    __slots__ = 'layer', 'datatype', 'points'
+
     def __init__(self, points, layer=0, datatype=0, verbose=True):
         if len(points) > 199 and verbose:
             warnings.warn(
@@ -441,6 +443,8 @@ class PolygonSet(object):
     The GDSII specification supports only a maximum of 199 vertices per
     polygon.
     """
+
+    __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self, polygons, layer=0, datatype=0, verbose=True):
         self.layers = [layer] * len(polygons)
@@ -748,6 +752,8 @@ class Rectangle(Polygon):
     >>> myCell.add(rectangle)
     """
 
+    __slots__ = 'layer', 'datatype', 'points'
+
     def __init__(self, point1, point2, layer=0, datatype=0):
         self.layer = layer
         self.points = numpy.array(
@@ -810,6 +816,8 @@ class Round(PolygonSet):
     ...                       initial_angle=-5.0*numpy.pi/6.0,
     ...                       final_angle=0)
     """
+
+    __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self,
                  center,
@@ -929,6 +937,7 @@ class Text(PolygonSet):
     >>> text = gdspy.Text('Sample text', 20, (-10, -100))
     >>> myCell.add(text)
     """
+
     _font = {
         '!': [[(2, 2), (3, 2), (3, 3), (2, 3)],
               [(2, 4), (3, 4), (3, 5), (3, 6), (3, 7), (3, 8), (3, 9), (2, 9),
@@ -1406,6 +1415,8 @@ class Text(PolygonSet):
               [(4, 7), (5, 7), (5, 8), (5, 9), (4, 9), (4, 8)]],
     }
 
+    __slots__ = 'layers', 'datatypes', 'polygons'
+
     def __init__(self,
                  text,
                  size,
@@ -1495,6 +1506,8 @@ class Path(PolygonSet):
         Length of the central path axis.  If only one path is created, this
         is the real length of the path.
     """
+    __slots__ = ('layers', 'datatypes', 'polygons', 'x', 'y', 'w', 'n',
+                 'direction', 'distance', 'length')
 
     def __init__(self,
                  width,
@@ -2074,6 +2087,7 @@ class L1Path(PolygonSet):
     >>> l1path = gdspy.L1Path((0, 0), '+x', 2, length, turn)
     >>> myCell.add(l1path)
     """
+    __slots__ = 'layers', 'datatypes', 'polygons', 'direction', 'x', 'y'
 
     def __init__(self,
                  initial_point,
@@ -2315,6 +2329,7 @@ class PolyPath(PolygonSet):
     The bevel join will give  strange results if the number of paths is
     greater than 1.
     """
+    __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self,
                  points,
@@ -2539,6 +2554,9 @@ class Label(object):
         'lower right': 10
     }
 
+    __slots__ = ('layer', 'texttype', 'text', 'position', 'anchor', 'rotation',
+                 'magnification', 'x_reflection')
+
     def __init__(self,
                  text,
                  position,
@@ -2669,6 +2687,7 @@ class Cell(object):
     labels : list
         List of ``Label``.
     """
+    __slots__ = 'name', 'elements', 'labels', '_bb_valid'
 
     def __init__(self, name, exclude_from_current=False):
         self.name = name
@@ -3084,6 +3103,8 @@ class CellReference(object):
     ignore_missing : bool
         If ``False`` a warning is issued when the referenced cell is not found.
     """
+    __slots__ = ('ref_cell', 'origin', 'rotation', 'magnification',
+                 'x_reflection')
 
     def __init__(self,
                  ref_cell,
@@ -3378,6 +3399,8 @@ class CellArray(object):
     ignore_missing : bool
         If ``False`` a warning is issued when the referenced cell is not found.
     """
+    __slots__ = ('ref_cell', 'origin', 'rotation', 'magnification',
+                 'x_reflection', 'columns', 'rows', 'spacing')
 
     def __init__(self,
                  ref_cell,
@@ -3730,6 +3753,8 @@ class GdsLibrary(object):
     _import_anchors = [
         'nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'
     ]
+
+    __slots__ = 'name', 'cell_dict', '_references'
 
     def __init__(self, name='library'):
         self.name = name
@@ -4168,6 +4193,7 @@ class GdsWriter(object):
     ...     del cell
     >>> writer.close()
     """
+    __slots__ = '_outfile', '_close', '_res'
 
     def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
         if isinstance(outfile, str):
