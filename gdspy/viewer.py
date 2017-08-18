@@ -6,7 +6,6 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
-
 """
 Classes and functions for the visualization of layouts created with the
 gdspy Python module.
@@ -65,10 +64,9 @@ class ColorDict(dict):
             rgb = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([
                 int(255 * c + 0.5)
                 for c in colorsys.hsv_to_rgb((layer % 3) / 3.0 + (
-                    layer % 6 // 3
-                ) / 6.0 + (layer // 6) / 11.0, 1 - ((layer + datatype) % 8
-                                                    ) / 12.0, 1 - (datatype % 3
-                                                                   ) / 4.0)
+                    layer % 6 // 3) / 6.0 + (layer // 6) / 11.0, 1 - (
+                        (layer + datatype) % 8) / 12.0, 1 -
+                                             (datatype % 3) / 4.0)
             ])
         else:
             rgb = self.default
@@ -216,11 +214,10 @@ class LayoutViewer(tkinter.Frame):
         ]
         self.default_outline = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format(
             [(0 if c > 127 else 255) for c in bg])
-        self.default_grey = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([(
-            (c + 256) // 2
-            if c < 85 else (c // 2
-                            if c > 171 else (255
-                                             if c > 127 else 0))) for c in bg])
+        self.default_grey = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format(
+            [((c + 256) // 2
+              if c < 85 else (c // 2 if c > 171 else (255 if c > 127 else 0)))
+             for c in bg])
 
         # Setup scrollbars
         self.xscroll = tkinter.Scrollbar(
@@ -662,8 +659,8 @@ class LayoutViewer(tkinter.Frame):
         x = self.canvas.canvasx(evt.x)
         y = self.canvas.canvasy(evt.y)
         if self.canvas.ruler is None:
-            self.coords.configure(text='{0:g}, {1:g}'.format(x * self.scale,
-                                                             -y * self.scale))
+            self.coords.configure(text='{0:g}, {1:g}'.format(
+                x * self.scale, -y * self.scale))
         else:
             self.canvas.coords(self.canvas.ruler, self.canvas.x_rl,
                                self.canvas.y_rl, x, y)
@@ -827,6 +824,6 @@ class LayoutViewer(tkinter.Frame):
                     'Element information',
                     'Layer/datatpe: {0}\nVertices: {1}\n'
                     'Approximate bounding box:\n'
-                    '({2[0]:g}, {2[1]:g}) - ({2[2]:g}, {2[3]:g})'
-                    .format(tags[0][1:], tags[1][1:], bb),
+                    '({2[0]:g}, {2[1]:g}) - ({2[2]:g}, {2[3]:g})'.format(
+                        tags[0][1:], tags[1][1:], bb),
                     parent=self.canvas)

@@ -6,7 +6,6 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
-
 """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
@@ -48,7 +47,10 @@ from gdspy import clipper
 try:
     from gdspy.viewer import LayoutViewer
 except ImportError as e:
-    warnings.warn("[GDSPY] LayoutViewer not available: " + str(e), category=ImportWarning, stacklevel=2)
+    warnings.warn(
+        "[GDSPY] LayoutViewer not available: " + str(e),
+        category=ImportWarning,
+        stacklevel=2)
 
 __version__ = '1.1.2'
 
@@ -220,8 +222,8 @@ class Polygon(object):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        self.points = (self.points - c0) * ca + (self.points - c0
-                                                 )[:, ::-1] * sa + c0
+        self.points = (self.points - c0) * ca + (
+            self.points - c0)[:, ::-1] * sa + c0
         return self
 
     def area(self, by_spec=False):
@@ -273,28 +275,33 @@ class Polygon(object):
             ii = 0
             while ii < len(out_polygons):
                 if len(out_polygons[ii]) > max_points:
-                    pts0 = sorted(out_polygons[ii][:,0])
-                    pts1 = sorted(out_polygons[ii][:,1])
+                    pts0 = sorted(out_polygons[ii][:, 0])
+                    pts1 = sorted(out_polygons[ii][:, 1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = clipper._chop(
                             out_polygons[ii],
-                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, 1 / precision)
+                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 +
+                                                         1]) / 2, 0,
+                            1 / precision)
                     else:
                         # Horizontal cuts
                         chopped = clipper._chop(
                             out_polygons[ii],
-                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, 1 / precision)
+                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 +
+                                                         1]) / 2, 1,
+                            1 / precision)
                     out_polygons.pop(ii)
-                    out_polygons.extend(numpy.array(x) for x in
-                                        chopped[0] + chopped[1])
+                    out_polygons.extend(
+                        numpy.array(x) for x in chopped[0] + chopped[1])
                 else:
                     ii += 1
         return PolygonSet(out_polygons, self.layer, self.datatype)
 
-    def fillet(self, radius, points_per_2pi=128, max_points=199,
+    def fillet(self,
+               radius,
+               points_per_2pi=128,
+               max_points=199,
                precision=1e-3):
         """
         Round the corners of this polygon and fractures it into polygons with
@@ -370,9 +377,9 @@ class Polygon(object):
                     r = radius[ii]
                 if l > 0.49 * length[ii + 1]:
                     r = 0.49 * length[ii + 1] / tt[ii]
-                new_points += list(r * dvec[ii] / ct[ii] + self.points[
-                    ii] + numpy.vstack((r * numpy.cos(a), r * numpy.sin(a)))
-                                   .transpose())
+                new_points += list(
+                    r * dvec[ii] / ct[ii] + self.points[ii] + numpy.vstack(
+                        (r * numpy.cos(a), r * numpy.sin(a))).transpose())
             else:
                 new_points.append(self.points[ii])
 
@@ -513,9 +520,9 @@ class PolygonSet(object):
                 raise ValueError("[GDSPY] Polygons with more than 4094 are "
                                  "not supported by the GDSII format.")
             data.append(
-                struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6,
-                            0x0E02, self.datatypes[ii], 12 + 8 * len(
-                                self.polygons[ii]), 0x1003))
+                struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[
+                    ii], 6, 0x0E02, self.datatypes[ii], 12 +
+                            8 * len(self.polygons[ii]), 0x1003))
             data.extend(
                 struct.pack('>2l',
                             int(round(point[0] * multiplier)),
@@ -594,25 +601,27 @@ class PolygonSet(object):
             ii = 0
             while ii < len(self.polygons):
                 if len(self.polygons[ii]) > max_points:
-                    pts0 = sorted(self.polygons[ii][:,0])
-                    pts1 = sorted(self.polygons[ii][:,1])
+                    pts0 = sorted(self.polygons[ii][:, 0])
+                    pts1 = sorted(self.polygons[ii][:, 1])
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
                         chopped = clipper._chop(
                             self.polygons[ii],
-                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, 1 / precision)
+                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 +
+                                                         1]) / 2, 0,
+                            1 / precision)
                     else:
                         # Horizontal cuts
                         chopped = clipper._chop(
                             self.polygons[ii],
-                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, 1 / precision)
+                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 +
+                                                         1]) / 2, 1,
+                            1 / precision)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
-                    self.polygons.extend(numpy.array(x) for x in
-                                         chopped[0] + chopped[1])
+                    self.polygons.extend(
+                        numpy.array(x) for x in chopped[0] + chopped[1])
                     self.layers += [layer] * (
                         len(chopped[0]) + len(chopped[1]))
                     self.datatypes += [datatype] * (
@@ -621,7 +630,10 @@ class PolygonSet(object):
                     ii += 1
         return self
 
-    def fillet(self, radius, points_per_2pi=128, max_points=199,
+    def fillet(self,
+               radius,
+               points_per_2pi=128,
+               max_points=199,
                precision=1e-3):
         """
         Round the corners of these polygons and fractures them into polygons
@@ -696,9 +708,10 @@ class PolygonSet(object):
                         r = radius
                     if l > 0.49 * length[ii + 1]:
                         r = 0.49 * length[ii + 1] / tt[ii]
-                    new_points += list(r * dvec[ii] / ct[ii] + self.polygons[
-                        jj][ii] + numpy.vstack((r * numpy.cos(a), r *
-                                                numpy.sin(a))).transpose())
+                    new_points += list(r * dvec[ii] / ct[ii] +
+                                       self.polygons[jj][ii] + numpy.vstack(
+                                           (r * numpy.cos(a),
+                                            r * numpy.sin(a))).transpose())
                 else:
                     new_points.append(self.polygons[jj][ii])
             self.polygons[jj] = numpy.array(new_points)
@@ -832,20 +845,20 @@ class Round(PolygonSet):
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
-                    number_of_points = int(2 * radius * numpy.pi /
-                                           number_of_points + 0.5)
+                    number_of_points = int(
+                        2 * radius * numpy.pi / number_of_points + 0.5)
                 else:
                     number_of_points = int(
                         abs(final_angle - initial_angle) * radius /
                         number_of_points + 0.5) + 2
             else:
                 if final_angle == initial_angle:
-                    number_of_points = 2 * int(2 * radius * numpy.pi /
-                                               number_of_points + 0.5) + 2
+                    number_of_points = 2 * int(
+                        2 * radius * numpy.pi / number_of_points + 0.5) + 2
                 else:
                     number_of_points = 2 * int(
-                        abs(final_angle - initial_angle) * radius /
-                        number_of_points + 0.5) + 2
+                        abs(final_angle - initial_angle
+                            ) * radius / number_of_points + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1527,15 +1540,14 @@ class Path(PolygonSet):
 
     def __str__(self):
         if self.n > 1:
-            return (
-                "Path (x{}, end at ({}, {}) towards {}, length {}, "
-                "width {}, {} apart, {} polygons, {} vertices, layers {}, "
-                "datatypes {})").format(self.n, self.x, self.y, self.direction,
-                                        self.length, self.w * 2, self.distance,
-                                        len(self.polygons),
-                                        sum([len(p) for p in self.polygons]),
-                                        list(set(self.layers)),
-                                        list(set(self.datatypes)))
+            return ("Path (x{}, end at ({}, {}) towards {}, length {}, "
+                    "width {}, {} apart, {} polygons, {} vertices, layers {}, "
+                    "datatypes {})").format(
+                        self.n, self.x, self.y, self.direction, self.length,
+                        self.w * 2, self.distance,
+                        len(self.polygons),
+                        sum([len(p) for p in self.polygons]),
+                        list(set(self.layers)), list(set(self.datatypes)))
         else:
             return ("Path (end at ({}, {}) towards {}, length {}, width {}, "
                     "{} polygons, {} vertices, layers {}, datatypes {})")\
@@ -1651,9 +1663,9 @@ class Path(PolygonSet):
                         old_d0 - old_w) * ca), (old_x + (old_d0 + old_w) * sa,
                                                 old_y - (old_d0 + old_w) * ca),
                                  (self.x + (d0 + self.w) * sa, self.y -
-                                  (d0 + self.w) * ca), (self.x + (
-                                      d0 - self.w) * sa, self.y - (d0 - self.w)
-                                                        * ca)]))
+                                  (d0 + self.w) * ca), (
+                                      self.x + (d0 - self.w) * sa, self.y -
+                                      (d0 - self.w) * ca)]))
                 if self.w == 0:
                     self.polygons[-1] = self.polygons[-1][:-1, :]
                 if old_w == 0:
@@ -1740,9 +1752,10 @@ class Path(PolygonSet):
             self.distance = final_distance
         if isinstance(number_of_points, float):
             number_of_points = 2 * int(
-                abs((final_angle - initial_angle) * (radius + max(
-                    old_distance, self.distance) * (self.n - 1) * 0.5 + max(
-                        old_w, self.w)) / number_of_points) + 0.5) + 2
+                abs((final_angle - initial_angle) *
+                    (radius + max(old_distance, self.distance) *
+                     (self.n - 1) * 0.5 + max(old_w, self.w)
+                     ) / number_of_points) + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -2000,14 +2013,14 @@ class Path(PolygonSet):
                                 number_of_evaluations)
             width = numpy.array([final_width(u) for u in uu]).reshape(
                 number_of_evaluations, 1) * 0.5
-            dist = numpy.array([final_distance(u) for u in uu]).reshape(
-                number_of_evaluations, 1)
+            dist = numpy.array([final_distance(u)
+                                for u in uu]).reshape(number_of_evaluations, 1)
             x0 = numpy.array([curve_function(u) for u in uu]) + orgn
             dx = numpy.array([curve_derivative(u) for u in uu])
             dx = dx[:, ::-1] * refl / numpy.sqrt(
                 (dx * dx).sum(1)).reshape(number_of_evaluations, 1)
-            self.length += numpy.sqrt((
-                (x0[1:, :] - x0[:-1, :])**2).sum(1)).sum()
+            self.length += numpy.sqrt(((x0[1:, :] - x0[:-1, :])
+                                       **2).sum(1)).sum()
             for ii in range(self.n):
                 p1 = x0 + dx * (dist * (ii - (self.n - 1) * 0.5) + width)
                 p2 = (x0 + dx * (dist * (ii -
@@ -2363,8 +2376,8 @@ class PolyPath(PolygonSet):
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
-            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) %
-                                                      len_w]
+            points[-1, :] = points[-1, :] + v * width[(
+                points.shape[0] - 1) % len_w]
         elif ends == 1:
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
@@ -2433,8 +2446,8 @@ class PolyPath(PolygonSet):
                     vec = p0m[0] * p1p[1] - p1p[0] * p0m[1]
                     if abs(vec) > 1e-30:
                         p = numpy.array((1, -1)) * (
-                            p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1] *
-                            p0[ii][kk] + p0m * p1p *
+                            p0m * p1p[::-1] * p1[ii][kk] -
+                            p1p * p0m[::-1] * p0[ii][kk] + p0m * p1p *
                             (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
                         if corners > 0 and numpy.sum((p - pp[ii][kk])*p1p) > 0\
                                 and numpy.sum((p - p0[ii][kk])*p0m) < 0:
@@ -2445,8 +2458,8 @@ class PolyPath(PolygonSet):
                 if len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points:
                     if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
                         paths[ii][1] = paths[ii][1][1:]
-                    if numpy.sum(
-                        (paths[ii][0][-1] - paths[ii][1][-1])**2) == 0:
+                    if numpy.sum((paths[ii][0][-1] - paths[ii][1][-1])
+                                 **2) == 0:
                         self.polygons.append(
                             numpy.array(paths[ii][0] + paths[ii][1][-2::-1]))
                     else:
@@ -2836,8 +2849,8 @@ class Cell(object):
                 layers.add(element.layer)
             elif isinstance(element, PolygonSet):
                 layers.update(element.layers)
-            elif isinstance(element, CellReference) or isinstance(element,
-                                                                  CellArray):
+            elif isinstance(element, CellReference) or isinstance(
+                    element, CellArray):
                 layers.update(element.ref_cell.get_layers())
         for label in self.labels:
             layers.add(label.layer)
@@ -2858,8 +2871,8 @@ class Cell(object):
                 datatypes.add(element.datatype)
             elif isinstance(element, PolygonSet):
                 datatypes.update(element.datatypes)
-            elif isinstance(element, CellReference) or isinstance(element,
-                                                                  CellArray):
+            elif isinstance(element, CellReference) or isinstance(
+                    element, CellArray):
                 datatypes.update(element.ref_cell.get_datatypes())
         return datatypes
 
@@ -2875,8 +2888,8 @@ class Cell(object):
         """
         if len(self.elements) == 0:
             return None
-        if not (self._bb_valid and all(
-                ref._bb_valid for ref in self.get_dependencies(True))):
+        if not (self._bb_valid and
+                all(ref._bb_valid for ref in self.get_dependencies(True))):
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
             for element in self.elements:
@@ -2953,9 +2966,8 @@ class Cell(object):
                                     numpy.array(element.polygons[ii])
                                 ]
                     else:
-                        cell_polygons = element.get_polygons(True, None
-                                                             if depth is None
-                                                             else depth - 1)
+                        cell_polygons = element.get_polygons(
+                            True, None if depth is None else depth - 1)
                         for kk in cell_polygons.keys():
                             if kk in polygons:
                                 polygons[kk] += cell_polygons[kk]
@@ -2970,9 +2982,8 @@ class Cell(object):
                         for points in element.polygons:
                             polygons.append(numpy.array(points))
                     else:
-                        polygons += element.get_polygons(depth=None
-                                                         if depth is None else
-                                                         depth - 1)
+                        polygons += element.get_polygons(
+                            depth=None if depth is None else depth - 1)
         return polygons
 
     def get_labels(self, depth=None):
@@ -2994,11 +3005,13 @@ class Cell(object):
         if depth is None or depth >= 0:
             for element in self.elements:
                 if isinstance(element, CellReference):
-                    labels.extend(element.get_labels(None if depth is None else
-                                                     depth - 1))
+                    labels.extend(
+                        element.get_labels(None
+                                           if depth is None else depth - 1))
                 elif isinstance(element, CellArray):
-                    labels.extend(element.get_labels(None if depth is None else
-                                                     depth - 1))
+                    labels.extend(
+                        element.get_labels(None
+                                           if depth is None else depth - 1))
         return labels
 
     def get_dependencies(self, recursive=False):
@@ -3017,15 +3030,17 @@ class Cell(object):
         """
         dependencies = set()
         for element in self.elements:
-            if isinstance(element, CellReference) or isinstance(element,
-                                                                CellArray):
+            if isinstance(element, CellReference) or isinstance(
+                    element, CellArray):
                 if recursive:
                     dependencies.update(
                         element.ref_cell.get_dependencies(True))
                 dependencies.add(element.ref_cell)
         return dependencies
 
-    def flatten(self, single_layer=None, single_datatype=None,
+    def flatten(self,
+                single_layer=None,
+                single_datatype=None,
                 single_texttype=None):
         """
         Flatten all ``CellReference`` and ``CellArray`` elements in this cell
@@ -3329,8 +3344,8 @@ class CellReference(object):
             key = (self.ref_cell, self.rotation, self.magnification,
                    self.x_reflection)
         deps = self.ref_cell.get_dependencies(True)
-        if not (self.ref_cell._bb_valid and all(ref._bb_valid for ref in deps)
-                and key in _bounding_boxes):
+        if not (self.ref_cell._bb_valid and
+                all(ref._bb_valid for ref in deps) and key in _bounding_boxes):
             for ref in deps:
                 ref.get_bounding_box()
             self.ref_cell.get_bounding_box()
@@ -3642,8 +3657,7 @@ class CellArray(object):
         labels = []
         for ii in range(self.columns):
             for jj in range(self.rows):
-                spc = numpy.array(
-                    [self.spacing[0] * ii, self.spacing[1] * jj])
+                spc = numpy.array([self.spacing[0] * ii, self.spacing[1] * jj])
                 for clbl in cell_labels:
                     lbl = libCopy.deepcopy(clbl)
                     if self.magnification:
@@ -3653,7 +3667,7 @@ class CellArray(object):
                     if self.x_reflection:
                         lbl.position = lbl.position * xrefl
                     if self.rotation is not None:
-                        lbl.position = lbl.position * ct  + lbl.position * st
+                        lbl.position = lbl.position * ct + lbl.position * st
                     if self.origin is not None:
                         lbl.position = lbl.position + orgn
                     labels.append(lbl)
@@ -3675,8 +3689,8 @@ class CellArray(object):
                self.x_reflection, self.columns, self.rows, self.spacing[0],
                self.spacing[1])
         deps = self.ref_cell.get_dependencies(True)
-        if not (self.ref_cell._bb_valid and all(ref._bb_valid for ref in deps)
-                and key in _bounding_boxes):
+        if not (self.ref_cell._bb_valid and
+                all(ref._bb_valid for ref in deps) and key in _bounding_boxes):
             for ref in deps:
                 ref.get_bounding_box()
             self.ref_cell.get_bounding_box()
@@ -3738,17 +3752,18 @@ class GdsLibrary(object):
         Dictionary of cells in this library, indexed by name.
     """
 
-    _record_name = (
-        'HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR', 'STRNAME',
-        'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF', 'TEXT', 'LAYER',
-        'DATATYPE', 'WIDTH', 'XY', 'ENDEL', 'SNAME', 'COLROW', 'TEXTNODE',
-        'NODE', 'TEXTTYPE', 'PRESENTATION', 'SPACING', 'STRING', 'STRANS',
-        'MAG', 'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS', 'PATHTYPE',
-        'GENERATIONS', 'ATTRTABLE', 'STYPTABLE', 'STRTYPE', 'ELFLAGS', 'ELKEY',
-        'LINKTYPE', 'LINKKEYS', 'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX',
-        'BOXTYPE', 'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE',
-        'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS', 'LIBDIRSIZE',
-        'SRFNAME', 'LIBSECUR')
+    _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR',
+                    'STRNAME', 'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF',
+                    'TEXT', 'LAYER', 'DATATYPE', 'WIDTH', 'XY', 'ENDEL',
+                    'SNAME', 'COLROW', 'TEXTNODE', 'NODE', 'TEXTTYPE',
+                    'PRESENTATION', 'SPACING', 'STRING', 'STRANS', 'MAG',
+                    'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS',
+                    'PATHTYPE', 'GENERATIONS', 'ATTRTABLE', 'STYPTABLE',
+                    'STRTYPE', 'ELFLAGS', 'ELKEY', 'LINKTYPE', 'LINKKEYS',
+                    'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX', 'BOXTYPE',
+                    'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE',
+                    'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS',
+                    'LIBDIRSIZE', 'SRFNAME', 'LIBSECUR')
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
     _import_anchors = [
         'nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'
@@ -3835,8 +3850,8 @@ class GdsLibrary(object):
             struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
                         now.month, now.day, now.hour, now.minute, now.second,
                         now.year, now.month, now.day, now.hour, now.minute,
-                        now.second, 4 + len(name), 0x0206) + name.encode(
-                            'ascii') + struct.pack('>2h', 20, 0x0305) +
+                        now.second, 4 + len(name), 0x0206) +
+            name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
             _eight_byte_real(precision / unit) + _eight_byte_real(precision))
         if cells is None:
             cells = self.cell_dict.values()
@@ -3979,8 +3994,8 @@ class GdsLibrary(object):
                 self.name = record[1]
             # PRESENTATION
             elif record[0] == 0x17:
-                kwargs['anchor'] = GdsLibrary._import_anchors[int(record[1][0])
-                                                              & 0x000f]
+                kwargs['anchor'] = GdsLibrary._import_anchors[
+                    int(record[1][0]) & 0x000f]
             # PATHTYPE
             elif record[0] == 0x21:
                 if record[1][0] > 2:
@@ -4210,8 +4225,8 @@ class GdsWriter(object):
             struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
                         now.month, now.day, now.hour, now.minute, now.second,
                         now.year, now.month, now.day, now.hour, now.minute,
-                        now.second, 4 + len(name), 0x0206) + name.encode(
-                            'ascii') + struct.pack('>2h', 20, 0x0305) +
+                        now.second, 4 + len(name), 0x0206) +
+            name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
             _eight_byte_real(precision / unit) + _eight_byte_real(precision))
 
     def write_cell(self, cell):
@@ -4364,8 +4379,8 @@ def offset(polygons,
         poly.append(polygons.points)
     elif isinstance(polygons, PolygonSet):
         poly += polygons.polygons
-    elif isinstance(polygons, CellReference) or isinstance(polygons,
-                                                           CellArray):
+    elif isinstance(polygons, CellReference) or isinstance(
+            polygons, CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
@@ -4473,10 +4488,11 @@ def boolean(polygons,
             poly.append(obj)
             indices.append(indices[-1] + 1)
     if special_function:
-        result = boolext.clip(poly, lambda *p: operation(* [
-            sum(p[indices[ia]:indices[ia + 1]]) for ia in range(
-                len(indices) - 1)
-        ]), eps)
+        result = boolext.clip(
+            poly, lambda *p: operation(* [
+                sum(p[indices[ia]:indices[ia + 1]])
+                for ia in range(len(indices) - 1)
+            ]), eps)
     else:
         result = boolext.clip(poly, operation, eps)
     return None if result is None else PolygonSet(result, layer, datatype,
@@ -4540,8 +4556,8 @@ def fast_boolean(operandA,
                     poly.append(inobj.points)
                 elif isinstance(inobj, PolygonSet):
                     poly += inobj.polygons
-                elif isinstance(inobj, CellReference) or isinstance(inobj,
-                                                                    CellArray):
+                elif isinstance(inobj, CellReference) or isinstance(
+                        inobj, CellArray):
                     poly += inobj.get_polygons()
                 else:
                     poly.append(inobj)
@@ -4586,8 +4602,8 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         poly.append(polygons.points)
     elif isinstance(polygons, PolygonSet):
         poly += polygons.polygons
-    elif isinstance(polygons, CellReference) or isinstance(polygons,
-                                                           CellArray):
+    elif isinstance(polygons, CellReference) or isinstance(
+            polygons, CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
@@ -4702,7 +4718,7 @@ def gdsii_hash(filename, engine=None):
     contents = []
     start = pos = 0
     while pos < len(data):
-        size, rec = struct.unpack('>HH', data[pos:pos+4])
+        size, rec = struct.unpack('>HH', data[pos:pos + 4])
         if rec == 0x0502:
             start = pos + 28
         elif rec == 0x0700:
