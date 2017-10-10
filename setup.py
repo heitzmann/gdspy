@@ -49,10 +49,10 @@ setup(
         'Development Status :: 4 - Beta', 'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Manufacturing',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved',
+        'Intended Audience :: Science/Research', 'License :: OSI Approved',
         'Operating System :: OS Independent', 'Programming Language :: C',
         'Programming Language :: C++', 'Programming Language :: Python',
+        'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
     ],
     zip_safe=False)
