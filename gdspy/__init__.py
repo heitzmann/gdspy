@@ -35,6 +35,13 @@ if sys.version_info.major < 3:
 
     from future import standard_library
     standard_library.install_aliases()
+else:
+    #Python 3 doesn't have basestring, as unicode is type string
+    #Python 2 doesn't equate unicode to string, but both are basestring
+    #Now isinstance(s, basestring) will be True for any python string type
+    basestring = str
+
+
 
 import struct
 import datetime
@@ -1541,7 +1548,7 @@ class Path(PolygonSet):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        if isinstance(self.direction, str):
+        if isinstance(self.direction, basestring):
             self.direction = _directions_dict[self.direction] * numpy.pi
         self.direction += angle
         cur = numpy.array((self.x, self.y)) - c0
@@ -3739,7 +3746,7 @@ class GdsLibrary(object):
         overwrite_duplicate : bool
             If True an existing cell with the same name in the library will be
             overwritten.
-        
+
         Returns
         -------
         out : ``GdsLibrary``
@@ -3789,7 +3796,7 @@ class GdsLibrary(object):
         Only the specified cells are written.  The user is responsible for
         ensuring all cell dependencies are satisfied.
         """
-        if isinstance(outfile, str):
+        if isinstance(outfile, basestring):
             outfile = open(outfile, 'wb')
             close = True
         else:
@@ -3851,7 +3858,7 @@ class GdsLibrary(object):
         imported file.
         """
         self._references = []
-        if isinstance(infile, str):
+        if isinstance(infile, basestring):
             infile = open(infile, 'rb')
             close = True
         else:
@@ -4101,7 +4108,7 @@ class GdsLibrary(object):
     def top_level(self):
         """
         Output the top level cells from the GDSII data.
-        
+
         Top level cells are those that are not referenced by any other cells.
 
         Returns
@@ -4160,7 +4167,7 @@ class GdsWriter(object):
     """
 
     def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
-        if isinstance(outfile, str):
+        if isinstance(outfile, basestring):
             self._outfile = open(outfile, 'wb')
             self._close = True
         else:
