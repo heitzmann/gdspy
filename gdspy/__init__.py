@@ -35,14 +35,12 @@ if sys.version_info.major < 3:
 
     from future import standard_library
     standard_library.install_aliases()
-
-#Python 3 doesn't have basestring as unicode is type string
-#Python 2 doesn't equate unicode to string, but both are basestring
-try:
-    basestring
-except NameError:
+else:
+    #Python 3 doesn't have basestring, as unicode is type string
+    #Python 2 doesn't equate unicode to string, but both are basestring
+    #Now isinstance(s, basestring) will be True for any python string type
     basestring = str
-#Now isinstance(s, basestring) will be True for any python string type
+
 
 
 import struct
