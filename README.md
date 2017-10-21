@@ -44,12 +44,11 @@ The preferred option is to install pre-compiled binaries from [here](https://git
 
 Installation via `pip` and building from source as above are also possible, but an appropriate [build environment](https://wiki.python.org/moin/WindowsCompilers) is required for compilation of the C extension modules.
 
-## Usage
+## Documentation
+
+The complete [documentation](http://gdspy.readthedocs.io/en/latest/) can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
 
 The file [tutorial.py](https://github.com/heitzmann/gdspy/blob/master/examples/tutorial.py) in the `example` folder is a sample script to show the features provided by this module.
-
-The complete module reference can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
-It is also available [on-line](http://gdspy.readthedocs.io/en/latest/)
 
 ## Support
 
@@ -57,7 +56,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Next
+### Version 1.2 (Oct 21, 2017)
 * Added new `gdsii_hash` function.
 * Added `precision` parameter to `_chop`, `Polygon.fracture`, `Polygon.fillet`, `PolygonSet.fracture`, `PolygonSet.fillet`, and `slice`.
 * Included labels in flatten operations (added `get_labels` to `Cell`, `CellReference`, and `CellArray`).
