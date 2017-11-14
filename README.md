@@ -56,6 +56,11 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### In development
+* `GdsLibrary` can be created directly from a GDSII file
+* Added return value to `GdsLibrary.read_gds`
+* Fix return value of `GdsLibrary.add`
+
 ### Version 1.2 (Oct 21, 2017)
 * Added new `gdsii_hash` function.
 * Added `precision` parameter to `_chop`, `Polygon.fracture`, `Polygon.fillet`, `PolygonSet.fracture`, `PolygonSet.fillet`, and `slice`.

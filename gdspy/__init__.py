@@ -3750,6 +3750,11 @@ class GdsLibrary(object):
     ----------
     name : string
         Name of the GDSII library.
+    infile : file or string
+        GDSII stream file (or path) to be imported.  It must be opened for
+        reading in binary format.
+    kwargs : keyword arguments
+        Arguments passed to `read_gds`.
 
     Attributes
     ----------
@@ -3778,9 +3783,11 @@ class GdsLibrary(object):
 
     __slots__ = 'name', 'cell_dict', '_references'
 
-    def __init__(self, name='library'):
+    def __init__(self, name='library', infile=None, **kwargs):
         self.name = name
         self.cell_dict = {}
+        if infile is not None:
+            self.read_gds(infile, **kwargs)
 
     def __str__(self):
         return "GdsLibrary (" + ", ".join([c for c in self.cell_dict]) + ")"
@@ -3815,6 +3822,7 @@ class GdsLibrary(object):
                     raise ValueError("[GDSPY] cell named {0} already present "
                                      "in library.".format(c.name))
                 self.cell_dict[c.name] = c
+        return self
 
     def write_gds(self, outfile, cells=None, unit=1.0e-6, precision=1.0e-9):
         """
@@ -3900,6 +3908,11 @@ class GdsLibrary(object):
         texttypes : dictionary
             Dictionary used to convert the text types in the imported cells.
             Keys and values must be integers.
+
+        Returns
+        -------
+        out : ``GdsLibrary``
+            This object.
 
         Notes
         -----
@@ -4035,6 +4048,7 @@ class GdsLibrary(object):
             record = self._read_record(infile)
         if close:
             infile.close()
+        return self
 
     def _read_record(self, stream):
         """
