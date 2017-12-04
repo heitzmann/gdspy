@@ -428,27 +428,30 @@ class LayoutViewer(tkinter.Frame):
                     bd=0,
                     fg=self.color[i],
                     bg=bg,
-                    anchor='c'), tkinter.Label(
-                        self,
-                        text='{0[0]}/{0[1]}'.format(i),
-                        bd=0,
-                        fg=fg,
-                        bg=bg,
-                        height=1,
-                        anchor='c',
-                        padx=8), tkinter.Label(
-                            self,
-                            bitmap=_icon_up,
-                            bd=0,
-                            fg=self.default_outline,
-                            bg=bg,
-                            anchor='c'), tkinter.Label(
-                                self,
-                                bitmap=_icon_down,
-                                bd=0,
-                                fg=self.default_outline,
-                                bg=bg,
-                                anchor='c'))
+                    anchor='c'),
+                       tkinter.Label(
+                           self,
+                           text='{0[0]}/{0[1]}'.format(i),
+                           bd=0,
+                           fg=fg,
+                           bg=bg,
+                           height=1,
+                           anchor='c',
+                           padx=8),
+                       tkinter.Label(
+                           self,
+                           bitmap=_icon_up,
+                           bd=0,
+                           fg=self.default_outline,
+                           bg=bg,
+                           anchor='c'),
+                       tkinter.Label(
+                           self,
+                           bitmap=_icon_down,
+                           bd=0,
+                           fg=self.default_outline,
+                           bg=bg,
+                           anchor='c'))
                 lbl[0].bind('<Button-1>', self._change_color(lbl[0], i))
                 lbl[0].bind('<Button-2>', self._change_pattern(lbl[0], i))
                 lbl[0].bind('<Button-3>', self._change_pattern(lbl[0], i))
@@ -472,11 +475,11 @@ class LayoutViewer(tkinter.Frame):
                     wid = lbl[1].winfo_reqwidth()
                     lbl[1].configure(text='{0[0]}/{0[1]}'.format(i))
                 ids = (self.l_canvas.create_window(
-                    0, pos, window=lbl[0],
-                    anchor='sw'), self.l_canvas.create_window(
-                        hei, pos, window=lbl[1],
-                        anchor='sw'), self.l_canvas.create_window(
-                            hei + wid, pos, window=lbl[2], anchor='sw'),
+                    0, pos, window=lbl[0], anchor='sw'),
+                       self.l_canvas.create_window(
+                           hei, pos, window=lbl[1], anchor='sw'),
+                       self.l_canvas.create_window(
+                           hei + wid, pos, window=lbl[2], anchor='sw'),
                        self.l_canvas.create_window(
                            2 * hei + wid, pos, window=lbl[3], anchor='sw'))
                 self.l_canvas_info.append((i, ids, lbl))
@@ -508,8 +511,8 @@ class LayoutViewer(tkinter.Frame):
                                 (1, -1)) * pol / self.scale).flatten()),
                             fill=self.color[i],
                             stipple=_stipple[self.pattern[i]],
-                            offset='{},{}'.format(*numpy.random.randint(
-                                16, size=2)),
+                            offset='{},{}'.format(
+                                *numpy.random.randint(16, size=2)),
                             outline=self.color[i],
                             activeoutline=self.default_outline,
                             activewidth=2,
@@ -659,16 +662,16 @@ class LayoutViewer(tkinter.Frame):
         x = self.canvas.canvasx(evt.x)
         y = self.canvas.canvasy(evt.y)
         if self.canvas.ruler is None:
-            self.coords.configure(text='{0:g}, {1:g}'.format(
-                x * self.scale, -y * self.scale))
+            self.coords.configure(
+                text='{0:g}, {1:g}'.format(x * self.scale, -y * self.scale))
         else:
             self.canvas.coords(self.canvas.ruler, self.canvas.x_rl,
                                self.canvas.y_rl, x, y)
             dx = (x - self.canvas.x_rl) * self.scale
             dy = (self.canvas.y_rl - y) * self.scale
             self.coords.configure(
-                text='Distance: {0:g} | dx = {1:g} | dy = {2:g}'.format(
-                    (dx**2 + dy**2)**0.5, dx, dy))
+                text='Distance: {0:g} | dx = {1:g} | dy = {2:g}'.format((
+                    dx**2 + dy**2)**0.5, dx, dy))
         if int(evt.state) & 0x0200:
             if int(evt.state) & 0x0004:
                 self.canvas.scan_dragto(evt.x, evt.y, 10)
