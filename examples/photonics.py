@@ -146,8 +146,8 @@ def grating(period,
     '''
     if focus_distance < 0:
         path = gdspy.L1Path(
-            (position[0] - 0.5 * width,
-             position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
+            (position[0] - 0.5 * width, position[1] + 0.5 *
+             (number_of_teeth - 1 + fill_frac) * period),
             '+x',
             period * fill_frac, [width], [],
             number_of_teeth,

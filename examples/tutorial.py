@@ -338,9 +338,11 @@ gdsii.read_gds(
         'REFS': 'IMPORT_REFS',
         'TRANS': 'IMPORT_TRANS'
     },
-    layers={1: 7,
-            2: 8,
-            3: 9})
+    layers={
+        1: 7,
+        2: 8,
+        3: 9
+    })
 
 # Now we extract the cells we want to actually include in our current
 # structure. Note that the referenced cells will be automatically
