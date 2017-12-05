@@ -13,4 +13,4 @@ install:
   - python setup.py install
 script:
   - pytest
-  - yapf -dr *.py docs/*.py tests/*.py tools/*.py examples/*.py gdspy/*.py
+  - if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then yapf -dr *.py docs/*.py tests/*.py tools/*.py examples/*.py gdspy/*.py; fi
