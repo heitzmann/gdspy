@@ -8,8 +8,8 @@ install:
   - pip install -r requirements.txt
   - pip install sphinx
   - pip install yapf
+  - python setup.py build build_sphinx
   - python setup.py install
 script:
   - pytest
-  - make --directory=docs html
   - yapf -dr *.py docs/*.py tests/*.py tools/*.py examples/*.py gdspy/*.py
