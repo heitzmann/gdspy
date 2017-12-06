@@ -23,4 +23,16 @@ after_test:
   - "build.cmd %PYTHON%\\python.exe setup.py bdist_wheel"
 
 artifacts:
-  - path: dist\*
+  - path: dist\*.whl
+
+deploy:
+  provider: GitHub
+  tag: $(appveyor_repo_tag_name)
+  description: Release $(appveyor_repo_tag_name)
+  auth_token:
+    secure: "TLjVTXLw+HfQYTJczXQ3SEGTE4sxkQNJ6gDJ0GGLDQQ5RItLcpGgkzs5Qq5WvFOF"
+  artifact: /gdspy.*\.whl/
+  prerelease: false
+  draft: true
+  on:
+    appveyor_repo_tag: true
