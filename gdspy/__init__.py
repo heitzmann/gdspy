@@ -3356,7 +3356,7 @@ class GdsLibrary(object):
     Parameters
     ----------
     name : string
-        Name of the GDSII library.
+        Name of the GDSII library.  Ignored if a name is define in `infile`.
     infile : file or string
         GDSII stream file (or path) to be imported.  It must be opened for
         reading in binary format.
