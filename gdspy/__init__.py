@@ -57,7 +57,7 @@ except ImportError as e:
         category=ImportWarning,
         stacklevel=2)
 
-__version__ = '1.2'
+__version__ = '1.2.1'
 
 _halfpi = 0.5 * numpy.pi
 _directions_dict = {'+x': 0, '+y': 0.5, '-x': 1, '-y': -0.5}
@@ -3356,7 +3356,7 @@ class GdsLibrary(object):
     Parameters
     ----------
     name : string
-        Name of the GDSII library.  Ignored if a name is define in `infile`.
+        Name of the GDSII library.  Ignored if a name is defined in `infile`.
     infile : file or string
         GDSII stream file (or path) to be imported.  It must be opened for
         reading in binary format.

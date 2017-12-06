@@ -19,8 +19,11 @@ with open('gdspy/__init__.py') as fin:
             version = eval(line[14:])
             break
 
-setup_requires = ['pytest-runner'] if \
-    {'pytest', 'test', 'ptr'}.intersection(sys.argv) else []
+setup_requires = []
+if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
+    setup_requires.append('pytest-runner')
+if 'build_sphinx' in sys.argv:
+    setup_requires.extend(['sphinx', 'sphinx_rtd_theme'])
 
 setup(
     name='gdspy',

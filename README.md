@@ -58,7 +58,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### In development
+### Version 1.2.1 (Dec 5, 2017)
 * `GdsLibrary` can be created directly from a GDSII file
 * Added return value to `GdsLibrary.read_gds`
 * Fix return value of `GdsLibrary.add`
