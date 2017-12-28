@@ -3599,7 +3599,8 @@ class GdsLibrary(object):
             # STRANS
             elif record[0] == 0x1a:
                 kwargs['x_reflection'] = ((int(record[1][0]) & 0x8000) > 0)
-                if (int(record[1][0]) & 0x0006) and record[0] not in emitted_warnings:
+                if (int(record[1][0]) &
+                        0x0006) and record[0] not in emitted_warnings:
                     warnings.warn(
                         "[GDSPY] Absolute magnification or rotation of "
                         "references is not supported.  Transformations will "
