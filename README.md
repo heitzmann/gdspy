@@ -58,6 +58,10 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Upcoming
+* Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
+* Documentation fixes.
+
 ### Version 1.2.1 (Dec 5, 2017)
 * `GdsLibrary` can be created directly from a GDSII file
 * Added return value to `GdsLibrary.read_gds`

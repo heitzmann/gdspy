@@ -2252,11 +2252,15 @@ class Label(object):
             if self.x_reflection:
                 word += 0x8000
             if not (self.magnification is None):
-                word += 0x0004
+                # This flag indicates that the magnification is absolute, not
+                # relative (not supported).
+                #word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) \
                     + _eight_byte_real(self.magnification)
             if not (self.rotation is None):
-                word += 0x0002
+                # This flag indicates that the rotation is absolute, not
+                # relative (not supported).
+                #word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) \
                     + _eight_byte_real(self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
@@ -2799,11 +2803,15 @@ class CellReference(object):
             if self.x_reflection:
                 word += 0x8000
             if not (self.magnification is None):
-                word += 0x0004
+                # This flag indicates that the magnification is absolute, not
+                # relative (not supported).
+                #word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) \
                     + _eight_byte_real(self.magnification)
             if not (self.rotation is None):
-                word += 0x0002
+                # This flag indicates that the rotation is absolute, not
+                # relative (not supported).
+                #word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) \
                     + _eight_byte_real(self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
@@ -3107,11 +3115,15 @@ class CellArray(object):
                 word += 0x8000
                 y3 = 2 * self.origin[1] - y3
             if not (self.magnification is None):
-                word += 0x0004
+                # This flag indicates that the magnification is absolute, not
+                # relative (not supported).
+                #word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) \
                     + _eight_byte_real(self.magnification)
             if not (self.rotation is None):
-                word += 0x0002
+                # This flag indicates that the rotation is absolute, not
+                # relative (not supported).
+                #word += 0x0002
                 sa = numpy.sin(self.rotation * numpy.pi / 180.0)
                 ca = numpy.cos(self.rotation * numpy.pi / 180.0)
                 tmp = (x2 - self.origin[0]) * ca - (y2 - self.origin[1]) * sa \
