@@ -3902,6 +3902,8 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
         Positions to perform the slicing operation along the specified axis.
     axis : 0 or 1
         Axis along which the polygon will be sliced.
+    precision : float
+        Desired precision for rounding vertice coordinates.
     layer : integer, list
         The GDSII layer numbers for the elements between each division.  If the
         number of layers in the list is less than the number of divided
