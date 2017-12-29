@@ -61,12 +61,13 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 ### Upcoming
 * Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
 * Improved `slice` to avoid errors when slicing in multiple positions at once.
+* Improved `Polygon.fracture` and `PolygonSet.fracture` to minimize function calls.
 * Documentation fixes.
 
 ### Version 1.2.1 (Dec 5, 2017)
 * `GdsLibrary` can be created directly from a GDSII file
 * Added return value to `GdsLibrary.read_gds`
-* Fix return value of `GdsLibrary.add`
+* Fixed return value of `GdsLibrary.add`
 
 ### Version 1.2 (Oct 21, 2017)
 * Added new `gdsii_hash` function.
