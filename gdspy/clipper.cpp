@@ -5207,7 +5207,7 @@ static PyObject* chop(PyObject *self, PyObject *args)
       {
         pos = bb[3];
       }
-      clip[0][2].X = clip[0][3].X = pos;
+      clip[0][2].Y = clip[0][3].Y = pos;
     }
     clpr.Clear();
     clpr.AddPaths(subj, ptSubject, true);
