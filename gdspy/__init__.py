@@ -43,6 +43,7 @@ else:
 import struct
 import datetime
 import warnings
+import itertools
 import numpy
 import copy as libCopy
 import hashlib
@@ -282,21 +283,27 @@ class Polygon(object):
                 if len(out_polygons[ii]) > max_points:
                     pts0 = sorted(out_polygons[ii][:, 0])
                     pts1 = sorted(out_polygons[ii][:, 1])
+                    ncuts = len(pts0) // max_points
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
-                        chopped = clipper._chop(
-                            out_polygons[ii],
-                            ((pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1])
-                             / 2, ), 0, 1 / precision)
+                        cuts = [
+                            pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)]
+                            for i in range(1, ncuts + 1)
+                        ]
+                        chopped = clipper._chop(out_polygons[ii], cuts, 0,
+                                                1 / precision)
                     else:
                         # Horizontal cuts
-                        chopped = clipper._chop(
-                            out_polygons[ii],
-                            ((pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1])
-                             / 2, ), 1, 1 / precision)
+                        cuts = [
+                            pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)]
+                            for i in range(1, ncuts + 1)
+                        ]
+                        chopped = clipper._chop(out_polygons[ii], cuts, 1,
+                                                1 / precision)
                     out_polygons.pop(ii)
                     out_polygons.extend(
-                        numpy.array(x) for x in chopped[0] + chopped[1])
+                        numpy.array(x)
+                        for x in itertools.chain.from_iterable(chopped))
                 else:
                     ii += 1
         return PolygonSet(out_polygons, self.layer, self.datatype)
@@ -604,27 +611,32 @@ class PolygonSet(object):
                 if len(self.polygons[ii]) > max_points:
                     pts0 = sorted(self.polygons[ii][:, 0])
                     pts1 = sorted(self.polygons[ii][:, 1])
+                    ncuts = len(pts0) // max_points
                     if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
                         # Vertical cuts
-                        chopped = clipper._chop(
-                            self.polygons[ii],
-                            ((pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1])
-                             / 2, ), 0, 1 / precision)
+                        cuts = [
+                            pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)]
+                            for i in range(1, ncuts + 1)
+                        ]
+                        chopped = clipper._chop(self.polygons[ii], cuts, 0,
+                                                1 / precision)
                     else:
                         # Horizontal cuts
-                        chopped = clipper._chop(
-                            self.polygons[ii],
-                            ((pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1])
-                             / 2, ), 1, 1 / precision)
+                        cuts = [
+                            pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)]
+                            for i in range(1, ncuts + 1)
+                        ]
+                        chopped = clipper._chop(self.polygons[ii], cuts, 1,
+                                                1 / precision)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
                     self.polygons.extend(
-                        numpy.array(x) for x in chopped[0] + chopped[1])
-                    self.layers += [layer] * (
-                        len(chopped[0]) + len(chopped[1]))
-                    self.datatypes += [datatype] * (
-                        len(chopped[0]) + len(chopped[1]))
+                        numpy.array(x)
+                        for x in itertools.chain.from_iterable(chopped))
+                    npols = sum(len(c) for c in chopped)
+                    self.layers += [layer] * npols
+                    self.datatypes += [datatype] * npols
                 else:
                     ii += 1
         return self
