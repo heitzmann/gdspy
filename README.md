@@ -60,6 +60,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
+* Improved `slice` to avoid errors when slicing in multiple positions at once.
 * Documentation fixes.
 
 ### Version 1.2.1 (Dec 5, 2017)
