@@ -5131,65 +5131,97 @@ static PyObject* inside(PyObject *self, PyObject *args)
 
 static PyObject* chop(PyObject *self, PyObject *args)
 {
-  PyObject *polygon;
+  PyObject *polygon, *positions;
   unsigned char axis;
-  double position, scaling;
+  double  scaling;
 
-  PyObject *resultitem, *returntuple;
+  PyObject *resultitem, *returntuple, *position;
   Paths result;
-  Paths subj(1), clip(1);
+  Paths subj(1);
+  Paths clip(1, Path(4));
   PolyTree solution;
   Clipper clpr;
-  cInt pos;
   cInt bb[4];
+  cInt pos;
+  long num_cuts;
 
-  if (!PyArg_ParseTuple(args, "OdBd:_chop", &polygon, &position, &axis, &scaling)) return NULL;
+  if (!PyArg_ParseTuple(args, "OOBd:_chop", &polygon, &positions, &axis, &scaling)) return NULL;
 
   if (parse_polygon(polygon, subj[0], scaling, true) != 0) return NULL;
 
   bounding_box(subj[0], bb);
+  clip[0][0].X = clip[0][3].X = bb[0];
+  clip[0][1].X = clip[0][2].X = bb[1];
+  clip[0][0].Y = clip[0][1].Y = bb[2];
+  clip[0][2].Y = clip[0][3].Y = bb[3];
 
-  pos = Round(scaling * position);
-  clip[0].reserve(4);
-  if (axis == 0)
+  if (!PySequence_Check(positions))
   {
-    clip[0].push_back(IntPoint(bb[0], bb[2]));
-    clip[0].push_back(IntPoint(pos, bb[2]));
-    clip[0].push_back(IntPoint(pos, bb[3]));
-    clip[0].push_back(IntPoint(bb[0], bb[3]));
-  }
-  else
-  {
-    clip[0].push_back(IntPoint(bb[0], bb[2]));
-    clip[0].push_back(IntPoint(bb[1], bb[2]));
-    clip[0].push_back(IntPoint(bb[1], pos));
-    clip[0].push_back(IntPoint(bb[0], pos));
-  }
-
-  clpr.AddPaths(subj, ptSubject, true);
-  clpr.AddPaths(clip, ptClip, true);
-
-  if ((returntuple = PyTuple_New(2)) == NULL) return NULL;
-
-  clpr.Execute(ctIntersection, solution, pftNonZero, pftNonZero);
-  tree2paths(solution, result);
-  if ((resultitem = build_polygon_tuple(result, scaling)) == NULL)
-  {
-    Py_DECREF(returntuple);
+    PyErr_SetString(PyExc_TypeError, "Positions must be a sequence.");
     return NULL;
   }
-  PyTuple_SET_ITEM(returntuple, 0, resultitem);
+  num_cuts = PySequence_Length(positions);
 
-  clpr.Execute(ctDifference, solution, pftNonZero, pftNonZero);
-  result.clear();
-  tree2paths(solution, result);
-  if ((resultitem = build_polygon_tuple(result, scaling)) == NULL)
+  if ((returntuple = PyTuple_New(num_cuts + 1)) == NULL) return NULL;
+
+  pos = axis == 0 ? bb[0] : bb[2];
+  for (long i = 0; i <= num_cuts; ++i)
   {
-    Py_DECREF(returntuple);
-    return NULL;
+    if (axis == 0)
+    {
+      clip[0][0].X = clip[0][3].X = pos;
+      if (i < num_cuts)
+      {
+        position = PySequence_ITEM(positions, i);
+        pos = Round(scaling * PyFloat_AsDouble(position));
+        Py_DECREF(position);
+        if (PyErr_Occurred() != NULL)
+        {
+          PyErr_SetString(PyExc_TypeError, "Positions must be a sequence of numbers.");
+          Py_DECREF(returntuple);
+          return NULL;
+        }
+      }
+      else
+      {
+        pos = bb[1];
+      }
+      clip[0][1].X = clip[0][2].X = pos;
+    }
+    else
+    {
+      clip[0][0].Y = clip[0][1].Y = pos;
+      if (i < num_cuts)
+      {
+        position = PySequence_ITEM(positions, i);
+        pos = Round(scaling * PyFloat_AsDouble(position));
+        Py_DECREF(position);
+        if (PyErr_Occurred() != NULL)
+        {
+          PyErr_SetString(PyExc_TypeError, "Positions must be a sequence of numbers.");
+          Py_DECREF(returntuple);
+          return NULL;
+        }
+      }
+      else
+      {
+        pos = bb[3];
+      }
+      clip[0][2].X = clip[0][3].X = pos;
+    }
+    clpr.Clear();
+    clpr.AddPaths(subj, ptSubject, true);
+    clpr.AddPaths(clip, ptClip, true);
+    clpr.Execute(ctIntersection, solution, pftNonZero, pftNonZero);
+    result.clear();
+    tree2paths(solution, result);
+    if ((resultitem = build_polygon_tuple(result, scaling)) == NULL)
+    {
+      Py_DECREF(returntuple);
+      return NULL;
+    }
+    PyTuple_SET_ITEM(returntuple, i, resultitem);
   }
-  PyTuple_SET_ITEM(returntuple, 1, resultitem);
-
   return returntuple;
 }
 
@@ -5288,7 +5320,7 @@ Parameters\n\
 ----------\n\
 polygon : array-like[N][2]\n\
     Coordinates of the vertices of the polygon.\n\
-position : number or list of numbers\n\
+position : list of numbers\n\
     Positions to perform the slicing operation along the specified\n\
     axis.\n\
 axis : 0 or 1\n\

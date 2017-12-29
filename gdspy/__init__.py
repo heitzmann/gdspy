@@ -286,14 +286,14 @@ class Polygon(object):
                         # Vertical cuts
                         chopped = clipper._chop(
                             out_polygons[ii],
-                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, 1 / precision)
+                            ((pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1])
+                             / 2, ), 0, 1 / precision)
                     else:
                         # Horizontal cuts
                         chopped = clipper._chop(
                             out_polygons[ii],
-                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, 1 / precision)
+                            ((pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1])
+                             / 2, ), 1, 1 / precision)
                     out_polygons.pop(ii)
                     out_polygons.extend(
                         numpy.array(x) for x in chopped[0] + chopped[1])
@@ -608,14 +608,14 @@ class PolygonSet(object):
                         # Vertical cuts
                         chopped = clipper._chop(
                             self.polygons[ii],
-                            (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) /
-                            2, 0, 1 / precision)
+                            ((pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1])
+                             / 2, ), 0, 1 / precision)
                     else:
                         # Horizontal cuts
                         chopped = clipper._chop(
                             self.polygons[ii],
-                            (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) /
-                            2, 1, 1 / precision)
+                            ((pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1])
+                             / 2, ), 1, 1 / precision)
                     self.polygons.pop(ii)
                     layer = self.layers.pop(ii)
                     datatype = self.datatypes.pop(ii)
@@ -3949,9 +3949,10 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     if not isinstance(objects, list):
         objects = [objects]
     if not isinstance(position, list):
-        position = [position]
-    position.sort()
-    result = [[] for i in range(len(position) + 1)]
+        pos = [position]
+    else:
+        pos = sorted(position)
+    result = [[] for _ in range(len(pos) + 1)]
     polygons = []
     for obj in objects:
         if isinstance(obj, Polygon):
@@ -3962,14 +3963,10 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
             polygons += obj.get_polygons()
         else:
             polygons.append(obj)
-    for i, p in enumerate(position):
-        nxt_polygons = []
-        for pol in polygons:
-            (pol1, pol2) = clipper._chop(pol, p, axis, 1 / precision)
-            result[i] += pol1
-            nxt_polygons.extend(numpy.array(p2) for p2 in pol2)
-        polygons = nxt_polygons
-    result[-1] = polygons
+    scaling = 1 / precision
+    for pol in polygons:
+        for r, p in zip(result, clipper._chop(pol, pos, axis, scaling)):
+            r.extend(p)
     for i in range(len(result)):
         result[i] = PolygonSet(result[i], layer[i % len(layer)], datatype)
     return result
