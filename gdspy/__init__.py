@@ -4120,8 +4120,8 @@ def boolean(polygons,
     if special_function:
         result = boolext.clip(
             poly, lambda *p: operation(*[
-                sum(p[indices[ia]:indices[ia + 1]])
-                for ia in range(len(indices) - 1)
+                sum(p[indices[ia]:indices[ia + 1]]) for ia in range(
+                    len(indices) - 1)
             ]), eps)
     else:
         result = boolext.clip(poly, operation, eps)
