@@ -323,7 +323,8 @@ class Polygon(object):
             Maximal number of points in each resulting polygon (must be greater
             than 4).
         precision : float
-            Desired precision for rounding vertice coordinates.
+            Desired precision for rounding vertice coordinates in case of
+            fracturing.
 
         Returns
         -------
@@ -653,7 +654,8 @@ class PolygonSet(object):
             Maximal number of points in each resulting polygon (must be greater
             than 4).
         precision : float
-            Desired precision for rounding vertice coordinates.
+            Desired precision for rounding vertice coordinates in case of
+            fracturing.
 
         Returns
         -------
