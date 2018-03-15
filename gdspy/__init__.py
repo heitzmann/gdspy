@@ -330,7 +330,8 @@ class Polygon(object):
             Maximal number of points in each resulting polygon (must be greater
             than 4).
         precision : float
-            Desired precision for rounding vertice coordinates.
+            Desired precision for rounding vertice coordinates in case of
+            fracturing.
 
         Returns
         -------
@@ -665,7 +666,8 @@ class PolygonSet(object):
             Maximal number of points in each resulting polygon (must be greater
             than 4).
         precision : float
-            Desired precision for rounding vertice coordinates.
+            Desired precision for rounding vertice coordinates in case of
+            fracturing.
 
         Returns
         -------
@@ -4149,8 +4151,8 @@ def boolean(polygons,
     if special_function:
         result = boolext.clip(
             poly, lambda *p: operation(*[
-                sum(p[indices[ia]:indices[ia + 1]])
-                for ia in range(len(indices) - 1)
+                sum(p[indices[ia]:indices[ia + 1]]) for ia in range(
+                    len(indices) - 1)
             ]), eps)
     else:
         result = boolext.clip(poly, operation, eps)
