@@ -2937,7 +2937,7 @@ class CellReference(object):
             if self.magnification is not None:
                 lbl.position = lbl.position * mag
             if self.rotation is not None:
-                lbl.position = lbl.position * ct + lbl.position * st
+                lbl.position = lbl.position * ct + lbl.position[::-1] * st
             if self.origin is not None:
                 lbl.position = lbl.position + orgn
         return labels
@@ -3283,7 +3283,8 @@ class CellArray(object):
                     if self.x_reflection:
                         lbl.position = lbl.position * xrefl
                     if self.rotation is not None:
-                        lbl.position = lbl.position * ct + lbl.position * st
+                        lbl.position = lbl.position * ct \
+                            + lbl.position[::-1] * st
                     if self.origin is not None:
                         lbl.position = lbl.position + orgn
                     labels.append(lbl)
