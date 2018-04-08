@@ -2233,6 +2233,13 @@ class Label(object):
         self.x_reflection = x_reflection
         self.texttype = texttype
 
+    def __eq__(self, other):
+        return (self.text, str(self.position)) == (other.text,
+                                                   str(other.position))
+
+    def __hash__(self):
+        return hash((self.text, str(self.position)))
+
     def __repr__(self):
         return ("Label(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4}, {5}, {6})")\
                 .format(self.text, self.position, self.rotation,
