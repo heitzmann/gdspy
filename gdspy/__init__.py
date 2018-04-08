@@ -257,6 +257,25 @@ class Polygon(object):
         else:
             return 0.5 * abs(poly_area)
 
+    def get_bounding_box(self):
+        """
+        Returns the bounding box for this cell.
+
+        Returns
+        -------
+        out : Numpy array[2,2] or ``None``
+            Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
+            ``None`` if the cell is empty.
+        """
+        bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
+        if len(self.points) > 0:
+            all_points = self.points.transpose()
+            bb[0, 0] = min(bb[0, 0], all_points[0].min())
+            bb[0, 1] = min(bb[0, 1], all_points[1].min())
+            bb[1, 0] = max(bb[1, 0], all_points[0].max())
+            bb[1, 1] = max(bb[1, 1], all_points[1].max())
+        return bb
+
     def fracture(self, max_points=199, precision=1e-3):
         """
         Slice this polygon in the horizontal and vertical directions so that
@@ -2213,6 +2232,13 @@ class Label(object):
         self.magnification = magnification
         self.x_reflection = x_reflection
         self.texttype = texttype
+
+    def __eq__(self, other):
+        return (self.text, str(self.position)) == (other.text,
+                                                   str(other.position))
+
+    def __hash__(self):
+        return hash((self.text, str(self.position)))
 
     def __repr__(self):
         return ("Label(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4}, {5}, {6})")\
