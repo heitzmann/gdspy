@@ -400,9 +400,13 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.ruler = None
         self.canvas.x_rl = 0
         self.canvas.y_rl = 0
-        lbl_dict = dict(
-            [((label.layer, label.texttype), label)
-             for label in self.cells[self.current_cell.get()].labels])
+        lbl_dict = {}
+        for label in self.cells[self.current_cell.get()].labels:
+            key = (label.layer, label.texttype)
+            if key in lbl_dict:
+                lbl_dict[key].append(label)
+            else:
+                lbl_dict[key] = [label]
         layers = list(set(list(pol_dict.keys()) + list(lbl_dict.keys())))
         layers.sort(
             reverse=True,
@@ -519,15 +523,15 @@ class LayoutViewer(tkinter.Frame):
                             tag=('L' + str(i), 'V' + str(pol.shape[0])),
                             state=state)
             if i in lbl_dict:
-                label = lbl_dict[i]
-                self.canvas.create_text(
-                    label.position[0] / self.scale,
-                    label.position[1] / -self.scale,
-                    text=label.text,
-                    anchor=_tkinteranchors[label.anchor],
-                    fill=self.color[i],
-                    activefill=self.default_outline,
-                    tag=('L' + str(i), 'TEXT'))
+                for label in lbl_dict[i]:
+                    self.canvas.create_text(
+                        label.position[0] / self.scale,
+                        label.position[1] / -self.scale,
+                        text=label.text,
+                        anchor=_tkinteranchors[label.anchor],
+                        fill=self.color[i],
+                        activefill=self.default_outline,
+                        tag=('L' + str(i), 'TEXT'))
         if (wid is None) or (hei is None) or (pos is None):
             pos = -12
             hei = 12
