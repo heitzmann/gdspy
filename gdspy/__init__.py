@@ -3396,6 +3396,11 @@ class GdsLibrary(object):
         Name of the GDSII library.
     cell_dict : dictionary
         Dictionary of cells in this library, indexed by name.
+    unit : number
+        Unit size for the objects in the library (in *meters*).
+    precision : number
+        Precision for the dimensions of the objects in the library (in
+        *meters*).
     """
 
     _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR',
@@ -3415,11 +3420,18 @@ class GdsLibrary(object):
         'nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'
     ]
 
-    __slots__ = 'name', 'cell_dict', '_references'
+    __slots__ = 'name', 'cell_dict', 'unit', 'precision', '_references'
 
-    def __init__(self, name='library', infile=None, **kwargs):
+    def __init__(self,
+                 name='library',
+                 infile=None,
+                 unit=1e-6,
+                 precision=1e-9,
+                 **kwargs):
         self.name = name
         self.cell_dict = {}
+        self.unit = unit
+        self.precision = precision
         if infile is not None:
             self.read_gds(infile, **kwargs)
 
@@ -3458,7 +3470,7 @@ class GdsLibrary(object):
                 self.cell_dict[c.name] = c
         return self
 
-    def write_gds(self, outfile, cells=None, unit=1.0e-6, precision=1.0e-9):
+    def write_gds(self, outfile, cells=None):
         """
         Write the GDSII library to a file.
 
@@ -3477,11 +3489,6 @@ class GdsLibrary(object):
         cells : array-like
             The list of cells or cell names to be included in the library.  If
             ``None``, all cells are used.
-        unit : number
-            Unit size for the objects in the library (in *meters*).
-        precision : number
-            Precision for the dimensions of the objects in the library (in
-            *meters*).
 
         Notes
         -----
@@ -3496,25 +3503,25 @@ class GdsLibrary(object):
         now = datetime.datetime.today()
         name = self.name if len(self.name) % 2 == 0 else (self.name + '\0')
         outfile.write(
-            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
-                        now.month, now.day, now.hour, now.minute, now.second,
-                        now.year, now.month, now.day, now.hour, now.minute,
-                        now.second, 4 + len(name), 0x0206) +
-            name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
-            _eight_byte_real(precision / unit) + _eight_byte_real(precision))
+            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.
+                        month, now.day, now.hour, now.minute, now.second, now.
+                        year, now.month, now.day, now.hour, now.minute, now.
+                        second, 4 + len(name), 0x0206) + name.encode('ascii') +
+            struct.pack('>2h', 20, 0x0305) + _eight_byte_real(
+                self.precision / self.unit) + _eight_byte_real(self.precision))
         if cells is None:
             cells = self.cell_dict.values()
         else:
             cells = [self.cell_dict.get(c, c) for c in cells]
         for cell in cells:
-            outfile.write(cell.to_gds(unit / precision))
+            outfile.write(cell.to_gds(self.unit / self.precision))
         outfile.write(struct.pack('>2h', 4, 0x0400))
         if close:
             outfile.close()
 
     def read_gds(self,
                  infile,
-                 unit=None,
+                 units='skip',
                  rename={},
                  layers={},
                  datatypes={},
@@ -3527,9 +3534,13 @@ class GdsLibrary(object):
         infile : file or string
             GDSII stream file (or path) to be imported.  It must be opened for
             reading in binary format.
-        unit : number
-            Unit (in *meters*) to use for the imported structures.  If
-            ``None``, the units used to create the GDSII file will be used.
+        units : {'convert', 'import', 'skip'}
+            Controls how to scale and use the units in the imported file:
+            'convert': the imported geometry is scaled to this library units.
+            'import': the unit and precision in this library are replaced by
+            those from the imported file.
+            'skip': the imported geometry is not scaled and units are not
+            replaced; the geometry is imported in the *user units* of the file.
         rename : dictionary
             Dictionary used to rename the imported cells.  Keys and values must
             be strings.
@@ -3647,10 +3658,19 @@ class GdsLibrary(object):
                 cell = None
             # UNITS
             elif record[0] == 0x03:
-                if unit is None:
+                print(self.unit, self.precision)
+                if units == 'skip':
                     factor = record[1][0]
+                elif units == 'import':
+                    self.unit = record[1][1] / record[1][0]
+                    self.precision = record[1][1]
+                    factor = record[1][0]
+                elif units == 'convert':
+                    factor = record[1][1] / self.unit
                 else:
-                    factor = record[1][1] / unit
+                    raise ValueError("[GDSPY] units must be one of 'convert', "
+                                     "'import' or 'skip'.")
+                print(self.unit, self.precision, record[1], factor)
             # LIBNAME
             elif record[0] == 0x02:
                 self.name = record[1]
@@ -4350,7 +4370,9 @@ def write_gds(outfile,
         *meters*).
     """
     current_library.name = name
-    current_library.write_gds(outfile, cells, unit, precision)
+    current_library.unit = unit
+    current_library.precision = precision
+    current_library.write_gds(outfile, cells)
 
 
 def gdsii_hash(filename, engine=None):
@@ -4399,35 +4421,3 @@ Current ``GdsLibrary`` instance for automatic creation of GDSII files.
 This variable can be freely overwritten by the user with a new instance of
 ``GdsLibrary``.
 """
-
-# Deprecated names
-
-
-class GdsImport(GdsLibrary):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "[GDSPY] GdsImport has been deprecated in favor of "
-            "GdsLibrary and it will be removed in future versions.",
-            FutureWarning,
-            stacklevel=2)
-        super().__init__()
-        super().read_gds(*args, **kwargs)
-
-
-class GdsPrint(GdsWriter):
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "[GDSPY] GdsPrint has been renamed to GdsWriter and "
-            "it will be removed in future versions.",
-            FutureWarning,
-            stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-
-def gds_print(*args, **kwargs):
-    warnings.warn(
-        "[GDSPY] gds_print has been renamed to write_gds and "
-        "it will be removed in future versions.",
-        FutureWarning,
-        stacklevel=2)
-    write_gds(*args, **kwargs)

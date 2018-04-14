@@ -98,9 +98,14 @@ def test_write_gds(tmpdir):
     c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
 
     fname1 = str(tmpdir.join('test1.gds'))
-    gdspy.write_gds(fname1, name='lib', unit=2e-3, precision=1e-5)
-    lib1 = gdspy.GdsLibrary()
-    lib1.read_gds(fname1, 1e-3, {'fu_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
+    gdspy.write_gds(fname1, name='lib', unit=2e-6, precision=1e-8)
+    lib1 = gdspy.GdsLibrary(
+        infile=fname1,
+        units='convert',
+        rename={'fu_rw_gds_1': '1'},
+        layers={2: 4},
+        datatypes={4: 2},
+        texttypes={6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
     assert set(lib1.cell_dict.keys()) == {

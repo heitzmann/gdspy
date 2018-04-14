@@ -125,7 +125,7 @@ def test_extract():
 
 
 def test_rw_gds(tmpdir):
-    lib = gdspy.GdsLibrary('lib')
+    lib = gdspy.GdsLibrary('lib', unit=2e-3, precision=1e-5)
     c1 = gdspy.Cell('gl_rw_gds_1', True)
     c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
     c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
@@ -138,9 +138,16 @@ def test_rw_gds(tmpdir):
     lib.add((c1, c2, c3, c4))
 
     fname1 = str(tmpdir.join('test1.gds'))
-    lib.write_gds(fname1, unit=2e-3, precision=1e-5)
-    lib1 = gdspy.GdsLibrary()
-    lib1.read_gds(fname1, 1e-3, {'gl_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
+    lib.write_gds(fname1)
+    lib1 = gdspy.GdsLibrary(
+        infile=fname1,
+        unit=1e-3,
+        precision=1e-6,
+        units='convert',
+        rename={'gl_rw_gds_1': '1'},
+        layers={2: 4},
+        datatypes={4: 2},
+        texttypes={6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
     assert set(lib1.cell_dict.keys()) == {
@@ -189,7 +196,7 @@ def test_rw_gds(tmpdir):
     fname2 = str(tmpdir.join('test2.gds'))
     lib.name = 'lib2'
     with open(fname2, 'wb') as fout:
-        lib.write_gds(fout, unit=2e-3, precision=1e-5)
+        lib.write_gds(fout)
     with open(fname2, 'rb') as fin:
         lib2 = gdspy.GdsLibrary()
         lib2.read_gds(fin)

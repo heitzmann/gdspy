@@ -28,8 +28,9 @@ def test_writer_gds(tmpdir):
     for c in lib.cell_dict.values():
         writer1.write_cell(c)
     writer1.close()
-    lib1 = gdspy.GdsLibrary()
-    lib1.read_gds(fname1, 1e-3, {'gw_rw_gds_1': '1'}, {2: 4}, {4: 2}, {6: 7})
+    lib1 = gdspy.GdsLibrary(unit=1e-3)
+    lib1.read_gds(fname1, 'convert', {'gw_rw_gds_1': '1'}, {2: 4}, {4: 2},
+                  {6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
     assert set(lib1.cell_dict.keys()) == {
