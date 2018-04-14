@@ -3658,7 +3658,6 @@ class GdsLibrary(object):
                 cell = None
             # UNITS
             elif record[0] == 0x03:
-                print(self.unit, self.precision)
                 if units == 'skip':
                     factor = record[1][0]
                 elif units == 'import':
@@ -3670,7 +3669,6 @@ class GdsLibrary(object):
                 else:
                     raise ValueError("[GDSPY] units must be one of 'convert', "
                                      "'import' or 'skip'.")
-                print(self.unit, self.precision, record[1], factor)
             # LIBNAME
             elif record[0] == 0x02:
                 self.name = record[1]
