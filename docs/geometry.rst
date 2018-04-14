@@ -108,11 +108,6 @@ fast_boolean
 .. autofunction:: gdspy.fast_boolean
 
 
-boolean
-=======
-
-.. autofunction:: gdspy.boolean
-
 offset
 ======
 

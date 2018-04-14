@@ -4028,7 +4028,7 @@ def offset(polygons,
         Offset distance.  Positive to expand, negative to shrink.
     join : {'miter', 'bevel', 'round'}
         Type of join used to create the offset polygon.
-    tolerance : integer or float
+    tolerance : number
         For miter joints, this number must be at least 2 and it represents the
         maximun distance in multiples of offset betwen new vertices and their
         original position before beveling to avoid spikes at acute joints.  For
@@ -4077,106 +4077,6 @@ def offset(polygons,
     return None if len(result) == 0 else \
         PolygonSet(result, layer, datatype, verbose=False).fracture(max_points,
                                                                     precision)
-
-
-def boolean(polygons,
-            operation,
-            max_points=199,
-            layer=0,
-            datatype=0,
-            eps=1e-13):
-    """
-    This function is deprecated in favor of 'fast_boolean'.
-
-    Execute any generalized boolean operation on polygons and polygon sets.
-
-    Parameters
-    ----------
-    polygons : array-like
-        Operands of the boolean operation.  Each element of this array must be
-        a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``, or an
-        array-like[N][2] of vertices of a polygon.
-    operation : function
-        Function that accepts as input ``len(polygons)`` integers.  Each
-        integer represents the incidence of the corresponding ``polygon``.  The
-        function must return a bool or integer (interpreted as bool).
-    max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they have
-        at most ``max_points`` vertices.  This is not a tessellating function,
-        so this number should be as high as possible.  For example, it should
-        be set to 199 for polygons being drawn in GDSII files.
-    layer : integer
-        The GDSII layer number for the resulting element.
-    datatype : integer
-        The GDSII datatype for the resulting element (between 0 and 255).
-    eps : positive number
-        Small number to be used as tolerance in intersection and overlap
-        calculations.
-
-    Returns
-    -------
-    out : PolygonSet or ``None``
-        Result of the boolean operation.
-
-    Notes
-    -----
-    Since ``operation`` receives a list of integers as input, it can be
-    somewhat more general than boolean operations only.  See the examples
-    below.
-
-    Because of roundoff errors there are a few cases when this function can
-    cause segmentation faults.  If that happens, increasing the value of
-    ``eps`` might help.
-
-    Examples
-    --------
-    >>> circle = gdspy.Round((0, 0), 10)
-    >>> triangle = gdspy.Round((0, 0), 12, number_of_points=3)
-    >>> bad_poly = gdspy.L1Path((0, 0), '+y', 2,
-    ...     [6, 4, 4, 8, 4, 5, 10], [-1, -1, -1, 1, 1, 1])
-    >>> union = gdspy.boolean([circle, triangle],
-    ...     lambda cir, tri: cir or tri)
-    >>> intersection = gdspy.boolean([circle, triangle],
-    ...     lambda cir, tri: cir and tri)
-    >>> subtraction = gdspy.boolean([circle, triangle],
-    ...     lambda cir, tri: cir and not tri)
-    >>> multi_xor = gdspy.boolean([badPath], lambda p: p % 2)
-    """
-    warnings.warn(
-        "[GDSPY] Function boolean is deprecated and it will be "
-        "removed in a future version.  Please use 'fast_boolean' "
-        "instead.",
-        FutureWarning,
-        stacklevel=2)
-    poly = []
-    indices = [0]
-    special_function = False
-    for obj in polygons:
-        if isinstance(obj, Polygon):
-            poly.append(obj.points)
-            indices.append(indices[-1] + 1)
-        elif isinstance(obj, PolygonSet):
-            special_function = True
-            poly += obj.polygons
-            indices.append(indices[-1] + len(obj.polygons))
-        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-            special_function = True
-            a = obj.get_polygons()
-            poly += a
-            indices.append(indices[-1] + len(a))
-        else:
-            poly.append(obj)
-            indices.append(indices[-1] + 1)
-    if special_function:
-        result = boolext.clip(
-            poly, lambda *p: operation(*[
-                sum(p[indices[ia]:indices[ia + 1]]) for ia in range(
-                    len(indices) - 1)
-            ]), eps)
-    else:
-        result = boolext.clip(poly, operation, eps)
-    return None if result is None else PolygonSet(result, layer, datatype,
-                                                  False).fracture(max_points)
 
 
 def fast_boolean(operandA,
