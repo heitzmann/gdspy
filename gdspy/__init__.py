@@ -174,9 +174,6 @@ class Polygon(object):
                 stacklevel=2)
         self.layer = layer
 
-        if isinstance(points[0][0], list):
-            raise ValueError('points cannot be a 3D array')
-
         self.points = numpy.array(points)
         self.datatype = datatype
 
