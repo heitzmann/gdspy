@@ -495,6 +495,23 @@ class PolygonSet(object):
                     len(self.polygons), sum([len(p) for p in self.polygons]),
                     list(set(self.layers)), list(set(self.datatypes)))
 
+    def get_bounding_box(self):
+        """
+        Returns the bounding box of the polygons.
+
+        Returns
+        -------
+        out : Numpy array[2,2] or ``None``
+            Bounding box of this polygon [[x_min, y_min], [x_max, y_max]], or
+            ``None`` if the polygon is empty.
+        """
+        if len(self.polygons) == 0:
+            return None
+        return numpy.array(((min(pts[:, 0].min() for pts in self.polygons),
+                             min(pts[:, 1].min() for pts in self.polygons)),
+                            (max(pts[:, 0].max() for pts in self.polygons),
+                             max(pts[:, 1].max() for pts in self.polygons))))
+
     def rotate(self, angle, center=(0, 0)):
         """
         Rotate this object.
