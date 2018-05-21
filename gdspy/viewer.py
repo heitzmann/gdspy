@@ -531,7 +531,8 @@ class LayoutViewer(tkinter.Frame):
                         anchor=_tkinteranchors[label.anchor],
                         fill=self.color[i],
                         activefill=self.default_outline,
-                        tag=('L' + str(i), 'TEXT'))
+                        tag=('L' + str(i), 'TEXT'),
+                        state=state)
         if (wid is None) or (hei is None) or (pos is None):
             pos = -12
             hei = 12
