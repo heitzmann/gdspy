@@ -62,11 +62,10 @@ class ColorDict(dict):
         if self.default is None:
             layer, datatype = key
             rgb = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([
-                int(255 * c + 0.5)
-                for c in colorsys.hsv_to_rgb((layer % 3) / 3.0 + (
-                    layer % 6 // 3) / 6.0 + (layer // 6) / 11.0, 1 - (
-                        (layer + datatype) % 8) / 12.0, 1 -
-                                             (datatype % 3) / 4.0)
+                int(255 * c + 0.5) for c in colorsys.hsv_to_rgb(
+                    (layer % 3) / 3.0 + (layer % 6 // 3) / 6.0 +
+                    (layer // 6) / 11.0, 1 -
+                    ((layer + datatype) % 8) / 12.0, 1 - (datatype % 3) / 4.0)
             ])
         else:
             rgb = self.default
@@ -289,27 +288,36 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.bind('<Motion>', self._mouse_move)
 
         # Y scroll: scroll wheel
-        self.canvas.bind('<MouseWheel>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Button-4>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Button-5>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.canvas.bind(
+            '<MouseWheel>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Button-4>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Button-5>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
-        self.l_canvas.bind('<MouseWheel>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-4>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-5>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<MouseWheel>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<Button-4>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<Button-5>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
         # X scroll: shift + scroll wheel
-        self.bind_all('<Shift-MouseWheel>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-4>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-5>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.bind_all(
+            '<Shift-MouseWheel>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Shift-Button-4>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Shift-Button-5>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
         # Object properties: double button 1
         # Zoom rectangle: drag button 1
@@ -400,9 +408,13 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.ruler = None
         self.canvas.x_rl = 0
         self.canvas.y_rl = 0
-        lbl_dict = dict(
-            [((label.layer, label.texttype), label)
-             for label in self.cells[self.current_cell.get()].labels])
+        lbl_dict = {}
+        for label in self.cells[self.current_cell.get()].labels:
+            key = (label.layer, label.texttype)
+            if key in lbl_dict:
+                lbl_dict[key].append(label)
+            else:
+                lbl_dict[key] = [label]
         layers = list(set(list(pol_dict.keys()) + list(lbl_dict.keys())))
         layers.sort(
             reverse=True,
@@ -461,13 +473,16 @@ class LayoutViewer(tkinter.Frame):
                 lbl[2].bind('<Button-1>', self._raise(i))
                 lbl[3].bind('<Button-1>', self._lower(i))
                 for l in lbl:
-                    l.bind('<MouseWheel>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, 1
-                        if evt.delta < 0 else -1, tkinter.UNITS))
-                    l.bind('<Button-4>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, -1, tkinter.UNITS))
-                    l.bind('<Button-5>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, 1, tkinter.UNITS))
+                    l.bind(
+                        '<MouseWheel>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1
+                            if evt.delta < 0 else -1, tkinter.UNITS))
+                    l.bind(
+                        '<Button-4>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, -1, tkinter.UNITS))
+                    l.bind(
+                        '<Button-5>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1, tkinter.UNITS))
                 if wid is None:
                     lbl[1].configure(text='255/255')
                     hei = max(lbl[0].winfo_reqheight(),
@@ -519,15 +534,16 @@ class LayoutViewer(tkinter.Frame):
                             tag=('L' + str(i), 'V' + str(pol.shape[0])),
                             state=state)
             if i in lbl_dict:
-                label = lbl_dict[i]
-                self.canvas.create_text(
-                    label.position[0] / self.scale,
-                    label.position[1] / -self.scale,
-                    text=label.text,
-                    anchor=_tkinteranchors[label.anchor],
-                    fill=self.color[i],
-                    activefill=self.default_outline,
-                    tag=('L' + str(i), 'TEXT'))
+                for label in lbl_dict[i]:
+                    self.canvas.create_text(
+                        label.position[0] / self.scale,
+                        label.position[1] / -self.scale,
+                        text=label.text,
+                        anchor=_tkinteranchors[label.anchor],
+                        fill=self.color[i],
+                        activefill=self.default_outline,
+                        tag=('L' + str(i), 'TEXT'),
+                        state=state)
         if (wid is None) or (hei is None) or (pos is None):
             pos = -12
             hei = 12
