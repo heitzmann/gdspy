@@ -115,8 +115,8 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256 - 64
-    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 + long3
-                ) / 72057594037927936.0
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 +
+                long3) / 72057594037927936.0
     if short1 & 0x8000:
         return -mantissa * 16.**exponent
     return mantissa * 16.**exponent
@@ -173,7 +173,6 @@ class Polygon(object):
                 RuntimeWarning,
                 stacklevel=2)
         self.layer = layer
-
         self.points = numpy.array(points)
         self.datatype = datatype
 
@@ -193,9 +192,9 @@ class Polygon(object):
         """
         if len(self.points) == 0:
             return None
-
-        return numpy.array(((self.points[:, 0].min(), self.points[:, 1].min()), 
-                            (self.points[:, 0].max(), self.points[:, 1].max())))
+        return numpy.array(((self.points[:, 0].min(), self.points[:, 1].min()),
+                            (self.points[:, 0].max(),
+                             self.points[:, 1].max())))
 
     def to_gds(self, multiplier):
         """
@@ -398,9 +397,9 @@ class Polygon(object):
                     r = radius[ii]
                 if l > 0.49 * length[ii + 1]:
                     r = 0.49 * length[ii + 1] / tt[ii]
-                new_points += list(
-                    r * dvec[ii] / ct[ii] + self.points[ii] + numpy.vstack(
-                        (r * numpy.cos(a), r * numpy.sin(a))).transpose())
+                new_points += list(r * dvec[ii] / ct[ii] + self.points[ii] +
+                                   numpy.vstack((r * numpy.cos(a), r *
+                                                 numpy.sin(a))).transpose())
             else:
                 new_points.append(self.points[ii])
 
@@ -656,10 +655,10 @@ class PolygonSet(object):
                     datatype = self.datatypes.pop(ii)
                     self.polygons.extend(
                         numpy.array(x) for x in chopped[0] + chopped[1])
-                    self.layers += [layer] * (
-                        len(chopped[0]) + len(chopped[1]))
-                    self.datatypes += [datatype] * (
-                        len(chopped[0]) + len(chopped[1]))
+                    self.layers += [layer
+                                    ] * (len(chopped[0]) + len(chopped[1]))
+                    self.datatypes += [datatype
+                                       ] * (len(chopped[0]) + len(chopped[1]))
                 else:
                     ii += 1
         return self
@@ -732,8 +731,8 @@ class PolygonSet(object):
                         a1 += two_pi
                     n = max(
                         int(
-                            numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi)
-                            + 0.5), 2)
+                            numpy.ceil(abs(a1 - a0) / two_pi *
+                                       points_per_2pi) + 0.5), 2)
                     a = numpy.linspace(a0, a1, n)
                     l = radius * tt[ii]
                     if l > 0.49 * length[ii]:
@@ -884,16 +883,16 @@ class Round(PolygonSet):
                         2 * radius * numpy.pi / number_of_points + 0.5)
                 else:
                     number_of_points = int(
-                        abs(final_angle - initial_angle
-                            ) * radius / number_of_points + 0.5) + 2
+                        abs(final_angle - initial_angle) * radius /
+                        number_of_points + 0.5) + 2
             else:
                 if final_angle == initial_angle:
                     number_of_points = 2 * int(
                         2 * radius * numpy.pi / number_of_points + 0.5) + 2
                 else:
                     number_of_points = 2 * int(
-                        abs(final_angle - initial_angle
-                            ) * radius / number_of_points + 0.5) + 2
+                        abs(final_angle - initial_angle) * radius /
+                        number_of_points + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1312,14 +1311,14 @@ class Path(PolygonSet):
                 d0 = ii * self.distance - (self.n - 1) * self.distance * 0.5
                 old_d0 = ii * old_distance - (self.n - 1) * old_distance * 0.5
                 self.polygons.append(
-                    numpy.array(
-                        [(old_x + (old_d0 - old_w) * sa,
-                          old_y - (old_d0 - old_w) * ca),
-                         (old_x + (old_d0 + old_w) * sa,
-                          old_y - (old_d0 + old_w) * ca),
-                         (self.x + (d0 + self.w) * sa, self.y -
-                          (d0 + self.w) * ca), (self.x + (d0 - self.w) * sa,
-                                                self.y - (d0 - self.w) * ca)]))
+                    numpy.array([(old_x + (old_d0 - old_w) * sa,
+                                  old_y - (old_d0 - old_w) * ca),
+                                 (old_x + (old_d0 + old_w) * sa,
+                                  old_y - (old_d0 + old_w) * ca),
+                                 (self.x + (d0 + self.w) * sa,
+                                  self.y - (d0 + self.w) * ca),
+                                 (self.x + (d0 - self.w) * sa,
+                                  self.y - (d0 - self.w) * ca)]))
                 if self.w == 0:
                     self.polygons[-1] = self.polygons[-1][:-1, :]
                 if old_w == 0:
@@ -1330,8 +1329,8 @@ class Path(PolygonSet):
             else:
                 self.layers += [layer] * self.n
             if isinstance(datatype, list):
-                self.datatypes += (datatype *
-                                   (self.n // len(datatype) + 1))[:self.n]
+                self.datatypes += (
+                    datatype * (self.n // len(datatype) + 1))[:self.n]
             else:
                 self.datatypes += [datatype] * self.n
         return self
@@ -1408,8 +1407,8 @@ class Path(PolygonSet):
             number_of_points = 2 * int(
                 abs((final_angle - initial_angle) *
                     (radius + max(old_distance, self.distance) *
-                     (self.n - 1) * 0.5 + max(old_w, self.w)
-                     ) / number_of_points) + 0.5) + 2
+                     (self.n - 1) * 0.5 + max(old_w, self.w)) /
+                    number_of_points) + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1453,13 +1452,13 @@ class Path(PolygonSet):
                     self.polygons[-1][pts1:, 1] = numpy.sin(ang) * rad + cy
                 self.length += abs((angles[jj + 1] - angles[jj]) * radius)
                 if isinstance(layer, list):
-                    self.layers += (layer *
-                                    (self.n // len(layer) + 1))[:self.n]
+                    self.layers += (
+                        layer * (self.n // len(layer) + 1))[:self.n]
                 else:
                     self.layers += [layer] * self.n
                 if isinstance(datatype, list):
-                    self.datatypes += (datatype *
-                                       (self.n // len(datatype) + 1))[:self.n]
+                    self.datatypes += (
+                        datatype * (self.n // len(datatype) + 1))[:self.n]
                 else:
                     self.datatypes += [datatype] * self.n
         return self
@@ -1689,8 +1688,8 @@ class Path(PolygonSet):
             else:
                 self.layers += [layer] * self.n
             if isinstance(datatype, list):
-                self.datatypes += (datatype *
-                                   (self.n // len(datatype) + 1))[:self.n]
+                self.datatypes += (
+                    datatype * (self.n // len(datatype) + 1))[:self.n]
             else:
                 self.datatypes += [datatype] * self.n
         self.x = x0[-1, 0]
@@ -2029,8 +2028,8 @@ class PolyPath(PolygonSet):
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
-            points[-1, :] = points[-1, :] + v * width[(
-                points.shape[0] - 1) % len_w]
+            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) %
+                                                      len_w]
         elif ends == 1:
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
@@ -2056,10 +2055,12 @@ class PolyPath(PolygonSet):
                 final_angle=angle1 + numpy.pi,
                 number_of_points=33).polygons[0])
                                  for ii in range(number_of_paths))
-            self.layers += ((layer * (
-                number_of_paths // len(layer) + 1))[:number_of_paths]) * 2
-            self.datatypes += ((datatype * (
-                number_of_paths // len(datatype) + 1))[:number_of_paths]) * 2
+            self.layers += (
+                (layer *
+                 (number_of_paths // len(layer) + 1))[:number_of_paths]) * 2
+            self.datatypes += (
+                (datatype *
+                 (number_of_paths // len(datatype) + 1))[:number_of_paths]) * 2
         v = points[1, :] - points[0, :]
         v = numpy.array((-v[1], v[0])) / numpy.sqrt(numpy.sum(v * v))
         d0 = 0.5 * (number_of_paths - 1) * distance[0]
@@ -2085,10 +2086,10 @@ class PolyPath(PolygonSet):
             p1 = []
             pp = []
             for ii in range(number_of_paths):
-                pp.append((points[jj, :] +
-                           (ii * distance[j0d] - d0 - width[j0w]) * v,
-                           points[jj, :] +
-                           (ii * distance[j0d] - d0 + width[j0w]) * v))
+                pp.append((
+                    points[jj, :] + (ii * distance[j0d] - d0 - width[j0w]) * v,
+                    points[jj, :] +
+                    (ii * distance[j0d] - d0 + width[j0w]) * v))
                 p1.append((points[jj + 1, :] +
                            (ii * distance[j1d] - d1 - width[j1w]) * v,
                            points[jj + 1, :] +
@@ -2129,10 +2130,10 @@ class PolyPath(PolygonSet):
                 paths[ii][0].append(p1[ii][0])
             paths[ii][1].append(p1[ii][1])
         self.polygons += [numpy.array(pol[0] + pol[1][::-1]) for pol in paths]
-        self.layers += (layer *
-                        (number_of_paths // len(layer) + 1))[:number_of_paths]
-        self.datatypes += (datatype * (
-            number_of_paths // len(datatype) + 1))[:number_of_paths]
+        self.layers += (
+            layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
+        self.datatypes += (datatype * (number_of_paths // len(datatype) + 1)
+                           )[:number_of_paths]
 
     def __str__(self):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})"\
@@ -2239,8 +2240,8 @@ class Label(object):
             self.anchor = Label._anchor[anchor.lower()]
         except:
             warnings.warn(
-                "[GDSPY] Label anchors must be one of: '" +
-                "', '".join(Label._anchor.keys()) + "'.",
+                "[GDSPY] Label anchors must be one of: '" + "', '".join(
+                    Label._anchor.keys()) + "'.",
                 stacklevel=2)
             self.anchor = 0
         self.rotation = rotation
@@ -2658,12 +2659,12 @@ class Cell(object):
             for element in self.elements:
                 if isinstance(element, CellReference):
                     labels.extend(
-                        element.get_labels(None
-                                           if depth is None else depth - 1))
+                        element.get_labels(None if depth is None else depth -
+                                           1))
                 elif isinstance(element, CellArray):
                     labels.extend(
-                        element.get_labels(None
-                                           if depth is None else depth - 1))
+                        element.get_labels(None if depth is None else depth -
+                                           1))
         return labels
 
     def get_dependencies(self, recursive=False):
@@ -3658,8 +3659,8 @@ class GdsLibrary(object):
                 self.name = record[1]
             # PRESENTATION
             elif record[0] == 0x17:
-                kwargs['anchor'] = GdsLibrary._import_anchors[
-                    int(record[1][0]) & 0x000f]
+                kwargs['anchor'] = GdsLibrary._import_anchors[int(record[1][0])
+                                                              & 0x000f]
             # PATHTYPE
             elif record[0] == 0x21:
                 if record[1][0] > 2:

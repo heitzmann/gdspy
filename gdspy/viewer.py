@@ -62,11 +62,10 @@ class ColorDict(dict):
         if self.default is None:
             layer, datatype = key
             rgb = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([
-                int(255 * c + 0.5)
-                for c in colorsys.hsv_to_rgb((layer % 3) / 3.0 + (
-                    layer % 6 // 3) / 6.0 + (layer // 6) / 11.0, 1 - (
-                        (layer + datatype) % 8) / 12.0, 1 -
-                                             (datatype % 3) / 4.0)
+                int(255 * c + 0.5) for c in colorsys.hsv_to_rgb(
+                    (layer % 3) / 3.0 + (layer % 6 // 3) / 6.0 +
+                    (layer // 6) / 11.0, 1 -
+                    ((layer + datatype) % 8) / 12.0, 1 - (datatype % 3) / 4.0)
             ])
         else:
             rgb = self.default
@@ -289,27 +288,36 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.bind('<Motion>', self._mouse_move)
 
         # Y scroll: scroll wheel
-        self.canvas.bind('<MouseWheel>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Button-4>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Button-5>', lambda evt: self.canvas.yview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.canvas.bind(
+            '<MouseWheel>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Button-4>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Button-5>', lambda evt: self.canvas.yview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
-        self.l_canvas.bind('<MouseWheel>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-4>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-5>', lambda evt: self.l_canvas.yview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<MouseWheel>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<Button-4>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.l_canvas.bind(
+            '<Button-5>', lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
         # X scroll: shift + scroll wheel
-        self.bind_all('<Shift-MouseWheel>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-4>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-5>', lambda evt: self.canvas.xview(
-            tkinter.SCROLL, 1, tkinter.UNITS))
+        self.bind_all(
+            '<Shift-MouseWheel>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Shift-Button-4>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, -1, tkinter.UNITS))
+        self.canvas.bind(
+            '<Shift-Button-5>', lambda evt: self.canvas.xview(
+                tkinter.SCROLL, 1, tkinter.UNITS))
 
         # Object properties: double button 1
         # Zoom rectangle: drag button 1
@@ -465,13 +473,16 @@ class LayoutViewer(tkinter.Frame):
                 lbl[2].bind('<Button-1>', self._raise(i))
                 lbl[3].bind('<Button-1>', self._lower(i))
                 for l in lbl:
-                    l.bind('<MouseWheel>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, 1
-                        if evt.delta < 0 else -1, tkinter.UNITS))
-                    l.bind('<Button-4>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, -1, tkinter.UNITS))
-                    l.bind('<Button-5>', lambda evt: self.l_canvas.yview(
-                        tkinter.SCROLL, 1, tkinter.UNITS))
+                    l.bind(
+                        '<MouseWheel>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1
+                            if evt.delta < 0 else -1, tkinter.UNITS))
+                    l.bind(
+                        '<Button-4>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, -1, tkinter.UNITS))
+                    l.bind(
+                        '<Button-5>', lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1, tkinter.UNITS))
                 if wid is None:
                     lbl[1].configure(text='255/255')
                     hei = max(lbl[0].winfo_reqheight(),
