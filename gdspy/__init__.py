@@ -173,12 +173,29 @@ class Polygon(object):
                 RuntimeWarning,
                 stacklevel=2)
         self.layer = layer
+
         self.points = numpy.array(points)
         self.datatype = datatype
 
     def __str__(self):
         return "Polygon ({} vertices, layer {}, datatype {})".format(
             len(self.points), self.layer, self.datatype)
+
+    def get_bounding_box(self):
+        """
+        Returns the bounding box of the polygon.
+
+        Returns
+        -------
+        out : Numpy array[2,2] or ``None``
+            Bounding box of this polygon [[x_min, y_min], [x_max, y_max]], or
+            ``None`` if the polygon is empty.
+        """
+        if len(self.points) == 0:
+            return None
+
+        return numpy.array(((self.points[:, 0].min(), self.points[:, 1].min()), 
+                            (self.points[:, 0].max(), self.points[:, 1].max())))
 
     def to_gds(self, multiplier):
         """
