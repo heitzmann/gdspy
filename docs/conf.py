@@ -69,7 +69,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'gdspy'
-copyright = '2009-2017, Lucas H. Gabrielli'
+copyright = '2009-2018, Lucas H. Gabrielli'
 author = 'Lucas H. Gabrielli'
 
 # The version info for the project you're documenting, acts as replacement for
