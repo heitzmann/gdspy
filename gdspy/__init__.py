@@ -877,8 +877,7 @@ class Round(PolygonSet):
                  max_points=199,
                  layer=0,
                  datatype=0):
-
-
+        
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
