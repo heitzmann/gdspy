@@ -864,7 +864,8 @@ class Round(PolygonSet):
     ...                       final_angle=0)
     """
 
-    __slots__ = 'layers', 'datatypes', 'polygons'
+    __slots__ = ('layers', 'datatypes', 'polygons', 'center', 'radius',
+                 'initial_angle', 'final_angle')
 
     def __init__(self,
                  center,
@@ -876,6 +877,8 @@ class Round(PolygonSet):
                  max_points=199,
                  layer=0,
                  datatype=0):
+
+
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
@@ -898,6 +901,10 @@ class Round(PolygonSet):
         number_of_points = number_of_points // pieces
         self.layers = [layer] * pieces
         self.datatypes = [datatype] * pieces
+        self.center = center
+        self.radius = radius
+        self.initial_angle = initial_angle
+        self.final_angle = final_angle
         self.polygons = [
             numpy.zeros((number_of_points, 2)) for _ in range(pieces)
         ]
