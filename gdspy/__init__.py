@@ -2383,7 +2383,7 @@ class Cell(object):
         return "Cell (\"{}\", {} elements, {} labels)".format(
             self.name, len(self.elements), len(self.labels))
 
-    def to_gds(self, multiplier):
+    def to_gds(self, multiplier, timestamp=None):
         """
         Convert this cell to a GDSII structure.
 
@@ -2392,13 +2392,15 @@ class Cell(object):
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             structure.
+        timestamp : datetime object
+            Sets the GDSII timestamp.  If ``None``, the current time is used.
 
         Returns
         -------
         out : string
             The GDSII binary string that represents this cell.
         """
-        now = datetime.datetime.today()
+        now = datetime.datetime.today() if timestamp is None else timestamp
         name = self.name
         if len(name) % 2 != 0:
             name = name + '\0'
@@ -3505,7 +3507,7 @@ class GdsLibrary(object):
                 self.cell_dict[c.name] = c
         return self
 
-    def write_gds(self, outfile, cells=None):
+    def write_gds(self, outfile, cells=None, timestamp=None):
         """
         Write the GDSII library to a file.
 
@@ -3524,6 +3526,8 @@ class GdsLibrary(object):
         cells : array-like
             The list of cells or cell names to be included in the library.  If
             ``None``, all cells are used.
+        timestamp : datetime object
+            Sets the GDSII timestamp.  If ``None``, the current time is used.
 
         Notes
         -----
@@ -3535,7 +3539,7 @@ class GdsLibrary(object):
             close = True
         else:
             close = False
-        now = datetime.datetime.today()
+        now = datetime.datetime.today() if timestamp is None else timestamp
         name = self.name if len(self.name) % 2 == 0 else (self.name + '\0')
         outfile.write(
             struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
@@ -3906,6 +3910,8 @@ class GdsWriter(object):
     precision : number
         Precision for the dimensions of the objects in the library (in
         *meters*).
+    timestamp : datetime object
+        Sets the GDSII timestamp.  If ``None``, the current time is used.
 
     Notes
     -----
@@ -3927,7 +3933,12 @@ class GdsWriter(object):
     """
     __slots__ = '_outfile', '_close', '_res'
 
-    def __init__(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
+    def __init__(self,
+                 outfile,
+                 name='library',
+                 unit=1.0e-6,
+                 precision=1.0e-9,
+                 timestamp=None):
         if isinstance(outfile, basestring):
             self._outfile = open(outfile, 'wb')
             self._close = True
@@ -3935,7 +3946,7 @@ class GdsWriter(object):
             self._outfile = outfile
             self._close = False
         self._res = unit / precision
-        now = datetime.datetime.today()
+        now = datetime.datetime.today() if timestamp is None else timestamp
         if len(name) % 2 != 0:
             name = name + '\0'
         self._outfile.write(
