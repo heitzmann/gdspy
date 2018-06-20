@@ -57,10 +57,10 @@ def test_inside():
 def test_copy():
     p = gdspy.Rectangle((0, 0), (1, 1))
     q = gdspy.copy(p, 1, -1)
-    assert set(p.points[:, 0]) == {0, 1}
-    assert set(p.points[:, 1]) == {0, 1}
-    assert set(q.points[:, 0]) == {1, 2}
-    assert set(q.points[:, 1]) == {-1, 0}
+    assert set(p.polygons[0][:, 0]) == {0, 1}
+    assert set(p.polygons[0][:, 1]) == {0, 1}
+    assert set(q.polygons[0][:, 0]) == {1, 2}
+    assert set(q.polygons[0][:, 1]) == {-1, 0}
     p = gdspy.PolygonSet([[(0, 0), (1, 0), (0, 1)], [(2, 2), (3, 2), (2, 3)]])
     q = gdspy.copy(p, 1, -1)
     assert set(p.polygons[0][:, 0]) == {0, 1}
@@ -114,8 +114,8 @@ def test_write_gds(tmpdir):
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
-    assert c.elements[0].layer == 4
-    assert c.elements[0].datatype == 2
+    assert c.elements[0].layers == [4]
+    assert c.elements[0].datatypes == [2]
     assert c.labels[0].text == 'label'
     assert c.labels[0].position[0] == 2 and c.labels[0].position[1] == -2
     assert c.labels[0].anchor == 4

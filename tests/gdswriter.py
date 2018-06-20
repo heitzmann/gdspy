@@ -39,8 +39,8 @@ def test_writer_gds(tmpdir):
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
-    assert c.elements[0].layer == 4
-    assert c.elements[0].datatype == 2
+    assert c.elements[0].layers == [4]
+    assert c.elements[0].datatypes == [2]
     assert c.labels[0].text == 'label'
     assert c.labels[0].position[0] == 2 and c.labels[0].position[1] == -2
     assert c.labels[0].anchor == 4

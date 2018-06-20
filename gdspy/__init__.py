@@ -123,327 +123,6 @@ def _eight_byte_real_to_float(value):
     return mantissa * 16.**exponent
 
 
-class Polygon(object):
-    """
-    Polygonal geometric object.
-
-    Parameters
-    ----------
-    points : array-like[N][2]
-        Coordinates of the vertices of the polygon.
-    layer : integer
-        The GDSII layer number for this element.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygon will
-        be suppressed.
-
-    Attributes
-    ----------
-    points : numpy array[N,2]
-        Coordinates of the vertices of the polygon.
-    layer : integer
-        The GDSII layer number for this element.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
-
-    Notes
-    -----
-    The last point should not be equal to the first (polygons are
-    automatically closed).
-
-    The GDSII specification supports only a maximum of 199 vertices per
-    polygon.
-
-    Examples
-    --------
-    >>> triangle_pts = [(0, 40), (15, 40), (10, 50)]
-    >>> triangle = gdspy.Polygon(triangle_pts)
-    >>> myCell.add(triangle)
-    """
-
-    __slots__ = 'layer', 'datatype', 'points'
-
-    def __init__(self, points, layer=0, datatype=0, verbose=True):
-        if len(points) > 199 and verbose:
-            warnings.warn(
-                "[GDSPY] A polygon with more than 199 points was "
-                "created (not officially supported by the GDSII "
-                "format).",
-                RuntimeWarning,
-                stacklevel=2)
-        self.layer = layer
-        self.points = numpy.array(points)
-        self.datatype = datatype
-
-    def __str__(self):
-        return "Polygon ({} vertices, layer {}, datatype {})".format(
-            len(self.points), self.layer, self.datatype)
-
-    def get_bounding_box(self):
-        """
-        Returns the bounding box of the polygon.
-
-        Returns
-        -------
-        out : Numpy array[2,2] or ``None``
-            Bounding box of this polygon [[x_min, y_min], [x_max, y_max]], or
-            ``None`` if the polygon is empty.
-        """
-        if len(self.points) == 0:
-            return None
-        return numpy.array(((self.points[:, 0].min(), self.points[:, 1].min()),
-                            (self.points[:, 0].max(),
-                             self.points[:, 1].max())))
-
-    def to_gds(self, multiplier):
-        """
-        Convert this object to a GDSII element.
-
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            element.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
-        """
-        if len(self.points) > 4094:
-            raise ValueError("[GDSPY] Polygons with more than 4094 are not "
-                             "supported by the GDSII format.")
-        return struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02,
-                           self.datatype, 12 + 8 * len(self.points), 0x1003) \
-            + b''.join(struct.pack('>2l', int(round(point[0] * multiplier)),
-                                   int(round(point[1] * multiplier)))
-                       for point in self.points) \
-            + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)),
-                          int(round(self.points[0][1] * multiplier)), 4,
-                          0x1100)
-
-    def rotate(self, angle, center=(0, 0)):
-        """
-        Rotate this object.
-
-        Parameters
-        ----------
-        angle : number
-            The angle of rotation (in *radians*).
-        center : array-like[2]
-            Center point for the rotation.
-
-        Returns
-        -------
-        out : ``Polygon``
-            This object.
-        """
-        ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
-        c0 = numpy.array(center)
-        self.points = (self.points - c0) * ca + (
-            self.points - c0)[:, ::-1] * sa + c0
-        return self
-
-    def area(self, by_spec=False):
-        """
-        Calculate the total area of this object.
-
-        Parameters
-        ----------
-        by_spec : bool
-            If ``True``, the return value is a dictionary ``{(layer, datatype):
-            area}``.
-
-        Returns
-        -------
-        out : number, dictionary
-            Area of this object.
-        """
-        poly_area = 0
-        for ii in range(1, self.points.shape[0] - 1):
-            poly_area += ((self.points[0][0] - self.points[ii + 1][0]) *
-                          (self.points[ii][1] - self.points[0][1]) -
-                          (self.points[0][1] - self.points[ii + 1][1]) *
-                          (self.points[ii][0] - self.points[0][0]))
-        if by_spec:
-            return {(self.layer, self.datatype): 0.5 * abs(poly_area)}
-        else:
-            return 0.5 * abs(poly_area)
-
-    def fracture(self, max_points=199, precision=1e-3):
-        """
-        Slice this polygon in the horizontal and vertical directions so that
-        each resulting piece has at most ``max_points``.
-
-        Parameters
-        ----------
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be greater
-            than 4).
-        precision : float
-            Desired precision for rounding vertice coordinates.
-
-        Returns
-        -------
-        out : ``PolygonSet``
-            Resulting polygons from the fracture operation.
-        """
-        out_polygons = [self.points]
-        if max_points > 4:
-            ii = 0
-            while ii < len(out_polygons):
-                if len(out_polygons[ii]) > max_points:
-                    pts0 = sorted(out_polygons[ii][:, 0])
-                    pts1 = sorted(out_polygons[ii][:, 1])
-                    ncuts = len(pts0) // max_points
-                    if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
-                        # Vertical cuts
-                        cuts = [
-                            pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)]
-                            for i in range(1, ncuts + 1)
-                        ]
-                        chopped = clipper._chop(out_polygons[ii], cuts, 0,
-                                                1 / precision)
-                    else:
-                        # Horizontal cuts
-                        cuts = [
-                            pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)]
-                            for i in range(1, ncuts + 1)
-                        ]
-                        chopped = clipper._chop(out_polygons[ii], cuts, 1,
-                                                1 / precision)
-                    out_polygons.pop(ii)
-                    out_polygons.extend(
-                        numpy.array(x)
-                        for x in itertools.chain.from_iterable(chopped))
-                else:
-                    ii += 1
-        return PolygonSet(out_polygons, self.layer, self.datatype)
-
-    def fillet(self,
-               radius,
-               points_per_2pi=128,
-               max_points=199,
-               precision=1e-3):
-        """
-        Round the corners of this polygon and fractures it into polygons with
-        less vertices if necessary.
-
-        Parameters
-        ----------
-        radius : number, list
-            Radius of the corners.
-        points_per_2pi : integer
-            Number of vertices used to approximate a full circle.  The number
-            of vertices in each corner of the polygon will be the fraction of
-            this number corresponding to the angle encompassed by that corner
-            with respect to 2 pi.
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be greater
-            than 4).
-        precision : float
-            Desired precision for rounding vertice coordinates in case of
-            fracturing.
-
-        Returns
-        -------
-        out : ``Polygon`` or ``PolygonSet``
-            If no fracturing occurs, return this object; otherwise return a
-            ``PolygonSet`` with the fractured result (this object will have
-            more than ``max_points`` vertices).
-        """
-        two_pi = 2 * numpy.pi
-        vec = self.points.astype(float) - numpy.roll(self.points, 1, 0)
-        length = numpy.sqrt(numpy.sum(vec**2, 1))
-        ii = numpy.flatnonzero(length)
-        if len(ii) < len(length):
-            self.points = self.points[ii]
-            vec = self.points - numpy.roll(self.points, 1, 0)
-            length = numpy.sqrt(numpy.sum(vec**2, 1))
-        vec[:, 0] = vec[:, 0] / length
-        vec[:, 1] = vec[:, 1] / length
-        dvec = numpy.roll(vec, -1, 0) - vec
-        norm = numpy.sqrt(numpy.sum(dvec**2, 1))
-        ii = numpy.flatnonzero(norm)
-        dvec[ii, 0] = dvec[ii, 0] / norm[ii]
-        dvec[ii, 1] = dvec[ii, 1] / norm[ii]
-        theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
-        ct = numpy.cos(theta * 0.5)
-        tt = numpy.tan(theta * 0.5)
-        if not isinstance(radius, list):
-            radius = [radius] * len(self.points)
-        if not len(self.points) == len(radius):
-            raise ValueError("[GDSPY] Fillet radius list length does not "
-                             "match the number of points in the polygon.")
-
-        new_points = []
-        for ii in range(-1, len(self.points) - 1):
-            if (theta[ii] > 0) and (radius[ii] > 0):
-                a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
-                a0 = numpy.arctan2(a0[1], a0[0])
-                a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
-                a1 = numpy.arctan2(a1[1], a1[0])
-                if a1 - a0 > numpy.pi:
-                    a1 -= two_pi
-                elif a1 - a0 < -numpy.pi:
-                    a1 += two_pi
-                n = max(
-                    int(
-                        numpy.ceil(abs(a1 - a0) / two_pi * points_per_2pi) +
-                        0.5), 2)
-                a = numpy.linspace(a0, a1, n)
-                l = radius[ii] * tt[ii]
-                if l > 0.49 * length[ii]:
-                    r = 0.49 * length[ii] / tt[ii]
-                    l = 0.49 * length[ii]
-                else:
-                    r = radius[ii]
-                if l > 0.49 * length[ii + 1]:
-                    r = 0.49 * length[ii + 1] / tt[ii]
-                new_points += list(r * dvec[ii] / ct[ii] + self.points[ii] +
-                                   numpy.vstack((r * numpy.cos(a), r *
-                                                 numpy.sin(a))).transpose())
-            else:
-                new_points.append(self.points[ii])
-
-        self.points = numpy.array(new_points)
-        if len(self.points) > max_points:
-            return self.fracture(max_points, precision)
-        else:
-            return self
-
-    def translate(self, dx, dy):
-        """
-        Move the polygon from one place to another
-
-        Parameters
-        ----------
-        dx : float
-            distance to move in the x-direction
-        dy : float
-            distance to move in the y-direction
-
-        Returns
-        -------
-        out : ``Polygon``
-            This object.
-
-        Examples
-        --------
-        >>> polygon = gdspy.Polygon((0, 0), (10, 20))
-        >>> polygon = polygon.translate(2,0)
-        >>> myCell.add(polygon)
-        """
-
-        self.points = self.points + [dx, dy]
-
-        return self
-
-
 class PolygonSet(object):
     """
     Set of polygonal objects.
@@ -689,7 +368,7 @@ class PolygonSet(object):
         radius : number, list
             Radius of the corners.  If number: All corners filleted by that
             amount.  If list: Specify fillet radii on a per-corner basis (list
-            length must be equal to the number of points in the Polygon)
+            length must be equal to the number of points in the polygon)
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The number
             of vertices in each corner of the polygon will be the fraction of
@@ -790,7 +469,57 @@ class PolygonSet(object):
         return self
 
 
-class Rectangle(Polygon):
+class Polygon(PolygonSet):
+    """
+    Polygonal geometric object.
+
+    Parameters
+    ----------
+    points : array-like[N][2]
+        Coordinates of the vertices of the polygon.
+    layer : integer
+        The GDSII layer number for this element.
+    datatype : integer
+        The GDSII datatype for this element (between 0 and 255).
+    verbose : bool
+        If False, warnings about the number of vertices of the polygon will
+        be suppressed.
+
+    Notes
+    -----
+    The last point should not be equal to the first (polygons are
+    automatically closed).
+
+    The GDSII specification supports only a maximum of 199 vertices per
+    polygon.
+
+    Examples
+    --------
+    >>> triangle_pts = [(0, 40), (15, 40), (10, 50)]
+    >>> triangle = gdspy.Polygon(triangle_pts)
+    >>> myCell.add(triangle)
+    """
+
+    __slots__ = 'layers', 'datatypes', 'polygons'
+
+    def __init__(self, points, layer=0, datatype=0, verbose=True):
+        if len(points) > 199 and verbose:
+            warnings.warn(
+                "[GDSPY] A polygon with more than 199 points was "
+                "created (not officially supported by the GDSII "
+                "format).",
+                RuntimeWarning,
+                stacklevel=2)
+        self.layers = [layer]
+        self.datatypes = [datatype]
+        self.polygons = [numpy.array(points)]
+
+    def __str__(self):
+        return "Polygon ({} vertices, layer {}, datatype {})".format(
+            len(self.polygons[0]), self.layers[0], self.datatypes[0])
+
+
+class Rectangle(PolygonSet):
     """
     Rectangular geometric object.
 
@@ -811,24 +540,26 @@ class Rectangle(Polygon):
     >>> myCell.add(rectangle)
     """
 
-    __slots__ = 'layer', 'datatype', 'points'
+    __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self, point1, point2, layer=0, datatype=0):
-        self.layer = layer
-        self.points = numpy.array(
-            [[point1[0], point1[1]], [point1[0], point2[1]],
-             [point2[0], point2[1]], [point2[0], point1[1]]])
-        self.datatype = datatype
+        self.layers = [layer]
+        self.datatypes = [datatype]
+        self.polygons = [
+            numpy.array([[point1[0], point1[1]], [point1[0], point2[1]],
+                         [point2[0], point2[1]], [point2[0], point1[1]]])
+        ]
 
     def __str__(self):
         return ("Rectangle (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, "
-                "datatype {3})").format(self.points[0], self.points[2],
-                                        self.layer, self.datatype)
+                "datatype {3})").format(self.polygons[0][0],
+                                        self.polygons[0][2], self.layers[0],
+                                        self.datatypes[0])
 
     def __repr__(self):
-        return "Rectangle({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})"\
-                .format(self.points[0], self.points[2], self.layer,
-                        self.datatype)
+        return "Rectangle(({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {2}, {3})"\
+                .format(self.polygons[0][0], self.polygons[0][2], self.layers[0],
+                        self.datatypes[0])
 
 
 class Round(PolygonSet):
@@ -2364,7 +2095,7 @@ class Cell(object):
     name : string
         The name of this cell.
     elements : list
-        List of cell elements (``Polygon``, ``PolygonSet``, ``CellReference``,
+        List of cell elements (``PolygonSet``, ``CellReference``,
         ``CellArray``).
     labels : list
         List of ``Label``.
@@ -2516,9 +2247,7 @@ class Cell(object):
         """
         layers = set()
         for element in self.elements:
-            if isinstance(element, Polygon):
-                layers.add(element.layer)
-            elif isinstance(element, PolygonSet):
+            if isinstance(element, PolygonSet):
                 layers.update(element.layers)
             elif isinstance(element, CellReference) or isinstance(
                     element, CellArray):
@@ -2538,9 +2267,7 @@ class Cell(object):
         """
         datatypes = set()
         for element in self.elements:
-            if isinstance(element, Polygon):
-                datatypes.add(element.datatype)
-            elif isinstance(element, PolygonSet):
+            if isinstance(element, PolygonSet):
                 datatypes.update(element.datatypes)
             elif isinstance(element, CellReference) or isinstance(
                     element, CellArray):
@@ -2564,9 +2291,7 @@ class Cell(object):
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
             for element in self.elements:
-                if isinstance(element, Polygon):
-                    all_polygons.append(element.points)
-                elif isinstance(element, PolygonSet):
+                if isinstance(element, PolygonSet):
                     all_polygons.extend(element.polygons)
                 elif isinstance(element, CellReference) or isinstance(
                         element, CellArray):
@@ -2620,13 +2345,7 @@ class Cell(object):
             if by_spec:
                 polygons = {}
                 for element in self.elements:
-                    if isinstance(element, Polygon):
-                        key = (element.layer, element.datatype)
-                        if key in polygons:
-                            polygons[key].append(numpy.array(element.points))
-                        else:
-                            polygons[key] = [numpy.array(element.points)]
-                    elif isinstance(element, PolygonSet):
+                    if isinstance(element, PolygonSet):
                         for ii in range(len(element.polygons)):
                             key = (element.layers[ii], element.datatypes[ii])
                             if key in polygons:
@@ -2647,9 +2366,7 @@ class Cell(object):
             else:
                 polygons = []
                 for element in self.elements:
-                    if isinstance(element, Polygon):
-                        polygons.append(numpy.array(element.points))
-                    elif isinstance(element, PolygonSet):
+                    if isinstance(element, PolygonSet):
                         for points in element.polygons:
                             polygons.append(numpy.array(points))
                     else:
@@ -3994,10 +3711,10 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
 
     Parameters
     ----------
-    objects : ``Polygon``, ``PolygonSet``, or list
+    objects : ``PolygonSet``, or list
         Operand of the slice operation.  If this is a list, each element must
-        be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``, or
-        an array-like[N][2] of vertices of a polygon.
+        be a ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
     position : number or list of numbers
         Positions to perform the slicing operation along the specified axis.
     axis : 0 or 1
@@ -4035,9 +3752,7 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     result = [[] for _ in range(len(pos) + 1)]
     polygons = []
     for obj in objects:
-        if isinstance(obj, Polygon):
-            polygons.append(obj.points)
-        elif isinstance(obj, PolygonSet):
+        if isinstance(obj, PolygonSet):
             polygons += obj.polygons
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             polygons += obj.get_polygons()
@@ -4067,10 +3782,9 @@ def offset(polygons,
     Parameters
     ----------
     polygons : polygon or array-like
-        Polygons to be offset.  Must be a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may contain
-        any of the previous objects or an array-like[N][2] of vertices of a
-        polygon.
+        Polygons to be offset.  Must be a ``PolygonSet``, ``CellReference``,
+        ``CellArray``, or an array.  The array may contain any of the previous
+        objects or an array-like[N][2] of vertices of a polygon.
     distance : number
         Offset distance.  Positive to expand, negative to shrink.
     join : {'miter', 'bevel', 'round'}
@@ -4102,18 +3816,14 @@ def offset(polygons,
         Return the offset shape as a set of polygons.
     """
     poly = []
-    if isinstance(polygons, Polygon):
-        poly.append(polygons.points)
-    elif isinstance(polygons, PolygonSet):
+    if isinstance(polygons, PolygonSet):
         poly += polygons.polygons
     elif isinstance(polygons, CellReference) or isinstance(
             polygons, CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
-            if isinstance(obj, Polygon):
-                poly.append(obj.points)
-            elif isinstance(obj, PolygonSet):
+            if isinstance(obj, PolygonSet):
                 poly += obj.polygons
             elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
                 poly += obj.get_polygons()
@@ -4139,15 +3849,13 @@ def fast_boolean(operandA,
     Parameters
     ----------
     operandA : polygon or array-like
-        First operand.  Must be a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may contain
-        any of the previous objects or an array-like[N][2] of vertices of a
-        polygon.
+        First operand.  Must be a ``PolygonSet``, ``CellReference``,
+        ``CellArray``, or an array.  The array may contain any of the previous
+        objects or an array-like[N][2] of vertices of a polygon.
     operandB : polygon, array-like or ``None``
-        Second operand.  Must be ``None``, a ``Polygon``, ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may contain
-        any of the previous objects or an array-like[N][2] of vertices of a
-        polygon.
+        Second operand.  Must be ``None``, a ``PolygonSet``, ``CellReference``,
+        ``CellArray``, or an array.  The array may contain any of the previous
+        objects or an array-like[N][2] of vertices of a polygon.
     operation : {'or', 'and', 'xor', 'not'}
         Boolean operation to be executed.  The 'not' operation returns the
         difference ``operandA - operandB``.
@@ -4171,17 +3879,13 @@ def fast_boolean(operandA,
     polyA = []
     polyB = []
     for poly, obj in zip((polyA, polyB), (operandA, operandB)):
-        if isinstance(obj, Polygon):
-            poly.append(obj.points)
-        elif isinstance(obj, PolygonSet):
+        if isinstance(obj, PolygonSet):
             poly += obj.polygons
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             poly += obj.get_polygons()
         elif obj is not None:
             for inobj in obj:
-                if isinstance(inobj, Polygon):
-                    poly.append(inobj.points)
-                elif isinstance(inobj, PolygonSet):
+                if isinstance(inobj, PolygonSet):
                     poly += inobj.polygons
                 elif isinstance(inobj, CellReference) or isinstance(
                         inobj, CellArray):
@@ -4206,7 +3910,7 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         Coordinates of the points to be tested or groups of points to be tested
         together.
     polygons : polygon or array-like
-        Polygons to be tested against.  Must be a ``Polygon``, ``PolygonSet``,
+        Polygons to be tested against.  Must be a ``PolygonSet``,
         ``CellReference``, ``CellArray``, or an array.  The array may contain
         any of the previous objects or an array-like[N][2] of vertices of a
         polygon.
@@ -4225,18 +3929,14 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         inside the set of polygons.
     """
     poly = []
-    if isinstance(polygons, Polygon):
-        poly.append(polygons.points)
-    elif isinstance(polygons, PolygonSet):
+    if isinstance(polygons, PolygonSet):
         poly += polygons.polygons
     elif isinstance(polygons, CellReference) or isinstance(
             polygons, CellArray):
         poly += polygons.get_polygons()
     else:
         for obj in polygons:
-            if isinstance(obj, Polygon):
-                poly.append(obj.points)
-            elif isinstance(obj, PolygonSet):
+            if isinstance(obj, PolygonSet):
                 poly += obj.polygons
             elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
                 poly += obj.get_polygons()
