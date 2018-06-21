@@ -1,7 +1,7 @@
 # GDSPY README
 
 [![Boost Software License - Version 1.0](https://img.shields.io/github/license/heitzmann/gdspy.svg)](http://www.boost.org/LICENSE_1_0.txt)
-[![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=latest)](http://gdspy.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=stable)](https://gdspy.readthedocs.io/en/stable/?badge=stable)
 [![Travis-CI Status](https://travis-ci.org/heitzmann/gdspy.svg?branch=master)](https://travis-ci.org/heitzmann/gdspy)
 [![Appveyor Status](https://ci.appveyor.com/api/projects/status/pr49a6bhxvbqwocy?svg=true)](https://ci.appveyor.com/project/heitzmann/gdspy)
 [![Downloads](https://img.shields.io/github/downloads/heitzmann/gdspy/total.svg)](https://github.com/heitzmann/gdspy/releases)

@@ -1,6 +1,6 @@
 ######################################################################
 #                                                                    #
-#  Copyright 2009-2017 Lucas Heitzmann Gabrielli.                    #
+#  Copyright 2009-2018 Lucas Heitzmann Gabrielli.                    #
 #  This file is part of gdspy, distributed under the terms of the    #
 #  Boost Software License - Version 1.0.  See the accompanying       #
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
@@ -1685,7 +1685,8 @@ class L1Path(PolygonSet):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        self.direction = _directions_dict[self.direction] * numpy.pi
+        if isinstance(self.direction, basestring):
+            self.direction = _directions_dict[self.direction] * numpy.pi
         self.direction += angle
         cur = numpy.array((self.x, self.y)) - c0
         self.x, self.y = cur * ca + cur[::-1] * sa + c0
