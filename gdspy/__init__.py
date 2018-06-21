@@ -1942,7 +1942,8 @@ class L1Path(PolygonSet):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        self.direction = _directions_dict[self.direction] * numpy.pi
+        if isinstance(self.direction, basestring):
+            self.direction = _directions_dict[self.direction] * numpy.pi
         self.direction += angle
         cur = numpy.array((self.x, self.y)) - c0
         self.x, self.y = cur * ca + cur[::-1] * sa + c0
