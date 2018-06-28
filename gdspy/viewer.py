@@ -348,13 +348,9 @@ class LayoutViewer(tkinter.Frame):
         if d != self.shown_depth:
             self.shown_cell = self.current_cell.get()
             self.shown_depth = d
-            pol_dict = self.cells[self.current_cell.get()].get_polygons(
-                by_spec=True, depth=self.shown_depth)
-            self._update_data(pol_dict)
+            self._update_data()
 
     def _update_canvas(self, *args):
-        pol_dict = self.cells[self.current_cell.get()].get_polygons(
-            by_spec=True, depth=self.shown_depth)
         if self.shown_cell is None:
             width = float(self.canvas.cget('width'))
             height = float(self.canvas.cget('height'))
@@ -364,6 +360,8 @@ class LayoutViewer(tkinter.Frame):
         self.shown_cell = self.current_cell.get()
         if self.cell_bb[self.current_cell.get()] is None:
             bb = [1e300, 1e300, -1e300, -1e300]
+            pol_dict = self.cells[self.current_cell.get()].get_polygons(
+                by_spec=True, depth=self.shown_depth)
             for pols in pol_dict.values():
                 for pol in pols:
                     bb[0] = min(bb[0], pol[:, 0].min())
@@ -394,7 +392,7 @@ class LayoutViewer(tkinter.Frame):
             add = (bb[2] - bb[0]) * 0.025
             bb[0] -= add
             bb[2] += add
-        self._update_data(pol_dict)
+        self._update_data()
         self.canvas.configure(scrollregion=tuple([x / self.scale for x in bb]))
         self.canvas.zoom_rect = None
         if self.canvas_margins is None:
@@ -402,14 +400,17 @@ class LayoutViewer(tkinter.Frame):
             self.canvas_margins = (int(self.canvas.winfo_width()) - width,
                                    int(self.canvas.winfo_height()) - height)
 
-    def _update_data(self, pol_dict):
+    def _update_data(self):
         self.canvas.delete(tkinter.ALL)
         self.l_canvas.delete(tkinter.ALL)
         self.canvas.ruler = None
         self.canvas.x_rl = 0
         self.canvas.y_rl = 0
+        pol_dict = self.cells[self.current_cell.get()].get_polygons(
+            by_spec=True, depth=self.shown_depth)
         lbl_dict = {}
-        for label in self.cells[self.current_cell.get()].labels:
+        for label in self.cells[self.current_cell.get()].get_labels(
+                depth=self.shown_depth):
             key = (label.layer, label.texttype)
             if key in lbl_dict:
                 lbl_dict[key].append(label)
