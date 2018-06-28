@@ -64,6 +64,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Changed the meaning of argument `unit` in `GdsLibrary.read_gds`.
 * Added argument `timestamp` to `Cell.to_gds`, `GdsLibrary.write_gds` and `GdsWriter`.
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
+* Added `PolygonSet.scale` utility method.
 * Added `PolygonSet.get_bounding_box` utility method.
 * Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
 * Improved `slice` to avoid errors when slicing in multiple positions at once.

@@ -221,6 +221,30 @@ class PolygonSet(object):
                          for points in self.polygons]
         return self
 
+    def scale(self, scalex, scaley=None, center=(0, 0)):
+        """
+        Scale this object.
+
+        Parameters
+        ----------
+        scalex : number
+            Scaling factor along the first axis.
+        scaley : number or ``None``
+            Scaling factor along the second axis.  If ``None``, same as
+            ``scalex``.
+        center : array-like[2]
+            Center point for the scaling operation.
+
+        Returns
+        -------
+        out : ``PolygonSet``
+            This object.
+        """
+        c0 = numpy.array(center)
+        s = scalex if scaley is None else numpy.array((scalex, scaley))
+        self.polygons = [(points - c0) * s + c0 for points in self.polygons]
+        return self
+
     def to_gds(self, multiplier):
         """
         Convert this object to a series of GDSII elements.
@@ -453,9 +477,9 @@ class PolygonSet(object):
 
         Parameters
         ----------
-        dx : float
+        dx : number
             distance to move in the x-direction
-        dy : float
+        dy : number
             distance to move in the y-direction
 
         Returns
@@ -463,9 +487,8 @@ class PolygonSet(object):
         out : ``PolygonSet``
             This object.
         """
-        for ii in range(len(self.polygons)):
-            self.polygons[ii] = self.polygons[ii] + [dx, dy]
-
+        vec = numpy.array((dx, dy))
+        self.polygons = [points + vec for points in self.polygons]
         return self
 
 
