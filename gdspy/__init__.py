@@ -2391,7 +2391,7 @@ class Cell(object):
             List containing the labels in this cell and its references.
         """
         labels = libCopy.deepcopy(self.labels)
-        if depth is None or depth >= 0:
+        if depth is None or depth > 0:
             for element in self.elements:
                 if isinstance(element, CellReference):
                     labels.extend(
