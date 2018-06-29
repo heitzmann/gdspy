@@ -2265,10 +2265,12 @@ class Cell(object):
         Examples
         --------
         Remove polygons in layer 1:
+
         >>> cell.remove_polygons(lambda pts, layer, datatype:
         ...                      layer == 1)
 
         Remove polygons with negative x coordinates:
+
         >>> cell.remove_polygons(lambda pts, layer, datatype:
         ...                      any(pts[:, 0] < 0))
         """
@@ -2312,6 +2314,7 @@ class Cell(object):
         Examples
         --------
         Remove labels in layer 1:
+
         >>> cell.remove_labels(lambda lbl: lbl.layer == 1)
         """
         ii = 0
