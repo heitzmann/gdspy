@@ -59,6 +59,8 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Upcoming
+
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
 * Added `Cell.remove_polygons` and `Cell.remove_labels` functions to allow filtering a cell contents based, for example, on each element's layer.
