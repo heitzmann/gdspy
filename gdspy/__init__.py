@@ -3338,14 +3338,12 @@ class GdsLibrary(object):
             opened for reading in binary format.
         units : {'convert', 'import', 'skip'}
             Controls how to scale and use the units in the imported
-            file:
-            - 'convert': the imported geometry is scaled to this library
-              units.
-            - 'import': the unit and precision in this library are
-              replaced by those from the imported file.
-            - 'skip': the imported geometry is not scaled and units are
-              not replaced; the geometry is imported in the *user units*
-              of the file.
+            file.  ``'convert'``: the imported geometry is scaled to
+            this library units. ``'import'``: the unit and precision in
+            this library are replaced by those from the imported file.
+            ``'skip'``: the imported geometry is not scaled and units
+            are not replaced; the geometry is imported in the *user
+            units* of the file.
         rename : dictionary
             Dictionary used to rename the imported cells.  Keys and
             values must be strings.
