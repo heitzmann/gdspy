@@ -60,15 +60,16 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Upcoming
-* Added `unit` and `precision` arguments to `GdsLibrary` initialization and removed from its `write_gds` method.
-* Changed the meaning of argument `unit` in `GdsLibrary.read_gds`.
-* Added argument `timestamp` to `Cell.to_gds`, `GdsLibrary.write_gds` and `GdsWriter`.
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
+* Added `Cell.remove_polygons` and `Cell.remove_labels` functions to allow filtering a cell contents based, for example, on each element's layer.
 * Added `PolygonSet.scale` utility method.
 * Added `PolygonSet.get_bounding_box` utility method.
-* Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
+* Added argument `timestamp` to `Cell.to_gds`, `GdsLibrary.write_gds` and `GdsWriter`.
+* Added `unit` and `precision` arguments to `GdsLibrary` initialization and removed from its `write_gds` method.
+* Changed the meaning of argument `unit` in `GdsLibrary.read_gds`.
 * Improved `slice` to avoid errors when slicing in multiple positions at once.
-* Improved `Polygon.fracture` and `PolygonSet.fracture` to reduce number of function calls.
+* Improved `PolygonSet.fracture` to reduce number of function calls.
+* Removed incorrect absolute flags for magnification and rotation in `CellReference` and `CellArray`.
 * Minor bug fixes.
 * Documentation fixes.
 * Removed deprecated classes and functions.

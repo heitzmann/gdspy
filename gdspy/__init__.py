@@ -2242,6 +2242,86 @@ class Cell(object):
         self._bb_valid = False
         return self
 
+    def remove_polygons(self, test):
+        """
+        Remove polygons from this cell.
+
+        The function or callable ``test`` is called for each polygon in
+        the cell.  If its return value evaluates to ``True``, the
+        corresponding polygon is removed from the cell.
+
+        Parameters
+        ----------
+        test : callable
+            Test function to query whether a polygon should be removed.
+            The function is called with arguments:
+            ``(points, layer, datatype)``
+
+        Returns
+        -------
+        out : ``Cell``
+            This cell.
+
+        Examples
+        --------
+        Remove polygons in layer 1:
+        >>> cell.remove_polygons(lambda pts, layer, datatype:
+        ...                      layer == 1)
+
+        Remove polygons with negative x coordinates:
+        >>> cell.remove_polygons(lambda pts, layer, datatype:
+        ...                      any(pts[:, 0] < 0))
+        """
+        empty = []
+        for element in self.elements:
+            if isinstance(element, PolygonSet):
+                ii = 0
+                while ii < len(element.polygons):
+                    if test(element.polygons[ii], element.layers[ii],
+                            element.datatypes[ii]):
+                        element.polygons.pop(ii)
+                        element.layers.pop(ii)
+                        element.datatypes.pop(ii)
+                    else:
+                        ii += 1
+                if len(element.polygons) == 0:
+                    empty.append(element)
+        for element in empty:
+            self.elements.remove(element)
+        return self
+
+    def remove_labels(self, test):
+        """
+        Remove labels from this cell.
+
+        The function or callable ``test`` is called for each label in
+        the cell.  If its return value evaluates to ``True``, the
+        corresponding label is removed from the cell.
+
+        Parameters
+        ----------
+        test : callable
+            Test function to query whether a label should be removed.
+            The function is called with the label as the only argument.
+
+        Returns
+        -------
+        out : ``Cell``
+            This cell.
+
+        Examples
+        --------
+        Remove labels in layer 1:
+        >>> cell.remove_labels(lambda lbl: lbl.layer == 1)
+        """
+        ii = 0
+        while ii < len(self.labels):
+            if test(self.labels[ii]):
+                self.labels.pop(ii)
+            else:
+                ii += 1
+        return self
+
     def area(self, by_spec=False):
         """
         Calculate the total area of the elements on this cell, including
