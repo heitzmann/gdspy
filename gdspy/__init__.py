@@ -312,9 +312,9 @@ class PolygonSet(object):
                 poly_area = 0
                 for ii in range(1, len(points) - 1):
                     poly_area += (points[0][0] - points[ii + 1][0]) * (
-                        points[ii][1] -
-                        points[0][1])(points[0][1] - points[ii + 1][1]) * (
-                            points[ii][0] - points[0][0])
+                        points[ii][1] - points[0][1]) - (
+                            points[0][1] - points[ii + 1][1]) * (
+                                points[ii][0] - points[0][0])
                 path_area += 0.5 * abs(poly_area)
         return path_area
 
