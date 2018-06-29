@@ -6,7 +6,7 @@ echo
 
 if [ "$GOON" = 'Y' ] ; then
 	wget "https://github.com/heitzmann/gdspy/archive/$v.tar.gz"
-	md5=$(md5sum "$v.tar.gz" | cut -d' ' -f1)
+	sha256=$(sha256sum "$v.tar.gz" | cut -d' ' -f1)
 
 	for i in '' 2; do
 		git clone "ssh://aur@aur.archlinux.org/python${i}-gdspy.git"
@@ -14,7 +14,7 @@ if [ "$GOON" = 'Y' ] ; then
 		cd "python${i}-gdspy"
 		sed -i -e "s|pkgver=.*$|pkgver=${v:1}|" \
 			-e "s|pkgrel=.*$|pkgrel=1|" \
-			-e "s|md5sums=.*$|md5sums=('$md5')|" \
+			-e "s|^.*sums=.*$|sha256sums=('$sha256')|" \
 					 PKGBUILD
 		makepkg --printsrcinfo > .SRCINFO
 
