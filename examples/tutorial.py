@@ -303,7 +303,7 @@ trans_cell.add(ref2)
 
 # Same goes for Labels & Text
 text1 = gdspy.Text(
-    'Created with gsdpy ' + gdspy.__version__, 7, (-7, -35), layer=6)
+    'Created with gdspy ' + gdspy.__version__, 7, (-7, -35), layer=6)
 text2 = gdspy.copy(text1, 0, -20)
 label1 = gdspy.Label(
     'Created with gdspy ' + gdspy.__version__, (-7, -36), 'nw', layer=6)
