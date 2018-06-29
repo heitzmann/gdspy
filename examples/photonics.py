@@ -22,7 +22,7 @@ def waveguide(path,
     '''
     Easy waveguide creation tool with absolute positioning.
 
-    path             : `gdspy.Path` which servers as base for the waveguide
+    path             : starting `gdspy.Path`
     points           : coordinates along which the waveguide will travel
     finish           : end point of the waveguide
     bend_radius      : radius of the turns in the waveguide
@@ -86,9 +86,9 @@ def taper(path,
     layer       : GDSII layer number (int or list)
     datatype    : GDSII datatype number (int or list)
 
-    Parameters `layer` and `datatype` must be of the same type. If they are
-    lists, they must have the same length. Their length indicate the number of
-    pieces that compose the taper.
+    Parameters `layer` and `datatype` must be of the same type. If they
+    are lists, they must have the same length. Their length indicate the
+    number of pieces that compose the taper.
 
     Return `path`.
     '''
@@ -128,17 +128,18 @@ def grating(period,
 
     period          : grating period
     number_of_teeth : number of teeth in the grating
-    fill_frac       : filling fraction of the teeth with respect to the period
+    fill_frac       : filling fraction of the teeth (w.r.t. the period)
     width           : width of the grating
     position        : grating position (feed point)
     direction       : one of {'+x', '-x', '+y', '-y'}
     lda             : free-space wavelength
     sin_theta       : sine of incidence angle
     focus_distance  : focus distance (negative for straight grating)
-    focus_width     : if non-negative, the focusing area is included in the
-                      result (usually for negative resists) and this is the
-                      width of the waveguide connecting to the grating
-    evaluations     : number of parametric evaluations of `path.parametric`
+    focus_width     : if non-negative, the focusing area is included in
+                      the result (usually for negative resists) and this
+                      is the width of the waveguide connecting to the
+                      grating
+    evaluations     : number of evaluations of `path.parametric`
     layer           : GDSII layer number
     datatype        : GDSII datatype number
 

@@ -93,27 +93,29 @@ class LayoutViewer(tkinter.Frame):
 
     The view can be scrolled vertically with the mouse wheel, and
     horizontally by holding the shift key and using the mouse wheel.
-    Dragging the 2nd mouse button also scrolls the view, and if control is
-    held down, it scrolls 10 times faster.
+    Dragging the 2nd mouse button also scrolls the view, and if control
+    is held down, it scrolls 10 times faster.
 
     You can zoom in or out using control plus the mouse wheel, or drag a
     rectangle on the window with the 1st mouse button to zoom into that
     area.
 
-    A ruler is available by clicking the 1st mouse button anywhere on the
-    view and moving the mouse around.  The distance is shown in the status
-    area.
+    A ruler is available by clicking the 1st mouse button anywhere on
+    the view and moving the mouse around.  The distance is shown in the
+    status area.
 
     Double-clicking on any polygon gives some information about it.
 
-    Color and pattern for each layer/datatype specification can be changed
-    by left and right clicking on the icon in the layer/datatype list. Left
-    and right clicking the text label changes the visibility.
+    Color and pattern for each layer/datatype specification can be
+    changed by left and right clicking on the icon in the layer/datatype
+    list.  Left and right clicking the text label changes the
+    visibility.
 
     Parameters
     ----------
     library : ``GdsLibrary``
-        GDSII library to display.  If ``None``, the current library is used.
+        GDSII library to display.  If ``None``, the current library is
+        used.
     cells : Cell, string or array-like
         The array of cells to be included in the view. If ``None``, all
         cells listed in the current library are used.
@@ -122,13 +124,13 @@ class LayoutViewer(tkinter.Frame):
     depth : integer
         Initial depth of referenced cells to be displayed.
     color : dictionary
-        Dictionary of colors for each tuple (layer, datatype).  The colors
-        must be strings in the format ``#rrggbb``.  A value with key
-        ``default`` will be used as default color.
+        Dictionary of colors for each tuple (layer, datatype).  The
+        colors must be strings in the format ``#rrggbb``.  A value
+        with key ``default`` will be used as default color.
     pattern : dictionary
         Dictionary of patterns for each tuple (layer, datatype).  The
-        patterns must be integers between 0 and 9, inclusive.  A value with
-        key ``default`` will be used as default pattern.
+        patterns must be integers between 0 and 9, inclusive.  A value
+        with key ``default`` will be used as default pattern.
     background : string
         Canvas background color in the format ``#rrggbb``.
     width : integer
@@ -140,11 +142,14 @@ class LayoutViewer(tkinter.Frame):
     --------
     White background, filled shapes:
 
-    >>> gdspy.LayoutViewer(pattern={'default':8}, background='#FFFFFF')
+    >>> gdspy.LayoutViewer(pattern={'default': 8},
+    ...                    background='#FFFFFF')
 
-    No filling, black color for layer 0, datatype 1, automatic for others:
+    No filling, black color for layer 0, datatype 1, automatic for
+    others:
 
-    >>> gdspy.LayoutViewer(pattern={'default':9}, color={(0,1):'#000000'})
+    >>> gdspy.LayoutViewer(pattern={'default': 9},
+    ...                    color={(0, 1): '#000000'})
     """
 
     def __init__(self,
