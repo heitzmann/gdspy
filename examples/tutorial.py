@@ -278,7 +278,7 @@ ref_cell.add(
         'Created with gdspy ' + gdspy.__version__, (-7, -36), 'nw', layer=6))
 
 # ------------------------------------------------------------------ #
-#      Translation
+#      TRANSLATION AND REFLECTION
 # ------------------------------------------------------------------ #
 
 trans_cell = gdspy.Cell('TRANS')
@@ -312,6 +312,12 @@ trans_cell.add(text1)
 trans_cell.add(text2)
 trans_cell.add(label1)
 trans_cell.add(label2)
+
+# Reflection across a line defined by the intersection of two points
+# allows the mirroring of an polygon over an abritrary axis: mirror(p1,p2)
+rect4 = gdspy.Rectangle((80, 0), (81, 1), 3)
+rect4.mirror((80, 2), (79, 0))
+trans_cell.add(rect4)
 
 # ------------------------------------------------------------------ #
 #      OUTPUT
