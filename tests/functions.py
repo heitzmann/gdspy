@@ -7,6 +7,7 @@
 #                                                                    #
 ######################################################################
 
+import datetime
 import numpy
 import gdspy
 
@@ -37,12 +38,29 @@ def test_twoway():
         assert x == f(g(x))
 
 
+def test_slice():
+    pass
+
+
+def test_offset():
+    r = gdspy.Rectangle((0, 0), (1, 2))
+    r2 = gdspy.Rectangle((-1, -1), (2, 3))
+    assert gdspy.fast_boolean(gdspy.offset(r, 1), r2, 'not') is None
+
+
+def test_boolean():
+    pass
+
+
 def test_inside():
     polygons = [
         gdspy.Round((0, 0), 10, inner_radius=5, number_of_points=180),
-        gdspy.Rectangle((20, -10), (40, 10)),
-        gdspy.Rectangle((-10, 0), (10, 20))
+        gdspy.Rectangle((20, -10), (40, 10)).polygons[0],
+        gdspy.CellReference(
+            gdspy.Cell('X').add(gdspy.Rectangle((-10, 0), (10, 20)))),
     ]
+    assert gdspy.inside([(0, 0)], polygons[0]) == (False, )
+    assert gdspy.inside([(0, 0)], polygons[2]) == (True, )
     assert gdspy.inside([(0, 0)], polygons) == (True, )
     assert gdspy.inside([(0, 0), (0, 30), (30, 0), (0, -1)], polygons) == \
         (True, False, True, False)
@@ -159,3 +177,22 @@ def test_write_gds(tmpdir):
         lib2.read_gds(fin)
     assert lib2.name == 'lib2'
     assert len(lib2.cell_dict) == 4
+
+
+def test_gdsii_hash(tmpdir):
+    gdspy.current_library = gdspy.GdsLibrary()
+    c1 = gdspy.Cell('fu_rw_gds_1')
+    c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
+    c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
+    c2 = gdspy.Cell('fu_rw_gds_2')
+    c2.add(gdspy.Round((0, 0), 1, number_of_points=32, max_points=20))
+    c3 = gdspy.Cell('fu_rw_gds_3')
+    c3.add(gdspy.CellReference(c1, (0, 1), -90, 2, True))
+    c4 = gdspy.Cell('fu_rw_gds_4')
+    c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
+    out1 = str(tmpdir.join('test1.gds'))
+    out2 = str(tmpdir.join('test2.gds'))
+    gdspy.current_library.write_gds(out1)
+    gdspy.current_library.write_gds(
+        out2, timestamp=datetime.datetime.today() + datetime.timedelta(1))
+    assert gdspy.gdsii_hash(out1) == gdspy.gdsii_hash(out2)
