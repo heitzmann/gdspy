@@ -486,6 +486,28 @@ class PolygonSet(object):
         vec = numpy.array((dx, dy))
         self.polygons = [points + vec for points in self.polygons]
         return self
+    
+    def mirror(self, p1, p2):
+        """
+        Mirror the polygons over a line through the points 1 and 2
+
+        Parameters
+        ----------
+        p1 : array-like[2]
+            first point defining the origin of the reflection
+        p2 : array-like[2]
+            second point defining the line over which the polygons will be reflected
+
+        Returns
+        -------
+        out : ``PolygonSet``
+            This object.
+        """
+        origin = numpy.array(p1)
+        vec = numpy.array(p2) - origin
+        vec_r = vec * (2 / numpy.inner(vec, vec))
+        self.polygons = [numpy.outer(numpy.inner(points - origin, vec_r), vec) - points + 2 * origin for points in self.polygons]
+        return self
 
 
 class Polygon(PolygonSet):
