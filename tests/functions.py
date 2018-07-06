@@ -7,9 +7,26 @@
 #                                                                    #
 ######################################################################
 
+import pytest
 import datetime
 import numpy
 import gdspy
+
+
+@pytest.fixture()
+def library():
+    lib = gdspy.GdsLibrary()
+    c1 = gdspy.Cell('cell1', True)
+    c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
+    c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
+    c2 = gdspy.Cell('cell2', True)
+    c2.add(gdspy.Round((0, 0), 1, number_of_points=32, max_points=20))
+    c3 = gdspy.Cell('cell3', True)
+    c3.add(gdspy.CellReference(c1, (0, 1), -90, 2, True))
+    c4 = gdspy.Cell('cell4', True)
+    c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
+    lib.add([c1, c2, c3, c4])
+    return lib
 
 
 def test_8b_f():
@@ -103,31 +120,21 @@ def test_copy():
     assert d.origin == (-1, 2)
 
 
-def test_write_gds(tmpdir):
-    gdspy.current_library = gdspy.GdsLibrary()
-    c1 = gdspy.Cell('fu_rw_gds_1')
-    c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
-    c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
-    c2 = gdspy.Cell('fu_rw_gds_2')
-    c2.add(gdspy.Round((0, 0), 1, number_of_points=32, max_points=20))
-    c3 = gdspy.Cell('fu_rw_gds_3')
-    c3.add(gdspy.CellReference(c1, (0, 1), -90, 2, True))
-    c4 = gdspy.Cell('fu_rw_gds_4')
-    c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
-
+def test_write_gds(library, tmpdir):
+    gdspy.current_library = library
     fname1 = str(tmpdir.join('test1.gds'))
     gdspy.write_gds(fname1, name='lib', unit=2e-6, precision=1e-8)
     lib1 = gdspy.GdsLibrary(
         infile=fname1,
         units='convert',
-        rename={'fu_rw_gds_1': '1'},
+        rename={'cell1': '1'},
         layers={2: 4},
         datatypes={4: 2},
         texttypes={6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
     assert set(lib1.cell_dict.keys()) == {
-        '1', 'fu_rw_gds_2', 'fu_rw_gds_3', 'fu_rw_gds_4'
+        '1', 'cell2', 'cell3', 'cell4'
     }
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
@@ -143,12 +150,12 @@ def test_write_gds(tmpdir):
     assert c.labels[0].layer == 5
     assert c.labels[0].texttype == 7
 
-    c = lib1.cell_dict['fu_rw_gds_2']
+    c = lib1.cell_dict['cell2']
     assert len(c.elements) == 2
     assert isinstance(c.elements[0], gdspy.Polygon) \
            and isinstance(c.elements[1], gdspy.Polygon)
 
-    c = lib1.cell_dict['fu_rw_gds_3']
+    c = lib1.cell_dict['cell3']
     assert len(c.elements) == 1
     assert isinstance(c.elements[0], gdspy.CellReference)
     assert c.elements[0].ref_cell == lib1.cell_dict['1']
@@ -157,10 +164,10 @@ def test_write_gds(tmpdir):
     assert c.elements[0].magnification == 2
     assert c.elements[0].x_reflection == True
 
-    c = lib1.cell_dict['fu_rw_gds_4']
+    c = lib1.cell_dict['cell4']
     assert len(c.elements) == 1
     assert isinstance(c.elements[0], gdspy.CellArray)
-    assert c.elements[0].ref_cell == lib1.cell_dict['fu_rw_gds_2']
+    assert c.elements[0].ref_cell == lib1.cell_dict['cell2']
     assert c.elements[0].origin[0] == -2 and c.elements[0].origin[1] == -4
     assert c.elements[0].rotation == 180
     assert c.elements[0].magnification == 0.5
@@ -179,20 +186,10 @@ def test_write_gds(tmpdir):
     assert len(lib2.cell_dict) == 4
 
 
-def test_gdsii_hash(tmpdir):
-    gdspy.current_library = gdspy.GdsLibrary()
-    c1 = gdspy.Cell('fu_rw_gds_1')
-    c1.add(gdspy.Rectangle((0, -1), (1, 2), 2, 4))
-    c1.add(gdspy.Label('label', (1, -1), 'w', 45, 1.5, True, 5, 6))
-    c2 = gdspy.Cell('fu_rw_gds_2')
-    c2.add(gdspy.Round((0, 0), 1, number_of_points=32, max_points=20))
-    c3 = gdspy.Cell('fu_rw_gds_3')
-    c3.add(gdspy.CellReference(c1, (0, 1), -90, 2, True))
-    c4 = gdspy.Cell('fu_rw_gds_4')
-    c4.add(gdspy.CellArray(c2, 2, 3, (1, 4), (-1, -2), 180, 0.5, True))
+def test_gdsii_hash(library, tmpdir):
     out1 = str(tmpdir.join('test1.gds'))
     out2 = str(tmpdir.join('test2.gds'))
-    gdspy.current_library.write_gds(out1)
-    gdspy.current_library.write_gds(
+    library.write_gds(out1)
+    library.write_gds(
         out2, timestamp=datetime.datetime.today() + datetime.timedelta(1))
     assert gdspy.gdsii_hash(out1) == gdspy.gdsii_hash(out2)
