@@ -314,7 +314,7 @@ trans_cell.add(label1)
 trans_cell.add(label2)
 
 # Reflection across a line defined by 2 points allows the mirroring of
-# a polygon over an arbitrary axis: mirror(p1,p2)
+# a polygon over an arbitrary axis:
 rect4 = gdspy.Rectangle((80, 0), (81, 1), 3)
 rect4.mirror((80, 2), (79, 0))
 trans_cell.add(rect4)
