@@ -126,7 +126,7 @@ class PolygonSet(object):
 
     Parameters
     ----------
-    polygons : list of array-like[N][2]
+    polygons : iterable of array-like[N][2]
         List containing the coordinates of the vertices of each polygon.
     layer : integer
         The GDSII layer number for this element.
@@ -157,19 +157,17 @@ class PolygonSet(object):
     __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self, polygons, layer=0, datatype=0, verbose=True):
-        self.layers = [layer] * len(polygons)
-        self.datatypes = [datatype] * len(polygons)
-        self.polygons = [None] * len(polygons)
-        for i in range(len(polygons)):
-            self.polygons[i] = numpy.array(polygons[i])
-            if len(polygons[i]) > 199 and verbose:
-                verbose = False
-                warnings.warn(
-                    "[GDSPY] A polygon with more than 199 points was "
-                    "created (not officially supported by the GDSII "
-                    "format).",
-                    RuntimeWarning,
-                    stacklevel=2)
+        self.polygons = [numpy.array(p) for p in polygons]
+        self.layers = [layer] * len(self.polygons)
+        self.datatypes = [datatype] * len(self.polygons)
+        if verbose and any(p.shape[0] > 199 for p in self.polygons):
+            verbose = False
+            warnings.warn(
+                "[GDSPY] A polygon with more than 199 points was "
+                "created (not officially supported by the GDSII "
+                "format).",
+                RuntimeWarning,
+                stacklevel=2)
 
     def __str__(self):
         return ("PolygonSet ({} polygons, {} vertices, layers {}, "
@@ -384,11 +382,9 @@ class PolygonSet(object):
 
         Parameters
         ----------
-        radius : number, list
+        radius : number
             Radius of the corners.  If number: All corners filleted by
-            that amount.  If list: Specify fillet radii on a per-corner
-            basis (list length must be equal to the number of points in
-            the polygon)
+            that amount.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The
             number of vertices in each corner of the polygon will be the
@@ -2245,25 +2241,27 @@ class Cell(object):
 
         Parameters
         ----------
-        element : object, list
-            The element or list of elements to be inserted in this cell.
+        element : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+            The element or iterable of elements to be inserted in this
+            cell.
 
         Returns
         -------
         out : ``Cell``
             This cell.
         """
-        if isinstance(element, list):
+        if (isinstance(element, PolygonSet) or
+                isinstance(element, CellReference) or
+                isinstance(element, CellArray)):
+            self.elements.append(element)
+        elif isinstance(element, Label):
+            self.labels.append(element)
+        else:
             for e in element:
                 if isinstance(e, Label):
                     self.labels.append(e)
                 else:
                     self.elements.append(e)
-        else:
-            if isinstance(element, Label):
-                self.labels.append(element)
-            else:
-                self.elements.append(element)
         self._bb_valid = False
         return self
 
@@ -3350,7 +3348,7 @@ class GdsLibrary(object):
 
         Parameters
         ----------
-        cell : ``Cell`` of list of ``Cell``
+        cell : ``Cell`` or iterable
             Cells to be included in the library.
         overwrite_duplicate : bool
             If True an existing cell with the same name in the library
@@ -3392,9 +3390,9 @@ class GdsLibrary(object):
         outfile : file or string
             The file (or path) where the GDSII stream will be written.
             It must be opened for writing operations in binary format.
-        cells : array-like
-            The list of cells or cell names to be included in the
-            library.  If ``None``, all cells are used.
+        cells : iterable
+            The cells or cell names to be included in the library.  If 
+            ``None``, all cells are used.
         timestamp : datetime object
             Sets the GDSII timestamp.  If ``None``, the current time is
             used.
@@ -3871,10 +3869,10 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
 
     Parameters
     ----------
-    objects : ``PolygonSet``, or list
-        Operand of the slice operation.  If this is a list, each element
-        must be a ``PolygonSet``, ``CellReference``, ``CellArray``, or
-        an array-like[N][2] of vertices of a polygon.
+    objects : ``PolygonSet`` or iterable
+        Operand of the slice operation.  If this is an iterable, each
+        element must be a ``PolygonSet``, ``CellReference``,
+        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
     position : number or list of numbers
         Positions to perform the slicing operation along the specified
         axis.
@@ -3886,9 +3884,10 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
         The GDSII layer numbers for the elements between each division.
         If the number of layers in the list is less than the number of
         divided regions, the list is repeated.
-    datatype : integer
+    datatype : integer, list
         The GDSII datatype for the resulting element (between 0 and
-        255).
+        255).  If the number of datatypes in the list is less than the
+        number of divided regions, the list is repeated.
 
     Returns
     -------
@@ -3905,27 +3904,31 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     """
     if not isinstance(layer, list):
         layer = [layer]
-    if not isinstance(objects, list):
-        objects = [objects]
+    if not isinstance(datatype, list):
+        datatype = [datatype]
     if not isinstance(position, list):
         pos = [position]
     else:
         pos = sorted(position)
     result = [[] for _ in range(len(pos) + 1)]
-    polygons = []
-    for obj in objects:
-        if isinstance(obj, PolygonSet):
-            polygons.extend(obj.polygons)
-        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-            polygons.extend(obj.get_polygons())
-        else:
-            polygons.append(obj)
+    if isinstance(objects, PolygonSet):
+        polygons = objects.polygons
+    else:
+        polygons = []
+        for obj in objects:
+            if isinstance(obj, PolygonSet):
+                polygons.extend(obj.polygons)
+            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
+                polygons.extend(obj.get_polygons())
+            else:
+                polygons.append(obj)
     scaling = 1 / precision
     for pol in polygons:
         for r, p in zip(result, clipper._chop(pol, pos, axis, scaling)):
             r.extend(p)
     for i in range(len(result)):
-        result[i] = PolygonSet(result[i], layer[i % len(layer)], datatype)
+        result[i] = PolygonSet(result[i], layer[i % len(layer)],
+                               datatype[i % len(datatype)])
     return result
 
 
@@ -4056,8 +4059,8 @@ def fast_boolean(operandA,
             for inobj in obj:
                 if isinstance(inobj, PolygonSet):
                     poly.extend(inobj.polygons)
-                elif isinstance(inobj, CellReference) or isinstance(
-                        inobj, CellArray):
+                elif (isinstance(inobj, CellReference) or
+                      isinstance(inobj, CellArray)):
                     poly.extend(inobj.get_polygons())
                 else:
                     poly.append(inobj)
@@ -4075,19 +4078,19 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
 
     Parameters
     ----------
-    points : array-like[N][2] or list of array-like[N][2]
+    points : array-like[N][2] or sequence of array-like[N][2]
         Coordinates of the points to be tested or groups of points to be
         tested together.
-    polygons : polygon or array-like
+    polygons : polygon or iterable
         Polygons to be tested against.  Must be a ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+        ``CellReference``, ``CellArray``, or an iterable.  The iterable
+        may contain any of the previous objects or an array-like[N][2]
+        of vertices of a polygon.
     short_circuit : {'any', 'all'}
-        If `points` is a list of point groups, testing within each group
-        will be short-circuited if any of the points in the group is
-        inside ('any') or outside ('all') the polygons.  If `points` is
-        simply a list of points, this parameter has no effect.
+        If `points` is a sequence of point groups, testing within each
+        group will be short-circuited if any of the points in the group
+        is inside ('any') or outside ('all') the polygons.  If `points`
+        is simply a sequence of points, this parameter has no effect.
     precision : float
         Desired precision for rounding vertice coordinates.
 
@@ -4100,8 +4103,8 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
     poly = []
     if isinstance(polygons, PolygonSet):
         poly.extend(polygons.polygons)
-    elif isinstance(polygons, CellReference) or isinstance(
-            polygons, CellArray):
+    elif (isinstance(polygons, CellReference) or
+          isinstance(polygons, CellArray)):
         poly.extend(polygons.get_polygons())
     else:
         for obj in polygons:
@@ -4174,8 +4177,8 @@ def write_gds(outfile,
         The file (or path) where the GDSII stream will be written.  It
         must be opened for writing operations in binary format.
     cells : array-like
-        The list of cells or cell names to be included in the library.
-        If ``None``, all cells are used.
+        The sequence of cells or cell names to be included in the
+        library.  If ``None``, all cells are used.
     name : string
         Name of the GDSII library.
     unit : number
