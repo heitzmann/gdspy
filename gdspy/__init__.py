@@ -3863,13 +3863,46 @@ class GdsWriter(object):
             self._outfile.close()
 
 
-def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
+def _gather_polys(args):
+    """
+    Gather polygons from different argument types into a list.
+
+    Parameters
+    ----------
+    args : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        Polygon types.  If this is an iterable, each element must be a
+        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
+
+    Returns
+    -------
+    out : list of numpy array[N][2]
+        List of polygons.
+    """
+    if args is None:
+        return []
+    if isinstance(args, PolygonSet):
+        return [p for p in args.polygons]
+    if isinstance(args, CellReference) or isinstance(args, CellArray):
+        return args.get_polygons()
+    polys = []
+    for p in args:
+        if isinstance(p, PolygonSet):
+            polys.extend(p.polygons)
+        elif isinstance(p, CellReference) or isinstance(p, CellArray):
+            polys.extend(p.get_polygons())
+        else:
+            polys.append(p)
+    return polys
+
+
+def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
     """
     Slice polygons and polygon sets at given positions along an axis.
 
     Parameters
     ----------
-    objects : ``PolygonSet`` or iterable
+    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
         Operand of the slice operation.  If this is an iterable, each
         element must be a ``PolygonSet``, ``CellReference``,
         ``CellArray``, or an array-like[N][2] of vertices of a polygon.
@@ -3902,6 +3935,7 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     >>> result = gdspy.slice(ring, [-7, 7], 0)
     >>> cell.add(result[1])
     """
+    polys = _gather_polys(polygons)
     if not isinstance(layer, list):
         layer = [layer]
     if not isinstance(datatype, list):
@@ -3911,19 +3945,8 @@ def slice(objects, position, axis, precision=1e-3, layer=0, datatype=0):
     else:
         pos = sorted(position)
     result = [[] for _ in range(len(pos) + 1)]
-    if isinstance(objects, PolygonSet):
-        polygons = objects.polygons
-    else:
-        polygons = []
-        for obj in objects:
-            if isinstance(obj, PolygonSet):
-                polygons.extend(obj.polygons)
-            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-                polygons.extend(obj.get_polygons())
-            else:
-                polygons.append(obj)
     scaling = 1 / precision
-    for pol in polygons:
+    for pol in polys:
         for r, p in zip(result, clipper._chop(pol, pos, axis, scaling)):
             r.extend(p)
     for i in range(len(result)):
@@ -3946,11 +3969,10 @@ def offset(polygons,
 
     Parameters
     ----------
-    polygons : polygon or array-like
-        Polygons to be offset.  Must be a ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        Polygons to be offset.  If this is an iterable, each element
+        must be a ``PolygonSet``, ``CellReference``, ``CellArray``, or
+        an array-like[N][2] of vertices of a polygon.
     distance : number
         Offset distance.  Positive to expand, negative to shrink.
     join : {'miter', 'bevel', 'round'}
@@ -3983,29 +4005,16 @@ def offset(polygons,
     out : ``PolygonSet`` or ``None``
         Return the offset shape as a set of polygons.
     """
-    poly = []
-    if isinstance(polygons, PolygonSet):
-        poly.extend(polygons.polygons)
-    elif isinstance(polygons, CellReference) or isinstance(
-            polygons, CellArray):
-        poly.extend(polygons.get_polygons())
-    else:
-        for obj in polygons:
-            if isinstance(obj, PolygonSet):
-                poly.extend(obj.polygons)
-            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-                poly.extend(obj.get_polygons())
-            else:
-                poly.append(obj)
-    result = clipper.offset(poly, distance, join, tolerance, 1 / precision, 1
-                            if join_first else 0)
+    result = clipper.offset(
+        _gather_polys(polygons), distance, join, tolerance, 1 / precision, 1
+        if join_first else 0)
     return None if len(result) == 0 else PolygonSet(
         result, layer, datatype, verbose=False).fracture(
             max_points, precision)
 
 
-def fast_boolean(operandA,
-                 operandB,
+def fast_boolean(operand1,
+                 operand2,
                  operation,
                  precision=0.001,
                  max_points=199,
@@ -4016,19 +4025,17 @@ def fast_boolean(operandA,
 
     Parameters
     ----------
-    operandA : polygon or array-like
-        First operand.  Must be a ``PolygonSet``, ``CellReference``,
-        ``CellArray``, or an array.  The array may contain any of the
-        previous objects or an array-like[N][2] of vertices of a
-        polygon.
-    operandB : polygon, array-like or ``None``
-        Second operand.  Must be ``None``, a ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an array.  The array may
-        contain any of the previous objects or an array-like[N][2] of
-        vertices of a polygon.
+    operand1 : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        First operand.  If this is an iterable, each element must be a
+        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
+    operand2 : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        Second operand.  If this is an iterable, each element must be a
+        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
     operation : {'or', 'and', 'xor', 'not'}
         Boolean operation to be executed.  The 'not' operation returns
-        the difference ``operandA - operandB``.
+        the difference ``operand1 - operand2``.
     precision : float
         Desired precision for rounding vertice coordinates.
     max_points : integer
@@ -4048,25 +4055,11 @@ def fast_boolean(operandA,
     out : PolygonSet or ``None``
         Result of the boolean operation.
     """
-    polyA = []
-    polyB = []
-    for poly, obj in zip((polyA, polyB), (operandA, operandB)):
-        if isinstance(obj, PolygonSet):
-            poly.extend(obj.polygons)
-        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-            poly.extend(obj.get_polygons())
-        elif obj is not None:
-            for inobj in obj:
-                if isinstance(inobj, PolygonSet):
-                    poly.extend(inobj.polygons)
-                elif (isinstance(inobj, CellReference) or
-                      isinstance(inobj, CellArray)):
-                    poly.extend(inobj.get_polygons())
-                else:
-                    poly.append(inobj)
-    if len(polyB) == 0:
-        polyB.append(polyA.pop())
-    result = clipper.clip(polyA, polyB, operation, 1 / precision)
+    poly1 = _gather_polys(operand1)
+    poly2 = _gather_polys(operand2)
+    if len(poly2) == 0:
+        poly2.append(poly1.pop())
+    result = clipper.clip(poly1, poly2, operation, 1 / precision)
     return None if len(result) == 0 else PolygonSet(
         result, layer, datatype, verbose=False).fracture(
             max_points, precision)
@@ -4081,11 +4074,10 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
     points : array-like[N][2] or sequence of array-like[N][2]
         Coordinates of the points to be tested or groups of points to be
         tested together.
-    polygons : polygon or iterable
-        Polygons to be tested against.  Must be a ``PolygonSet``,
-        ``CellReference``, ``CellArray``, or an iterable.  The iterable
-        may contain any of the previous objects or an array-like[N][2]
-        of vertices of a polygon.
+    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        Polygons to be tested against.  If this is an iterable, each
+        element must be a ``PolygonSet``, ``CellReference``,
+        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
     short_circuit : {'any', 'all'}
         If `points` is a sequence of point groups, testing within each
         group will be short-circuited if any of the points in the group
@@ -4100,27 +4092,14 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         Tuple of booleans indicating if each of the points or point
         groups is inside the set of polygons.
     """
-    poly = []
-    if isinstance(polygons, PolygonSet):
-        poly.extend(polygons.polygons)
-    elif (isinstance(polygons, CellReference) or
-          isinstance(polygons, CellArray)):
-        poly.extend(polygons.get_polygons())
-    else:
-        for obj in polygons:
-            if isinstance(obj, PolygonSet):
-                poly.extend(obj.polygons)
-            elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-                poly.extend(obj.get_polygons())
-            else:
-                poly.append(obj)
+    polys = _gather_polys(polygons)
     if hasattr(points[0][0], '__iter__'):
         pts = points
         sc = 1 if short_circuit == 'any' else -1
     else:
         pts = (points, )
         sc = 0
-    return clipper.inside(pts, poly, sc, 1 / precision)
+    return clipper.inside(pts, polys, sc, 1 / precision)
 
 
 def copy(obj, dx, dy):
