@@ -3924,7 +3924,7 @@ def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
 
     Returns
     -------
-    out : list[N] of PolygonSet
+    out : list[N] of ``PolygonSet`` or ``None``
         Result of the slicing operation, with N = len(positions) + 1.
         Each PolygonSet comprises all polygons between 2 adjacent
         slicing positions, in crescent order.
@@ -3950,8 +3950,8 @@ def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
         for r, p in zip(result, clipper._chop(pol, pos, axis, scaling)):
             r.extend(p)
     for i in range(len(result)):
-        result[i] = PolygonSet(result[i], layer[i % len(layer)],
-                               datatype[i % len(datatype)])
+        result[i] = None if len(result[i]) == 0 else PolygonSet(
+            result[i], layer[i % len(layer)], datatype[i % len(datatype)])
     return result
 
 

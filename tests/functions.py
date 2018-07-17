@@ -59,8 +59,46 @@ def test_twoway():
         assert x == f(g(x))
 
 
+def test_gather():
+    def same_points(x, y):
+        for px, py in zip(x, y):
+            for ptx, pty in zip(px, py):
+                for cx, cy in zip(ptx, pty):
+                    if cx != cy: return False
+        return True
+
+    gdspy.current_library = gdspy.GdsLibrary()
+    pts = [(0, 0), (1, 1), (1, 0)]
+    ps1 = gdspy.Round((10, 10), 1, inner_radius=0.2)
+    ps2 = gdspy.Path(0.1, (-1, -1), 2, 1).segment(2, '-x')
+    c = gdspy.Cell('C1').add(gdspy.Rectangle((-4, 3), (-5, 4)))
+    cr = gdspy.CellReference(c, (10, -10))
+    ca = gdspy.CellArray(c, 2, 1, (2, 0))
+    assert gdspy._gather_polys(None) == []
+    assert same_points(gdspy._gather_polys([pts]), [pts])
+    assert same_points(gdspy._gather_polys(ps1), ps1.polygons)
+    assert same_points(gdspy._gather_polys(ps2), ps2.polygons)
+    assert same_points(gdspy._gather_polys(cr), cr.get_polygons())
+    assert same_points(gdspy._gather_polys(ca), ca.get_polygons())
+    result = [pts]
+    result.extend(ps2.polygons)
+    result.extend(cr.get_polygons())
+    assert same_points(gdspy._gather_polys([pts, ps2, cr]), result)
+
+
 def test_slice():
-    pass
+    poly = gdspy.Path(1, (1, 0), 2, 3).segment(2, '-x')
+    left = gdspy.Path(1, (0, 0), 2, 3).segment(1, '-x')
+    right = gdspy.Path(1, (1, 0), 2, 3).segment(1, '-x')
+    result = gdspy.slice(poly, 0, 0)
+    assert equals(result[0], left)
+    assert equals(result[1], right)
+    bot = gdspy.Path(1, (1, -1.5)).segment(2, '-x')
+    top = gdspy.Path(1, (1, 1.5)).segment(2, '-x')
+    result = gdspy.slice(poly, [0.1, -0.1], 1)
+    assert equals(result[0], bot)
+    assert equals(result[2], top)
+    assert result[1] is None
 
 
 def test_offset():
@@ -69,9 +107,6 @@ def test_offset():
     result = gdspy.Rectangle((-1, -1), (2, 3))
     assert equals(gdspy.offset(r, 1), result)
     c = gdspy.Cell('OFFSET').add(r)
-    cr = gdspy.CellReference(c)
-    result = gdspy.Rectangle((0.1, 0.1), (0.9, 1.9))
-    assert equals(gdspy.offset(cr, -0.1), result)
     ca = gdspy.CellArray(c, 2, 1, (1, 0))
     result = gdspy.Rectangle((0.2, 0.2), (1.8, 1.8))
     assert equals(gdspy.offset([ca], -0.2, join_first=True), result)
@@ -85,7 +120,13 @@ def test_offset():
 
 
 def test_boolean():
-    pass
+    op1 = gdspy.Rectangle((0, 0), (3, 3))
+    op2 = gdspy.Rectangle((1, 1), (2, 2))
+    result = [[(0, 0), (3, 0), (3, 3), (0, 3), (0, 0),
+               (1, 1), (1, 2), (2, 2), (2, 1), (1, 1)]]
+    assert equals(gdspy.fast_boolean(op1, op2, 'not'), result)
+    op3 = gdspy.Rectangle((0, 0), (2, 2))
+    assert equals(gdspy.fast_boolean([op2, op3], None, 'or'), op3)
 
 
 def test_inside():

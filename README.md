@@ -61,6 +61,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * Added `PolygonSet.mirror` (thanks to Daan Waardenburg for the contribution).
+* Changed return value of `slice` to avoid creating empty `PolygonSet`.
 
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
