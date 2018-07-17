@@ -13,6 +13,10 @@ import numpy
 import gdspy
 
 
+def equals(x, y):
+    return gdspy.fast_boolean(x, y, 'xor') is None
+
+
 @pytest.fixture()
 def library():
     lib = gdspy.GdsLibrary()
@@ -60,9 +64,24 @@ def test_slice():
 
 
 def test_offset():
+    gdspy.current_library = gdspy.GdsLibrary()
     r = gdspy.Rectangle((0, 0), (1, 2))
-    r2 = gdspy.Rectangle((-1, -1), (2, 3))
-    assert gdspy.fast_boolean(gdspy.offset(r, 1), r2, 'not') is None
+    result = gdspy.Rectangle((-1, -1), (2, 3))
+    assert equals(gdspy.offset(r, 1), result)
+    c = gdspy.Cell('OFFSET').add(r)
+    cr = gdspy.CellReference(c)
+    result = gdspy.Rectangle((0.1, 0.1), (0.9, 1.9))
+    assert equals(gdspy.offset(cr, -0.1), result)
+    ca = gdspy.CellArray(c, 2, 1, (1, 0))
+    result = gdspy.Rectangle((0.2, 0.2), (1.8, 1.8))
+    assert equals(gdspy.offset([ca], -0.2, join_first=True), result)
+    v = [gdspy.Rectangle((-1, -1), (1, 1)), [(0, 0), (1, 0), (1, 1), (0, 1)]]
+    x = 1 + 0.1 * numpy.tan(numpy.pi / 8)
+    result = gdspy.Polygon(
+        [(-1.1, -x), (-1.1, x), (-x, 1.1), (x, 1.1), (1.1, x), (1.1, -x),
+         (x, -1.1), (-x, -1.1)],
+        layer=8)
+    assert equals(gdspy.offset(v, 0.1, join='bevel', layer=12), result)
 
 
 def test_boolean():
@@ -70,6 +89,7 @@ def test_boolean():
 
 
 def test_inside():
+    gdspy.current_library = gdspy.GdsLibrary()
     polygons = [
         gdspy.Round((0, 0), 10, inner_radius=5, number_of_points=180),
         gdspy.Rectangle((20, -10), (40, 10)).polygons[0],
@@ -90,6 +110,7 @@ def test_inside():
 
 
 def test_copy():
+    gdspy.current_library = gdspy.GdsLibrary()
     p = gdspy.Rectangle((0, 0), (1, 1))
     q = gdspy.copy(p, 1, -1)
     assert set(p.polygons[0][:, 0]) == {0, 1}
@@ -133,9 +154,7 @@ def test_write_gds(library, tmpdir):
         texttypes={6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
-    assert set(lib1.cell_dict.keys()) == {
-        '1', 'cell2', 'cell3', 'cell4'
-    }
+    assert set(lib1.cell_dict.keys()) == {'1', 'cell2', 'cell3', 'cell4'}
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
@@ -187,6 +206,7 @@ def test_write_gds(library, tmpdir):
 
 
 def test_gdsii_hash(library, tmpdir):
+    gdspy.current_library = gdspy.GdsLibrary()
     out1 = str(tmpdir.join('test1.gds'))
     out2 = str(tmpdir.join('test2.gds'))
     library.write_gds(out1)
