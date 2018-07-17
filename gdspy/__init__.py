@@ -4013,13 +4013,13 @@ def offset(polygons,
             max_points, precision)
 
 
-def fast_boolean(operand1,
-                 operand2,
-                 operation,
-                 precision=0.001,
-                 max_points=199,
-                 layer=0,
-                 datatype=0):
+def boolean(operand1,
+            operand2,
+            operation,
+            precision=0.001,
+            max_points=199,
+            layer=0,
+            datatype=0):
     """
     Execute any boolean operation between 2 polygons or polygon sets.
 
@@ -4063,6 +4063,9 @@ def fast_boolean(operand1,
     return None if len(result) == 0 else PolygonSet(
         result, layer, datatype, verbose=False).fracture(
             max_points, precision)
+
+
+fast_boolean = boolean
 
 
 def inside(points, polygons, short_circuit='any', precision=0.001):

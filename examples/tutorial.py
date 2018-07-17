@@ -205,8 +205,7 @@ oper_cell = gdspy.Cell('OPERATIONS')
 # Here we subtract the previously created spiral from a rectangle with
 # the 'not' operation.
 oper_cell.add(
-    gdspy.fast_boolean(
-        gdspy.Rectangle((10, -4), (17, 4)), path3, 'not', layer=1))
+    gdspy.boolean(gdspy.Rectangle((10, -4), (17, 4)), path3, 'not', layer=1))
 
 # Polygon offset (inset and outset) can be used, for instance, to
 # define safety margins around shapes.
@@ -218,7 +217,7 @@ path4 = gdspy.Path(0.5, (21, -5)).segment(3, '+x', **spec)\
 oper_cell.add(path4)
 
 # Merge all parts into a single polygon.
-merged = gdspy.fast_boolean(path4, None, 'or', max_points=0)
+merged = gdspy.boolean(path4, None, 'or', max_points=0)
 
 # Offset the path shape by 0.5 and add it to the cell.
 oper_cell.add(gdspy.offset(merged, 1, layer=8))

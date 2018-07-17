@@ -14,7 +14,7 @@ import gdspy
 
 
 def equals(x, y):
-    return gdspy.fast_boolean(x, y, 'xor') is None
+    return gdspy.boolean(x, y, 'xor') is None
 
 
 @pytest.fixture()
@@ -124,9 +124,9 @@ def test_boolean():
     op2 = gdspy.Rectangle((1, 1), (2, 2))
     result = [[(0, 0), (3, 0), (3, 3), (0, 3), (0, 0), (1, 1), (1, 2), (2, 2),
                (2, 1), (1, 1)]]
-    assert equals(gdspy.fast_boolean(op1, op2, 'not'), result)
+    assert equals(gdspy.boolean(op1, op2, 'not'), result)
     op3 = gdspy.Rectangle((0, 0), (2, 2))
-    assert equals(gdspy.fast_boolean([op2, op3], None, 'or'), op3)
+    assert equals(gdspy.boolean([op2, op3], None, 'or'), op3)
 
 
 def test_inside():

@@ -102,10 +102,10 @@ Label
 Functions
 *********
 
-fast_boolean
+boolean
 ============
 
-.. autofunction:: gdspy.fast_boolean
+.. autofunction:: gdspy.boolean
 
 
 offset
