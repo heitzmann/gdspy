@@ -122,8 +122,8 @@ def test_offset():
 def test_boolean():
     op1 = gdspy.Rectangle((0, 0), (3, 3))
     op2 = gdspy.Rectangle((1, 1), (2, 2))
-    result = [[(0, 0), (3, 0), (3, 3), (0, 3), (0, 0),
-               (1, 1), (1, 2), (2, 2), (2, 1), (1, 1)]]
+    result = [[(0, 0), (3, 0), (3, 3), (0, 3), (0, 0), (1, 1), (1, 2), (2, 2),
+               (2, 1), (1, 1)]]
     assert equals(gdspy.fast_boolean(op1, op2, 'not'), result)
     op3 = gdspy.Rectangle((0, 0), (2, 2))
     assert equals(gdspy.fast_boolean([op2, op3], None, 'or'), op3)
