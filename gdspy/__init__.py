@@ -623,10 +623,10 @@ class Round(PolygonSet):
     number_of_points : integer or float
         If integer: number of vertices that form the object (polygonal
         approximation).  If float: approximate curvature resolution.
-				The actual number of points is automatically calculated.
+        The actual number of points is automatically calculated.
     max_points : integer
         if ``number_of_points > max_points``, the element will be
-				fractured in smaller polygons with at most ``max_points`` each.
+        fractured in smaller polygons with at most ``max_points`` each.
     layer : integer
         The GDSII layer number for this element.
     datatype : integer
