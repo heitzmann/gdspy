@@ -32,9 +32,9 @@ if sys.version_info.major < 3:
     from future import standard_library
     standard_library.install_aliases()
 else:
-    #Python 3 doesn't have basestring, as unicode is type string
-    #Python 2 doesn't equate unicode to string, but both are basestring
-    #Now isinstance(s, basestring) will be True for any python version
+    # Python 3 doesn't have basestring, as unicode is type string
+    # Python 2 doesn't equate unicode to string, but both are basestring
+    # Now isinstance(s, basestring) will be True for any python version
     basestring = str
 
 import struct
@@ -441,13 +441,13 @@ class PolygonSet(object):
                             numpy.ceil(abs(a1 - a0) / two_pi *
                                        points_per_2pi) + 0.5), 2)
                     a = numpy.linspace(a0, a1, n)
-                    l = radius * tt[ii]
-                    if l > 0.49 * length[ii]:
+                    ll = radius * tt[ii]
+                    if ll > 0.49 * length[ii]:
                         r = 0.49 * length[ii] / tt[ii]
-                        l = 0.49 * length[ii]
+                        ll = 0.49 * length[ii]
                     else:
                         r = radius
-                    if l > 0.49 * length[ii + 1]:
+                    if ll > 0.49 * length[ii + 1]:
                         r = 0.49 * length[ii + 1] / tt[ii]
                     new_points.extend(r * dvec[ii] / ct[ii] +
                                       self.polygons[jj][ii] + numpy.vstack(
@@ -569,7 +569,7 @@ class Rectangle(PolygonSet):
         Coordinates of a corner of the rectangle.
     point2 : array-like[2]
         Coordinates of the corner of the rectangle opposite to
-				``point1``.
+        ``point1``.
     layer : integer
         The GDSII layer number for this element.
     datatype : integer
@@ -755,7 +755,7 @@ class Text(PolygonSet):
         Text position (lower left corner).
     horizontal : bool
         If ``True``, the text is written from left to right; if
-				``False``, from top to bottom.
+        ``False``, from top to bottom.
     angle : number
         The angle of rotation of the text.
     layer : integer
@@ -2035,14 +2035,13 @@ class Label(object):
         self.layer = layer
         self.text = text
         self.position = numpy.array(position)
-        try:
-            self.anchor = Label._anchor[anchor.lower()]
-        except:
+        self.anchor = Label._anchor.get(anchor.lower(), None)
+        if self.anchor is None:
             warnings.warn(
                 "[GDSPY] Label anchors must be one of: '" + "', '".join(
                     Label._anchor.keys()) + "'.",
                 stacklevel=2)
-            self.anchor = 0
+            self.anchor = Label._anchor['o']
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
@@ -2090,13 +2089,13 @@ class Label(object):
             if not (self.magnification is None):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
-                #word += 0x0004
+                # word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
                 # relative (not supported).
-                #word += 0x0002
+                # word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(
                     self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
@@ -2719,13 +2718,13 @@ class CellReference(object):
             if not (self.magnification is None):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
-                #word += 0x0004
+                # word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
                 # relative (not supported).
-                #word += 0x0002
+                # word += 0x0002
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(
                     self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
@@ -3033,13 +3032,13 @@ class CellArray(object):
             if not (self.magnification is None):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
-                #word += 0x0004
+                # word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
                 # relative (not supported).
-                #word += 0x0002
+                # word += 0x0002
                 sa = numpy.sin(self.rotation * numpy.pi / 180.0)
                 ca = numpy.cos(self.rotation * numpy.pi / 180.0)
                 tmp = (x2 - self.origin[0]) * ca - (
@@ -3211,7 +3210,8 @@ class CellArray(object):
                     if self.x_reflection:
                         lbl.position = lbl.position * xrefl
                     if self.rotation is not None:
-                        lbl.position = lbl.position * ct + lbl.position[::-1] * st
+                        lbl.position = (
+                            lbl.position * ct + lbl.position[::-1] * st)
                     if self.origin is not None:
                         lbl.position = lbl.position + orgn
                     labels.append(lbl)
@@ -3391,7 +3391,7 @@ class GdsLibrary(object):
             The file (or path) where the GDSII stream will be written.
             It must be opened for writing operations in binary format.
         cells : iterable
-            The cells or cell names to be included in the library.  If 
+            The cells or cell names to be included in the library.  If
             ``None``, all cells are used.
         timestamp : datetime object
             Sets the GDSII timestamp.  If ``None``, the current time is
