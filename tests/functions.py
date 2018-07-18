@@ -255,6 +255,19 @@ def test_gdsii_hash(library, tmpdir):
     assert gdspy.gdsii_hash(out1) == gdspy.gdsii_hash(out2)
 
 
+def test_get_gds_units(tmpdir):
+    out = str(tmpdir.join('test1.gds'))
+    lib = gdspy.GdsLibrary(unit=10.0, precision=0.1)
+    lib.write_gds(out)
+    assert (10.0, 0.1) == gdspy.get_gds_units(out)
+    lib.unit = 0.2
+    lib.precision = 5e-5
+    out = str(tmpdir.join('test2.gds'))
+    lib.write_gds(out)
+    with open(out, 'rb') as fin:
+        assert (0.2, 5e-5) == gdspy.get_gds_units(fin)
+
+
 def test_get_binary_cells(library, tmpdir):
     out = str(tmpdir.join('test.gds'))
     now = datetime.datetime.today()

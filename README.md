@@ -61,6 +61,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * Added `PolygonSet.mirror` (thanks to Daan Waardenburg for the contribution).
+* Added `get_gds_units` to get units used in a GDSII file without loading.
+* Added `get_binary_cells` to load only the binary GDSII representation of cell from a file.
+* Added argument `binary_cells` to GDSII writing functions to support `get_binary_cells`.
 * Changed return value of `slice` to avoid creating empty `PolygonSet`.
 * Added argument `timestamp` to GDSII writing functions.
 

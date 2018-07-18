@@ -3429,7 +3429,8 @@ class GdsLibrary(object):
                 self.cell_dict[c.name] = c
         return self
 
-    def write_gds(self, outfile, cells=None, timestamp=None, binary_cells=None):
+    def write_gds(self, outfile, cells=None, timestamp=None,
+                  binary_cells=None):
         """
         Write the GDSII library to a file.
 
@@ -3863,6 +3864,25 @@ class GdsWriter(object):
         self._outfile.write(cell.to_gds(self._res, timestamp))
         return self
 
+    def write_binary_cells(self, binary_cells):
+        """
+        Write the specified binary cells to the file.
+
+        Parameters
+        ----------
+        binary_cells : iterable of bytes
+            Iterable with binary data for GDSII cells (from
+            ``get_binary_cells``, for example).
+
+        Returns
+        -------
+        out : ``GdsWriter``
+            This object.
+        """
+        for bc in binary_cells:
+            self._outfile.write(bc)
+        return self
+
     def close(self):
         """
         Finalize the GDSII stream library.
@@ -3895,6 +3915,39 @@ def _raw_record_reader(stream):
         yield (rec_type, header + stream.read(size - 4))
 
 
+def get_gds_units(infile):
+    """
+    Return the unit and precision used in the GDS stream file.
+
+    Parameters
+    ----------
+    infile : file or string
+        GDSII stream file to be queried.
+
+    Returns
+    -------
+    out : 2-tuple
+        Return ``(unit, precision)`` from the file.
+    """
+    if isinstance(infile, basestring):
+        infile = open(infile, 'rb')
+        close = True
+    else:
+        close = False
+    unit = precision = None
+    for rec_type, data in _raw_record_reader(infile):
+        # UNITS
+        if rec_type == 0x03:
+            db_user = _eight_byte_real_to_float(data[4:12])
+            db_meters = _eight_byte_real_to_float(data[12:])
+            unit = db_meters / db_user
+            precision = db_meters
+            break
+    if close:
+        infile.close()
+    return (unit, precision)
+
+
 def get_binary_cells(infile):
     """
     Load all cells from a GDSII stream file in binary format.
@@ -3909,13 +3962,19 @@ def get_binary_cells(infile):
     -------
     out : dictionary
         Dictionary of binary cell representations indexed by name.
+
+    Notes
+    -----
+    The returned cells inherit the units of the loaded file.  If they
+    are used in a new library, the new library must use compatible
+    units.
     """
-    cells = {}
     if isinstance(infile, basestring):
         infile = open(infile, 'rb')
         close = True
     else:
         close = False
+    cells = {}
     name = None
     cell_data = None
     for rec_type, data in _raw_record_reader(infile):
@@ -4227,7 +4286,8 @@ def write_gds(outfile,
               name='library',
               unit=1.0e-6,
               precision=1.0e-9,
-              timestamp=None):
+              timestamp=None,
+              binary_cells=None):
     """
     Write the current GDSII library to a file.
 
@@ -4256,11 +4316,14 @@ def write_gds(outfile,
     timestamp : datetime object
         Sets the GDSII timestamp.  If ``None``, the current time is
         used.
+    binary_cells : iterable of bytes
+        Iterable with binary data for GDSII cells (from
+        ``get_binary_cells``, for example).
     """
     current_library.name = name
     current_library.unit = unit
     current_library.precision = precision
-    current_library.write_gds(outfile, cells, timestamp)
+    current_library.write_gds(outfile, cells, timestamp, binary_cells)
 
 
 def gdsii_hash(filename, engine=None):
