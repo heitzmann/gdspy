@@ -3832,7 +3832,7 @@ class GdsWriter(object):
             name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
             _eight_byte_real(precision / unit) + _eight_byte_real(precision))
 
-    def write_cell(self, cell):
+    def write_cell(self, cell, timestamp=None):
         """
         Write the specified cell to the file.
 
@@ -3840,6 +3840,9 @@ class GdsWriter(object):
         ----------
         cell : ``Cell``
             Cell to be written.
+        timestamp : datetime object
+            Sets the GDSII timestamp.  If ``None``, the current time is
+            used.
 
         Notes
         -----
@@ -3851,7 +3854,7 @@ class GdsWriter(object):
         out : ``GdsWriter``
             This object.
         """
-        self._outfile.write(cell.to_gds(self._res))
+        self._outfile.write(cell.to_gds(self._res, timestamp))
         return self
 
     def close(self):
@@ -4142,7 +4145,8 @@ def write_gds(outfile,
               cells=None,
               name='library',
               unit=1.0e-6,
-              precision=1.0e-9):
+              precision=1.0e-9,
+              timestamp=None):
     """
     Write the current GDSII library to a file.
 
@@ -4168,11 +4172,14 @@ def write_gds(outfile,
     precision : number
         Precision for the dimensions of the objects in the library (in
         *meters*).
+    timestamp : datetime object
+        Sets the GDSII timestamp.  If ``None``, the current time is
+        used.
     """
     current_library.name = name
     current_library.unit = unit
     current_library.precision = precision
-    current_library.write_gds(outfile, cells)
+    current_library.write_gds(outfile, cells, timestamp)
 
 
 def gdsii_hash(filename, engine=None):
