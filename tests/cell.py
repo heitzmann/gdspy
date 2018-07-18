@@ -38,16 +38,16 @@ def tree():
 def test_duplicate():
     gdspy.current_library = gdspy.GdsLibrary()
     name = 'c_duplicate'
-    c1 = gdspy.Cell(name)
+    gdspy.Cell(name)
     with pytest.raises(ValueError) as e:
-        c2 = gdspy.Cell(name)
+        gdspy.Cell(name)
     assert name in str(e.value)
 
 
 def test_ignore_duplicate():
     gdspy.current_library = gdspy.GdsLibrary()
     c1 = gdspy.Cell('c_ignore_duplicate')
-    c2 = gdspy.Cell(c1.name, True)
+    gdspy.Cell(c1.name, True)
 
 
 def test_str():
@@ -67,43 +67,43 @@ def test_add_element():
 
 def test_add_label():
     gdspy.current_library = gdspy.GdsLibrary()
-    l = gdspy.Label('label', (0, 0))
+    lbl = gdspy.Label('label', (0, 0))
     c = gdspy.Cell('c_add_label')
-    assert c.add(l) is c
-    assert c.add([l, l]) is c
-    assert c.labels == [l, l, l]
+    assert c.add(lbl) is c
+    assert c.add([lbl, lbl]) is c
+    assert c.labels == [lbl, lbl, lbl]
 
 
 def test_copy():
     gdspy.current_library = gdspy.GdsLibrary()
     name = 'c_copy'
     p = gdspy.Polygon(((0, 0), (1, 0), (0, 1)))
-    l = gdspy.Label('label', (0, 0))
+    lbl = gdspy.Label('label', (0, 0))
     c1 = gdspy.Cell(name)
     c1.add(p)
-    c1.add(l)
+    c1.add(lbl)
     with pytest.raises(ValueError) as e:
-        c2 = c1.copy(name)
+        c1.copy(name)
     assert name in str(e.value)
     c3 = c1.copy(name, True)
     assert c3.elements == c1.elements and c3.elements is not c1.elements
     assert c3.labels == c1.labels and c3.labels is not c1.labels
     cref = gdspy.Cell('c_ref').add(gdspy.Rectangle((-1, -1), (-2, -2)))
     c1.add(gdspy.CellReference(cref))
-    bb = c1.get_bounding_box()
+    c1.get_bounding_box()
     c4 = c1.copy('c_copy_1', False, True)
     assert c4.elements != c1.elements
     assert c4.labels != c1.labels
-    assert c1._bb_valid == True
-    assert cref._bb_valid == True
-    assert c4._bb_valid == False
+    assert c1._bb_valid
+    assert cref._bb_valid
+    assert not c4._bb_valid
 
 
 def test_remove(tree):
     c3, c2, c1 = tree
-    c1.remove_polygons(lambda p, l, d: l == 1)
+    c1.remove_polygons(lambda p, layer, d: layer == 1)
     assert len(c1.elements) == 1
-    c1.remove_polygons(lambda p, l, d: l == 0)
+    c1.remove_polygons(lambda p, layer, d: layer == 0)
     assert len(c1.elements) == 0
     c1.remove_labels(lambda lbl: lbl.layer == 12)
     assert len(c1.labels) == 1
@@ -203,6 +203,7 @@ def test_get_polygons1(tree):
     assert set(c3.get_polygons(True, 0).keys()) == {c2.name}
     assert set(c3.get_polygons(True, 1).keys()) == {c1.name, (1, 1)}
 
+
 def test_get_polygons2(tree):
     c3, c2, c1 = tree
     c1.add(gdspy.Rectangle((0, 0), (1, 1), 0, 0))
@@ -218,11 +219,10 @@ def test_get_polygons2(tree):
     assert len(d[(0, 0)]) == 14
     assert len(d[(1, 1)]) == 6
 
-def test_get_polygons2():
+
+def test_get_polygons3():
     gdspy.current_library = gdspy.GdsLibrary()
     c0 = gdspy.Cell('empty', False)
     assert len(c0.get_polygons()) == 0
     assert len(c0.get_polygons(True)) == 0
     assert len(c0.get_polygons(False, -1)) == 0
-
-
