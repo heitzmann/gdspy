@@ -606,16 +606,21 @@ class Rectangle(PolygonSet):
 class Round(PolygonSet):
     """
     Circular geometric object.
-    Represent a circle, a circular section, a ring or a ring section.
+
+    Represent a circle, ellipse, ring or their sections.
 
     Parameters
     ----------
     center : array-like[2]
         Coordinates of the center of the circle/ring.
-    radius : number
-        Radius of the circle/outer radius of the ring.
-    inner_radius : number
-        Inner radius of the ring.
+    radius : number, sequence
+        Radius of the circle/outer radius of the ring.  To build an
+        ellipse a sequence with 2 numbers can be used, representing the
+        radii in the horizontal and vertical directions.
+    inner_radius : number, sequence
+        Inner radius of the ring. To build an elliptical hole, a
+        sequence with 2 numbers can be used, representing the radii in
+        the horizontal and vertical directions.
     initial_angle : number
         Initial angle of the circular/ring section (in *radians*).
     final_angle : number
@@ -640,7 +645,7 @@ class Round(PolygonSet):
     Examples
     --------
     >>> circle = gdspy.Round((30, 5), 8)
-    >>> ring = gdspy.Round((50, 5), 8, inner_radius=5)
+    >>> ell_ring = gdspy.Round((50, 5), (8, 7), inner_radius=(5, 4))
     >>> pie_slice = gdspy.Round((30, 25), 8, initial_angle=0,
     ...                             final_angle=-5.0*numpy.pi/6.0)
     >>> arc = gdspy.Round((50, 25), 8, inner_radius=5,
@@ -660,6 +665,34 @@ class Round(PolygonSet):
                  max_points=199,
                  layer=0,
                  datatype=0):
+        if hasattr(radius, '__iter__'):
+            orx, ory = radius
+            radius = max(radius)
+
+            def outer_transform(a):
+                r = a - ((a + numpy.pi) % (2 * numpy.pi) - numpy.pi)
+                t = numpy.arctan2(orx * numpy.sin(a), ory * numpy.cos(a)) + r
+                t[a == numpy.pi] = numpy.pi
+                return t
+        else:
+            orx = ory = radius
+
+            def outer_transform(a):
+                return a
+        if hasattr(inner_radius, '__iter__'):
+            irx, iry = inner_radius
+            inner_radius = max(inner_radius)
+
+            def inner_transform(a):
+                r = a - ((a + numpy.pi) % (2 * numpy.pi) - numpy.pi)
+                t = numpy.arctan2(irx * numpy.sin(a), iry * numpy.cos(a)) + r
+                t[a == numpy.pi] = numpy.pi
+                return t
+        else:
+            irx = iry = inner_radius
+
+            def inner_transform(a):
+                return a
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
@@ -688,49 +721,39 @@ class Round(PolygonSet):
         if final_angle == initial_angle and pieces > 1:
             final_angle += 2 * numpy.pi
         angles = numpy.linspace(initial_angle, final_angle, pieces + 1)
+        oang = outer_transform(angles)
+        iang = inner_transform(angles)
         for ii in range(pieces):
-            if angles[ii + 1] == angles[ii]:
+            if oang[ii + 1] == oang[ii]:
                 if inner_radius <= 0:
-                    angle = numpy.arange(
+                    t = numpy.arange(
                         number_of_points) * 2.0 * numpy.pi / number_of_points
-                    self.polygons[ii][:, 0] = numpy.cos(angle)
-                    self.polygons[ii][:, 1] = numpy.sin(angle)
-                    self.polygons[ii] = (
-                        self.polygons[ii] * radius + numpy.array(center))
+                    self.polygons[ii][:, 0] = numpy.cos(t) * orx + center[0]
+                    self.polygons[ii][:, 1] = numpy.sin(t) * ory + center[1]
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
-                    angle = numpy.arange(n1) * 2.0 * numpy.pi / (n1 - 1.0)
-                    self.polygons[ii][:n1, 0] = (
-                        numpy.cos(angle) * radius + center[0])
-                    self.polygons[ii][:n1, 1] = (
-                        numpy.sin(angle) * radius + center[1])
-                    angle = numpy.arange(n2) * -2.0 * numpy.pi / (n2 - 1.0)
-                    self.polygons[ii][n1:, 0] = (
-                        numpy.cos(angle) * inner_radius + center[0])
-                    self.polygons[ii][n1:, 1] = (
-                        numpy.sin(angle) * inner_radius + center[1])
+                    t = numpy.arange(n1) * 2.0 * numpy.pi / (n1 - 1)
+                    self.polygons[ii][:n1, 0] = numpy.cos(t) * orx + center[0]
+                    self.polygons[ii][:n1, 1] = numpy.sin(t) * ory + center[1]
+                    t = numpy.arange(n2) * -2.0 * numpy.pi / (n2 - 1)
+                    self.polygons[ii][n1:, 0] = numpy.cos(t) * irx + center[0]
+                    self.polygons[ii][n1:, 1] = numpy.sin(t) * iry + center[1]
             else:
                 if inner_radius <= 0:
-                    angle = numpy.linspace(angles[ii], angles[ii + 1],
-                                           number_of_points - 1)
-                    self.polygons[ii][1:, 0] = numpy.cos(angle)
-                    self.polygons[ii][1:, 1] = numpy.sin(angle)
-                    self.polygons[ii] = (
-                        self.polygons[ii] * radius + numpy.array(center))
+                    t = numpy.linspace(oang[ii], oang[ii + 1],
+                                       number_of_points - 1)
+                    self.polygons[ii][1:, 0] = numpy.cos(t) * orx + center[0]
+                    self.polygons[ii][1:, 1] = numpy.sin(t) * ory + center[1]
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
-                    angle = numpy.linspace(angles[ii], angles[ii + 1], n1)
-                    self.polygons[ii][:n1, 0] = (
-                        numpy.cos(angle) * radius + center[0])
-                    self.polygons[ii][:n1, 1] = (
-                        numpy.sin(angle) * radius + center[1])
-                    angle = numpy.linspace(angles[ii + 1], angles[ii], n2)
-                    self.polygons[ii][n1:, 0] = (
-                        numpy.cos(angle) * inner_radius + center[0])
-                    self.polygons[ii][n1:, 1] = (
-                        numpy.sin(angle) * inner_radius + center[1])
+                    t = numpy.linspace(oang[ii], oang[ii + 1], n1)
+                    self.polygons[ii][:n1, 0] = numpy.cos(t) * orx + center[0]
+                    self.polygons[ii][:n1, 1] = numpy.sin(t) * ory + center[1]
+                    t = numpy.linspace(iang[ii + 1], iang[ii], n2)
+                    self.polygons[ii][n1:, 0] = numpy.cos(t) * irx + center[0]
+                    self.polygons[ii][n1:, 1] = numpy.sin(t) * iry + center[1]
 
     def __str__(self):
         return ("Round ({} polygons, {} vertices, layers {}, datatypes "
