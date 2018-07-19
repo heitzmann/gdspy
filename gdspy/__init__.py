@@ -613,14 +613,14 @@ class Round(PolygonSet):
     ----------
     center : array-like[2]
         Coordinates of the center of the circle/ring.
-    radius : number, sequence
+    radius : number, array-like[2]
         Radius of the circle/outer radius of the ring.  To build an
-        ellipse a sequence with 2 numbers can be used, representing the
+        ellipse an array of 2 numbers can be used, representing the
         radii in the horizontal and vertical directions.
-    inner_radius : number, sequence
-        Inner radius of the ring. To build an elliptical hole, a
-        sequence with 2 numbers can be used, representing the radii in
-        the horizontal and vertical directions.
+    inner_radius : number, array-like[2]
+        Inner radius of the ring. To build an elliptical hole, an array
+        of 2 numbers can be used, representing the radii in the
+        horizontal and vertical directions.
     initial_angle : number
         Initial angle of the circular/ring section (in *radians*).
     final_angle : number
