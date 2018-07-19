@@ -679,6 +679,7 @@ class Round(PolygonSet):
 
             def outer_transform(a):
                 return a
+
         if hasattr(inner_radius, '__iter__'):
             irx, iry = inner_radius
             inner_radius = max(inner_radius)
@@ -693,6 +694,7 @@ class Round(PolygonSet):
 
             def inner_transform(a):
                 return a
+
         if isinstance(number_of_points, float):
             if inner_radius <= 0:
                 if final_angle == initial_angle:
