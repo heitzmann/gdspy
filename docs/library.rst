@@ -84,6 +84,11 @@ gdsii_hash
 .. autofunction:: gdspy.gdsii_hash
 
 
+get_binary_cells
+================
+
+.. autofunction:: gdspy.get_binary_cells
+
 **********
 Attributes
 **********

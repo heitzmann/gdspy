@@ -3302,6 +3302,61 @@ class CellArray(object):
         return self
 
 
+def _record_reader(stream):
+    """
+    Iterator over complete records from a GDSII stream file.
+
+    Parameters
+    ----------
+    stream : file
+        GDSII stream file to be read.
+
+    Returns
+    -------
+    out : list
+        Record type and data (as a numpy.array, string or None)
+    """
+    while True:
+        header = stream.read(4)
+        if len(header) < 4:
+            return
+        size, rec_type = struct.unpack('>HH', header)
+        data_type = (rec_type & 0x00ff)
+        rec_type = rec_type // 256
+        data = None
+        if size > 4:
+            if data_type == 0x01:
+                data = numpy.array(
+                    struct.unpack('>{0}H'.format((size - 4) // 2),
+                                  stream.read(size - 4)),
+                    dtype='uint')
+            elif data_type == 0x02:
+                data = numpy.array(
+                    struct.unpack('>{0}h'.format((size - 4) // 2),
+                                  stream.read(size - 4)),
+                    dtype='int')
+            elif data_type == 0x03:
+                data = numpy.array(
+                    struct.unpack('>{0}l'.format((size - 4) // 4),
+                                  stream.read(size - 4)),
+                    dtype='int')
+            elif data_type == 0x05:
+                data = numpy.array([
+                    _eight_byte_real_to_float(stream.read(8))
+                    for _ in range((size - 4) // 8)
+                ])
+            else:
+                data = stream.read(size - 4)
+                if str is not bytes:
+                    if data[-1] == 0:
+                        data = data[:-1].decode('ascii')
+                    else:
+                        data = data.decode('ascii')
+                elif data[-1] == '\0':
+                    data = data[:-1]
+        yield [rec_type, data]
+
+
 class GdsLibrary(object):
     """
     GDSII library (file).
@@ -3399,7 +3454,8 @@ class GdsLibrary(object):
                 self.cell_dict[c.name] = c
         return self
 
-    def write_gds(self, outfile, cells=None, timestamp=None):
+    def write_gds(self, outfile, cells=None, timestamp=None,
+                  binary_cells=None):
         """
         Write the GDSII library to a file.
 
@@ -3421,6 +3477,9 @@ class GdsLibrary(object):
         timestamp : datetime object
             Sets the GDSII timestamp.  If ``None``, the current time is
             used.
+        binary_cells : iterable of bytes
+            Iterable with binary data for GDSII cells (from
+            ``get_binary_cells``, for example).
 
         Notes
         -----
@@ -3448,6 +3507,9 @@ class GdsLibrary(object):
             cells = [self.cell_dict.get(c, c) for c in cells]
         for cell in cells:
             outfile.write(cell.to_gds(self.unit / self.precision))
+        if binary_cells is not None:
+            for bc in binary_cells:
+                outfile.write(bc)
         outfile.write(struct.pack('>2h', 4, 0x0400))
         if close:
             outfile.close()
@@ -3506,12 +3568,11 @@ class GdsLibrary(object):
         else:
             close = False
         emitted_warnings = []
-        record = self._read_record(infile)
         kwargs = {}
         create_element = None
         factor = 1
         cell = None
-        while record is not None:
+        for record in _record_reader(infile):
             # LAYER
             if record[0] == 0x0d:
                 kwargs['layer'] = layers.get(record[1][0], record[1][0])
@@ -3639,63 +3700,9 @@ class GdsLibrary(object):
                     RuntimeWarning,
                     stacklevel=2)
                 emitted_warnings.append(record[0])
-            record = self._read_record(infile)
         if close:
             infile.close()
         return self
-
-    def _read_record(self, stream):
-        """
-        Read a complete record from a GDSII stream file.
-
-        Parameters
-        ----------
-        stream : file
-            GDSII stream file to be imported.
-
-        Returns
-        -------
-        out : 2-tuple
-            Record type and data (as a numpy.array)
-        """
-        header = stream.read(4)
-        if len(header) < 4:
-            return None
-        size, rec_type = struct.unpack('>HH', header)
-        data_type = (rec_type & 0x00ff)
-        rec_type = rec_type // 256
-        data = None
-        if size > 4:
-            if data_type == 0x01:
-                data = numpy.array(
-                    struct.unpack('>{0}H'.format((size - 4) // 2),
-                                  stream.read(size - 4)),
-                    dtype='uint')
-            elif data_type == 0x02:
-                data = numpy.array(
-                    struct.unpack('>{0}h'.format((size - 4) // 2),
-                                  stream.read(size - 4)),
-                    dtype='int')
-            elif data_type == 0x03:
-                data = numpy.array(
-                    struct.unpack('>{0}l'.format((size - 4) // 4),
-                                  stream.read(size - 4)),
-                    dtype='int')
-            elif data_type == 0x05:
-                data = numpy.array([
-                    _eight_byte_real_to_float(stream.read(8))
-                    for _ in range((size - 4) // 8)
-                ])
-            else:
-                data = stream.read(size - 4)
-                if str is not bytes:
-                    if data[-1] == 0:
-                        data = data[:-1].decode('ascii')
-                    else:
-                        data = data.decode('ascii')
-                elif data[-1] == '\0':
-                    data = data[:-1]
-        return [rec_type, data]
 
     def _create_polygon(self, layer, datatype, xy):
         return Polygon(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype)
@@ -3882,6 +3889,25 @@ class GdsWriter(object):
         self._outfile.write(cell.to_gds(self._res, timestamp))
         return self
 
+    def write_binary_cells(self, binary_cells):
+        """
+        Write the specified binary cells to the file.
+
+        Parameters
+        ----------
+        binary_cells : iterable of bytes
+            Iterable with binary data for GDSII cells (from
+            ``get_binary_cells``, for example).
+
+        Returns
+        -------
+        out : ``GdsWriter``
+            This object.
+        """
+        for bc in binary_cells:
+            self._outfile.write(bc)
+        return self
+
     def close(self):
         """
         Finalize the GDSII stream library.
@@ -3889,6 +3915,120 @@ class GdsWriter(object):
         self._outfile.write(struct.pack('>2h', 4, 0x0400))
         if self._close:
             self._outfile.close()
+
+
+def _raw_record_reader(stream):
+    """
+    Iterator over complete records from a GDSII stream file.
+
+    Parameters
+    ----------
+    stream : file
+        GDSII stream file to be read.
+
+    Returns
+    -------
+    out : 2-tuple
+        Record type and binary data (including header)
+    """
+    while True:
+        header = stream.read(4)
+        if len(header) < 4:
+            return
+        size, rec_type = struct.unpack('>HH', header)
+        rec_type = rec_type // 256
+        yield (rec_type, header + stream.read(size - 4))
+
+
+def get_gds_units(infile):
+    """
+    Return the unit and precision used in the GDS stream file.
+
+    Parameters
+    ----------
+    infile : file or string
+        GDSII stream file to be queried.
+
+    Returns
+    -------
+    out : 2-tuple
+        Return ``(unit, precision)`` from the file.
+    """
+    if isinstance(infile, basestring):
+        infile = open(infile, 'rb')
+        close = True
+    else:
+        close = False
+    unit = precision = None
+    for rec_type, data in _raw_record_reader(infile):
+        # UNITS
+        if rec_type == 0x03:
+            db_user = _eight_byte_real_to_float(data[4:12])
+            db_meters = _eight_byte_real_to_float(data[12:])
+            unit = db_meters / db_user
+            precision = db_meters
+            break
+    if close:
+        infile.close()
+    return (unit, precision)
+
+
+def get_binary_cells(infile):
+    """
+    Load all cells from a GDSII stream file in binary format.
+
+    Parameters
+    ----------
+    infile : file or string
+        GDSII stream file (or path) to be loaded.  It must be opened for
+        reading in binary format.
+
+    Returns
+    -------
+    out : dictionary
+        Dictionary of binary cell representations indexed by name.
+
+    Notes
+    -----
+    The returned cells inherit the units of the loaded file.  If they
+    are used in a new library, the new library must use compatible
+    units.
+    """
+    if isinstance(infile, basestring):
+        infile = open(infile, 'rb')
+        close = True
+    else:
+        close = False
+    cells = {}
+    name = None
+    cell_data = None
+    for rec_type, data in _raw_record_reader(infile):
+        # BGNSTR
+        if rec_type == 0x05:
+            cell_data = [data]
+        # STRNAME
+        elif rec_type == 0x06:
+            cell_data.append(data)
+            if str is not bytes:
+                if data[-1] == 0:
+                    name = data[4:-1].decode('ascii')
+                else:
+                    name = data[4:].decode('ascii')
+            else:
+                if data[-1] == '\0':
+                    name = data[4:-1]
+                else:
+                    name = data[4:]
+        # ENDSTR
+        elif rec_type == 0x07:
+            cell_data.append(data)
+            cells[name] = b''.join(cell_data)
+            cell_data = None
+        elif cell_data is not None:
+            cell_data.append(data)
+    if close:
+        infile.close()
+    return cells
 
 
 def _gather_polys(args):
@@ -4171,7 +4311,8 @@ def write_gds(outfile,
               name='library',
               unit=1.0e-6,
               precision=1.0e-9,
-              timestamp=None):
+              timestamp=None,
+              binary_cells=None):
     """
     Write the current GDSII library to a file.
 
@@ -4200,11 +4341,14 @@ def write_gds(outfile,
     timestamp : datetime object
         Sets the GDSII timestamp.  If ``None``, the current time is
         used.
+    binary_cells : iterable of bytes
+        Iterable with binary data for GDSII cells (from
+        ``get_binary_cells``, for example).
     """
     current_library.name = name
     current_library.unit = unit
     current_library.precision = precision
-    current_library.write_gds(outfile, cells, timestamp)
+    current_library.write_gds(outfile, cells, timestamp, binary_cells)
 
 
 def gdsii_hash(filename, engine=None):
