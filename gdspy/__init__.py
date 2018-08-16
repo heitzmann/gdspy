@@ -257,8 +257,8 @@ class PolygonSet(object):
         """
         data = []
         for ii in range(len(self.polygons)):
-            if len(self.polygons[ii]) > 4094:
-                raise ValueError("[GDSPY] Polygons with more than 4094 are "
+            if len(self.polygons[ii]) > 8190:
+                raise ValueError("[GDSPY] Polygons with more than 8190 are "
                                  "not supported by the GDSII format.")
             data.append(
                 struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
