@@ -261,15 +261,15 @@ class PolygonSet(object):
                 raise ValueError("[GDSPY] Polygons with more than 4094 are "
                                  "not supported by the GDSII format.")
             data.append(
-                struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6,
-                            0x0E02, self.datatypes[ii],
+                struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
+                            6, 0x0E02, self.datatypes[ii],
                             12 + 8 * len(self.polygons[ii]), 0x1003))
             data.extend(
                 struct.pack('>2l', int(round(point[0] * multiplier)),
                             int(round(point[1] * multiplier)))
                 for point in self.polygons[ii])
             data.append(
-                struct.pack('>2l2h',
+                struct.pack('>2l2H',
                             int(round(self.polygons[ii][0][0] * multiplier)),
                             int(round(self.polygons[ii][0][1] * multiplier)),
                             4, 0x1100))
@@ -1483,8 +1483,8 @@ class Path(PolygonSet):
                                 number_of_evaluations)
             width = numpy.array([final_width(u) for u in uu]).reshape(
                 number_of_evaluations, 1) * 0.5
-            dist = numpy.array([final_distance(u) for u in uu]).reshape(
-                number_of_evaluations, 1)
+            dist = numpy.array([final_distance(u)
+                                for u in uu]).reshape(number_of_evaluations, 1)
             x0 = numpy.array([curve_function(u) for u in uu]) + orgn
             dx = numpy.array([curve_derivative(u) for u in uu])
             dx = dx[:, ::-1] * refl / numpy.sqrt(
@@ -1737,8 +1737,9 @@ class L1Path(PolygonSet):
         return ("L1Path (end at ({}, {}) towards {}, {} polygons, {}"
                 "vertices, layers {}, datatypes {})").format(
                     self.x, self.y, self.direction, len(self.polygons),
-                    sum([len(p) for p in self.polygons]), list(
-                        set(self.layers)), list(set(self.datatypes)))
+                    sum([len(p)
+                         for p in self.polygons]), list(set(self.layers)),
+                    list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -2103,8 +2104,8 @@ class Label(object):
         text = self.text
         if len(text) % 2 != 0:
             text = text + '\0'
-        data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602,
-                           self.texttype, 6, 0x1701, self.anchor)
+        data = struct.pack('>4Hh2Hh2Hh', 4, 0x0C00, 6, 0x0D02, self.layer, 6,
+                           0x1602, self.texttype, 6, 0x1701, self.anchor)
         if (self.rotation is not None) or (self.magnification is
                                            not None) or self.x_reflection:
             word = 0
@@ -2115,19 +2116,19 @@ class Label(object):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
                 # word += 0x0004
-                values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
                 # relative (not supported).
                 # word += 0x0002
-                values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1C05) + _eight_byte_real(
                     self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+            data += struct.pack('>3H', 6, 0x1A01, word) + values
         return data + struct.pack(
-            '>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)),
+            '>2H2l2H', 12, 0x1003, int(round(self.position[0] * multiplier)),
             int(round(self.position[1] * multiplier)), 4 + len(text),
-            0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
+            0x1906) + text.encode('ascii') + struct.pack('>2H', 4, 0x1100)
 
     def translate(self, dx, dy):
         """
@@ -2217,14 +2218,14 @@ class Cell(object):
         if len(name) % 2 != 0:
             name = name + '\0'
         return struct.pack(
-            '>16h', 28, 0x0502, now.year, now.month, now.day, now.hour,
+            '>2H12h2H', 28, 0x0502, now.year, now.month, now.day, now.hour,
             now.minute, now.second, now.year, now.month, now.day, now.hour,
             now.minute, now.second, 4 + len(name),
             0x0606) + name.encode('ascii') + b''.join(
                 element.to_gds(multiplier)
                 for element in self.elements) + b''.join(
                     label.to_gds(multiplier)
-                    for label in self.labels) + struct.pack('>2h', 4, 0x0700)
+                    for label in self.labels) + struct.pack('>2H', 4, 0x0700)
 
     def copy(self, name, exclude_from_current=False, deep_copy=False):
         """
@@ -2732,7 +2733,7 @@ class CellReference(object):
         name = self.ref_cell.name
         if len(name) % 2 != 0:
             name = name + '\0'
-        data = struct.pack('>4h', 4, 0x0A00, 4 + len(name),
+        data = struct.pack('>4H', 4, 0x0A00, 4 + len(name),
                            0x1206) + name.encode('ascii')
         if (self.rotation is not None) or (self.magnification is
                                            not None) or self.x_reflection:
@@ -2744,17 +2745,17 @@ class CellReference(object):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
                 # word += 0x0004
-                values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
                 # relative (not supported).
                 # word += 0x0002
-                values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1C05) + _eight_byte_real(
                     self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+            data += struct.pack('>3H', 6, 0x1A01, word) + values
         return data + struct.pack(
-            '>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)),
+            '>2H2l2H', 12, 0x1003, int(round(self.origin[0] * multiplier)),
             int(round(self.origin[1] * multiplier)), 4, 0x1100)
 
     def area(self, by_spec=False):
@@ -3041,7 +3042,7 @@ class CellArray(object):
         name = self.ref_cell.name
         if len(name) % 2 != 0:
             name = name + '\0'
-        data = struct.pack('>4h', 4, 0x0B00, 4 + len(name),
+        data = struct.pack('>4H', 4, 0x0B00, 4 + len(name),
                            0x1206) + name.encode('ascii')
         x2 = self.origin[0] + self.columns * self.spacing[0]
         y2 = self.origin[1]
@@ -3058,7 +3059,7 @@ class CellArray(object):
                 # This flag indicates that the magnification is absolute, not
                 # relative (not supported).
                 # word += 0x0004
-                values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1B05) + _eight_byte_real(
                     self.magnification)
             if not (self.rotation is None):
                 # This flag indicates that the rotation is absolute, not
@@ -3076,11 +3077,11 @@ class CellArray(object):
                 y3 = (x3 - self.origin[0]) * sa + (
                     y3 - self.origin[1]) * ca + self.origin[1]
                 x3 = tmp
-                values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(
+                values += struct.pack('>2H', 12, 0x1C05) + _eight_byte_real(
                     self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+            data += struct.pack('>3H', 6, 0x1A01, word) + values
         return data + struct.pack(
-            '>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003,
+            '>2H2h2H6l2H', 8, 0x1302, self.columns, self.rows, 28, 0x1003,
             int(round(self.origin[0] * multiplier)),
             int(round(self.origin[1] * multiplier)), int(
                 round(x2 * multiplier)), int(round(y2 * multiplier)),
@@ -3494,11 +3495,11 @@ class GdsLibrary(object):
         now = datetime.datetime.today() if timestamp is None else timestamp
         name = self.name if len(self.name) % 2 == 0 else (self.name + '\0')
         outfile.write(
-            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
+            struct.pack('>5H12h2H', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
                         now.month, now.day, now.hour, now.minute, now.second,
                         now.year, now.month, now.day, now.hour, now.minute,
                         now.second, 4 + len(name), 0x0206) +
-            name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
+            name.encode('ascii') + struct.pack('>2H', 20, 0x0305) +
             _eight_byte_real(self.precision / self.unit) +
             _eight_byte_real(self.precision))
         if cells is None:
@@ -3510,7 +3511,7 @@ class GdsLibrary(object):
         if binary_cells is not None:
             for bc in binary_cells:
                 outfile.write(bc)
-        outfile.write(struct.pack('>2h', 4, 0x0400))
+        outfile.write(struct.pack('>2H', 4, 0x0400))
         if close:
             outfile.close()
 
@@ -3857,11 +3858,11 @@ class GdsWriter(object):
         if len(name) % 2 != 0:
             name = name + '\0'
         self._outfile.write(
-            struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
+            struct.pack('>5H12h2H', 6, 0x0002, 0x0258, 28, 0x0102, now.year,
                         now.month, now.day, now.hour, now.minute, now.second,
                         now.year, now.month, now.day, now.hour, now.minute,
                         now.second, 4 + len(name), 0x0206) +
-            name.encode('ascii') + struct.pack('>2h', 20, 0x0305) +
+            name.encode('ascii') + struct.pack('>2H', 20, 0x0305) +
             _eight_byte_real(precision / unit) + _eight_byte_real(precision))
 
     def write_cell(self, cell, timestamp=None):
@@ -3912,7 +3913,7 @@ class GdsWriter(object):
         """
         Finalize the GDSII stream library.
         """
-        self._outfile.write(struct.pack('>2h', 4, 0x0400))
+        self._outfile.write(struct.pack('>2H', 4, 0x0400))
         if self._close:
             self._outfile.close()
 
