@@ -9,7 +9,7 @@ align_closing_bracket_with_visual_indent=True
 #        'this is the second element of a tuple'):
 #            value,
 #   }
-allow_multiline_dictionary_keys=False
+allow_multiline_dictionary_keys=True
 
 # Allow lambdas to be formatted on more than one line.
 allow_multiline_lambdas=True
@@ -52,7 +52,7 @@ blank_line_before_nested_class_or_def=False
 #        'key1': 'value1',
 #        'key2': 'value2',
 #    })
-coalesce_brackets=False
+coalesce_brackets=True
 
 # The column limit.
 column_limit=79
@@ -94,6 +94,10 @@ continuation_indent_width=4
 #   )        # <--- this bracket is dedented and on a separate line
 dedent_closing_brackets=False
 
+# Disable the heuristic which places each list element on a separate line
+# if the list is comma-terminated.
+disable_ending_comma_heuristic=False
+
 # Place each dictionary entry onto its own line.
 each_dict_entry_on_separate_line=True
 
@@ -128,7 +132,7 @@ join_multiple_lines=True
 #
 #   1 + 2 * 3 - 4 / 5
 #
-# will be formatted as follows when configured with a value "*,/":
+# will be formatted as follows when configured with *,/:
 #
 #   1 + 2*3 - 4/5
 #
