@@ -3439,6 +3439,11 @@ class GdsLibrary(object):
         -------
         out : ``GdsLibrary``
             This object.
+
+        Notes
+        -----
+        ``CellReference`` or ``CellArray`` instances that referred to an
+        overwritten cell are not automatically updated.
         """
         if isinstance(cell, Cell):
             if (not overwrite_duplicate and cell.name in self.cell_dict and
@@ -3750,7 +3755,7 @@ class GdsLibrary(object):
         self._references.append(ref)
         return ref
 
-    def extract(self, cell):
+    def extract(self, cell, overwrite_duplicate=False):
         """
         Extract a cell from the this GDSII file and include it in the
         current global library, including referenced dependencies.
@@ -3761,15 +3766,23 @@ class GdsLibrary(object):
             Cell or name of the cell to be extracted from the imported
             file.  Referenced cells will be automatically extracted as
             well.
+        overwrite_duplicate : bool
+            If True an existing cell with the same name in the current
+            global library will be overwritten.
 
         Returns
         -------
         out : ``Cell``
             The extracted cell.
+
+        Notes
+        -----
+        ``CellReference`` or ``CellArray`` instances that referred to an
+        overwritten cell are not automatically updated.
         """
         cell = self.cell_dict.get(cell, cell)
-        current_library.add(cell)
-        current_library.add(cell.get_dependencies(True))
+        current_library.add(cell, overwrite_duplicate=overwrite_duplicate)
+        current_library.add(cell.get_dependencies(True), overwrite_duplicate=overwrite_duplicate)
         return cell
 
     def top_level(self):
