@@ -3782,7 +3782,8 @@ class GdsLibrary(object):
         """
         cell = self.cell_dict.get(cell, cell)
         current_library.add(cell, overwrite_duplicate=overwrite_duplicate)
-        current_library.add(cell.get_dependencies(True), overwrite_duplicate=overwrite_duplicate)
+        current_library.add(cell.get_dependencies(True),
+                            overwrite_duplicate=overwrite_duplicate)
         return cell
 
     def top_level(self):
