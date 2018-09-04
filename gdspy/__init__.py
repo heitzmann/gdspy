@@ -3594,11 +3594,11 @@ class GdsLibrary(object):
                 if 'bgnextn' in kwargs or 'endextn' in kwargs:
                     xy = kwargs['xy']
                     d = kwargs.pop('bgnextn', 0)
-                    v = xy[0, :] - xy[1, :]
-                    xy[0, :] = xy[0, :] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
+                    v = xy[0:2] - xy[2:4]
+                    xy[0:2] = xy[0:2] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
                     d = kwargs.pop('endextn', 0)
-                    v = xy[-1, :] - xy[-2, :]
-                    xy[-1, :] = xy[-1, :] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
+                    v = xy[-2:] - xy[-4:-2]
+                    xy[-2:] = xy[-2:] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
             # WIDTH
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
