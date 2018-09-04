@@ -3591,6 +3591,14 @@ class GdsLibrary(object):
             # XY
             elif record[0] == 0x10:
                 kwargs['xy'] = factor * record[1]
+                if 'bgnextn' in kwargs or 'endextn' in kwargs:
+                    xy = kwargs['xy']
+                    d = kwargs.pop('bgnextn', 0)
+                    v = xy[0, :] - xy[1, :]
+                    xy[0, :] = xy[0, :] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
+                    d = kwargs.pop('endextn', 0)
+                    v = xy[-1, :] - xy[-2, :]
+                    xy[-1, :] = xy[-1, :] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
             # WIDTH
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
@@ -3680,15 +3688,17 @@ class GdsLibrary(object):
             # PATHTYPE
             elif record[0] == 0x21:
                 if record[1][0] > 2:
-                    if 0x21 not in emitted_warnings:
-                        warnings.warn(
-                            "[GDSPY] Path ends with custom size are not "
-                            "supported.",
-                            RuntimeWarning,
-                            stacklevel=2)
-                        emitted_warnings.append(0x21)
+                    # Custom path extension is manually added to the
+                    # first and last path segments.
+                    kwargs['ends'] = 0
                 else:
                     kwargs['ends'] = record[1][0]
+            # BGNEXTN
+            elif record[0] == 0x30:
+                kwargs['bgnextn'] = factor * record[1][0]
+            # ENDEXTN
+            elif record[0] == 0x31:
+                kwargs['endextn'] = factor * record[1][0]
             # ENDLIB
             elif record[0] == 0x04:
                 for ref in self._references:
