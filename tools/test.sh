@@ -13,8 +13,9 @@ if [ $(which virtualenv$VERSION) ]; then
 	echo
 	echo Testing $VERSION
 	cd examples
-	python tutorial.py
-	python photonics.py
+  for i in *.py; do
+    python "$i"
+  done
 	cd -
 	cd tests
 	for i in *.py; do
