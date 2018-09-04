@@ -260,19 +260,20 @@ class PolygonSet(object):
             if len(self.polygons[ii]) > 8190:
                 raise ValueError("[GDSPY] Polygons with more than 8190 are "
                                  "not supported by the GDSII format.")
-            data.append(
-                struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
-                            6, 0x0E02, self.datatypes[ii],
-                            12 + 8 * len(self.polygons[ii]), 0x1003))
-            data.extend(
-                struct.pack('>2l', int(round(point[0] * multiplier)),
-                            int(round(point[1] * multiplier)))
-                for point in self.polygons[ii])
-            data.append(
-                struct.pack('>2l2H',
-                            int(round(self.polygons[ii][0][0] * multiplier)),
-                            int(round(self.polygons[ii][0][1] * multiplier)),
-                            4, 0x1100))
+            else:
+                data.append(
+                    struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
+                                6, 0x0E02, self.datatypes[ii],
+                                12 + 8 * len(self.polygons[ii]), 0x1003))
+                data.extend(
+                    struct.pack('>2l', int(round(point[0] * multiplier)),
+                                int(round(point[1] * multiplier)))
+                    for point in self.polygons[ii])
+                data.append(
+                    struct.pack('>2l2H',
+                                int(round(self.polygons[ii][0][0] * multiplier)),
+                                int(round(self.polygons[ii][0][1] * multiplier)),
+                                4, 0x1100))
         return b''.join(data)
 
     def area(self, by_spec=False):
@@ -3592,14 +3593,6 @@ class GdsLibrary(object):
             # XY
             elif record[0] == 0x10:
                 kwargs['xy'] = factor * record[1]
-                if 'bgnextn' in kwargs or 'endextn' in kwargs:
-                    xy = kwargs['xy']
-                    d = kwargs.pop('bgnextn', 0)
-                    v = xy[0:2] - xy[2:4]
-                    xy[0:2] = xy[0:2] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
-                    d = kwargs.pop('endextn', 0)
-                    v = xy[-2:] - xy[-4:-2]
-                    xy[-2:] = xy[-2:] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
             # WIDTH
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
@@ -3726,6 +3719,14 @@ class GdsLibrary(object):
 
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
+        if 'bgnextn' in kwargs or 'endextn' in kwargs:
+            xy = kwargs['xy']
+            d = kwargs.pop('bgnextn', 0)
+            v = xy[0:2] - xy[2:4]
+            xy[0:2] = xy[0:2] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
+            d = kwargs.pop('endextn', 0)
+            v = xy[-2:] - xy[-4:-2]
+            xy[-2:] = xy[-2:] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
         return PolyPath(**kwargs)
 
