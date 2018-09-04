@@ -747,6 +747,7 @@ class Round(PolygonSet):
                                        number_of_points - 1)
                     self.polygons[ii][1:, 0] = numpy.cos(t) * orx + center[0]
                     self.polygons[ii][1:, 1] = numpy.sin(t) * ory + center[1]
+                    self.polygons[ii][0, :] += center
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
