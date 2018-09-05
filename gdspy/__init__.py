@@ -166,7 +166,6 @@ class PolygonSet(object):
                 "[GDSPY] A polygon with more than 199 points was "
                 "created (not officially supported by the GDSII "
                 "format).",
-                RuntimeWarning,
                 stacklevel=2)
 
     def __str__(self):
@@ -258,8 +257,28 @@ class PolygonSet(object):
         data = []
         for ii in range(len(self.polygons)):
             if len(self.polygons[ii]) > 8190:
-                raise ValueError("[GDSPY] Polygons with more than 8190 are "
-                                 "not supported by the GDSII format.")
+                warnings.warn("[GDSPY] Polygons with more than 8190 are not "
+                              "supported by the official GDSII specification. "
+                              "This extension might not be compatible with "
+                              "all GDSII readers.",
+                              stacklevel=2)
+                data.append(
+                    struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii],
+                                6, 0x0E02, self.datatypes[ii]))
+                xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype=int)
+                xy[:-1, :] = self.polygons[ii] * multiplier
+                xy[-1, :] = xy[0, :]
+                i0 = 0
+                while i0 < xy.shape[0]:
+                    i1 = min(i0 + 8191, xy.shape[0])
+                    data.append(
+                        struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.extend(
+                        struct.pack('>2l', point[0], point[1])
+                        for point in xy[i0:i1])
+                    i0 = i1
+                data.append(
+                    struct.pack('>2H', 4, 0x1100))
             else:
                 data.append(
                     struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
@@ -549,7 +568,6 @@ class Polygon(PolygonSet):
                 "[GDSPY] A polygon with more than 199 points was "
                 "created (not officially supported by the GDSII "
                 "format).",
-                RuntimeWarning,
                 stacklevel=2)
         self.layers = [layer]
         self.datatypes = [datatype]
@@ -3592,7 +3610,11 @@ class GdsLibrary(object):
                 kwargs['texttype'] = texttypes.get(record[1][0], record[1][0])
             # XY
             elif record[0] == 0x10:
-                kwargs['xy'] = factor * record[1]
+                if 'xy' in kwargs:
+                    kwargs['xy'] = numpy.concatenate((kwargs['xy'],
+                                                      factor * record[1]))
+                else:
+                    kwargs['xy'] = factor * record[1]
             # WIDTH
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
@@ -3707,7 +3729,6 @@ class GdsLibrary(object):
                     "[GDSPY] Record type {0} ({1:02X}) is not "
                     "supported.".format(GdsLibrary._record_name[record[0]],
                                         record[0]),
-                    RuntimeWarning,
                     stacklevel=2)
                 emitted_warnings.append(record[0])
         if close:
