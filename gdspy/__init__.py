@@ -3408,10 +3408,10 @@ class GdsLibrary(object):
                  infile,
                  units='skip',
                  rename={},
-                 prefix='',
                  layers={},
                  datatypes={},
-                 texttypes={}):
+                 texttypes={},
+                 prefix=''):
         """
         Read a GDSII file into this library.
 
@@ -3431,8 +3431,6 @@ class GdsLibrary(object):
         rename : dictionary
             Dictionary used to rename the imported cells.  Keys and
             values must be strings.
-        prefix : string
-            String to be prefixed to names of the imported cells.
         layers : dictionary
             Dictionary used to convert the layers in the imported cells.
             Keys and values must be integers.
@@ -3442,6 +3440,8 @@ class GdsLibrary(object):
         texttypes : dictionary
             Dictionary used to convert the text types in the imported
             cells.  Keys and values must be integers.
+        prefix : string
+            String to be prefixed to names of the imported cells.
 
         Returns
         -------
