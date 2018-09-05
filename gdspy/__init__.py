@@ -3408,6 +3408,7 @@ class GdsLibrary(object):
                  infile,
                  units='skip',
                  rename={},
+                 prefix='',
                  layers={},
                  datatypes={},
                  texttypes={}):
@@ -3430,6 +3431,8 @@ class GdsLibrary(object):
         rename : dictionary
             Dictionary used to rename the imported cells.  Keys and
             values must be strings.
+        prefix : string
+            String to be prefixed to names of the imported cells.
         layers : dictionary
             Dictionary used to convert the layers in the imported cells.
             Keys and values must be integers.
@@ -3503,7 +3506,7 @@ class GdsLibrary(object):
                 create_element = self._create_label
             # SNAME
             elif record[0] == 0x12:
-                kwargs['ref_cell'] = rename.get(record[1], record[1])
+                kwargs['ref_cell'] = prefix + rename.get(record[1], record[1])
             # COLROW
             elif record[0] == 0x13:
                 kwargs['columns'] = record[1][0]
@@ -3533,7 +3536,7 @@ class GdsLibrary(object):
                 create_element = self._create_array
             # STRNAME
             elif record[0] == 0x06:
-                name = rename.get(record[1], record[1])
+                name = prefix + rename.get(record[1], record[1])
                 cell = Cell(name, exclude_from_current=True)
                 self.cell_dict[name] = cell
             # STRING
