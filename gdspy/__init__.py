@@ -3408,10 +3408,10 @@ class GdsLibrary(object):
                  infile,
                  units='skip',
                  rename={},
+                 rename_template='{name}',
                  layers={},
                  datatypes={},
-                 texttypes={},
-                 rename_template='{name}'):
+                 texttypes={}):
         """
         Read a GDSII file into this library.
 
