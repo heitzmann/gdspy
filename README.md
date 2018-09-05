@@ -67,8 +67,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Changed return value of `slice` to avoid creating empty `PolygonSet`.
 * Added argument `timestamp` to GDSII writing functions.
 * Improved `Round` to support creating ellipses.
-* Increased maximum number of vertices per polygon to 8190.
+* Added support for unlimited number of points per polygon.
 * Added support for BGNEXTN and ENDEXTN when reading a GDSII file.
+* Polygon creation warnings are now controlled by `poly_warnings`.
 
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.

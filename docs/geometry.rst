@@ -130,3 +130,10 @@ copy
 ====
 
 .. autofunction:: gdspy.copy
+
+
+**********
+Attributes
+**********
+
+.. autodata:: poly_warnings

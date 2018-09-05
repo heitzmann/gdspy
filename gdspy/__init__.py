@@ -132,9 +132,6 @@ class PolygonSet(object):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygon
-        will be suppressed.
 
     Attributes
     ----------
@@ -156,12 +153,11 @@ class PolygonSet(object):
 
     __slots__ = 'layers', 'datatypes', 'polygons'
 
-    def __init__(self, polygons, layer=0, datatype=0, verbose=True):
+    def __init__(self, polygons, layer=0, datatype=0):
         self.polygons = [numpy.array(p) for p in polygons]
         self.layers = [layer] * len(self.polygons)
         self.datatypes = [datatype] * len(self.polygons)
-        if verbose and any(p.shape[0] > 199 for p in self.polygons):
-            verbose = False
+        if poly_warnings and any(p.shape[0] > 199 for p in self.polygons):
             warnings.warn(
                 "[GDSPY] A polygon with more than 199 points was "
                 "created (not officially supported by the GDSII "
@@ -256,7 +252,7 @@ class PolygonSet(object):
         """
         data = []
         for ii in range(len(self.polygons)):
-            if len(self.polygons[ii]) > 8190:
+            if poly_warnings and len(self.polygons[ii]) > 8190:
                 warnings.warn("[GDSPY] Polygons with more than 8190 are not "
                               "supported by the official GDSII specification. "
                               "This extension might not be compatible with "
@@ -541,9 +537,6 @@ class Polygon(PolygonSet):
         The GDSII layer number for this element.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygon
-        will be suppressed.
 
     Notes
     -----
@@ -562,8 +555,8 @@ class Polygon(PolygonSet):
 
     __slots__ = 'layers', 'datatypes', 'polygons'
 
-    def __init__(self, points, layer=0, datatype=0, verbose=True):
-        if len(points) > 199 and verbose:
+    def __init__(self, points, layer=0, datatype=0):
+        if poly_warnings and len(points) > 199:
             warnings.warn(
                 "[GDSPY] A polygon with more than 199 points was "
                 "created (not officially supported by the GDSII "
@@ -1221,7 +1214,6 @@ class Path(PolygonSet):
         The GDSII specification supports only a maximum of 199 vertices
         per polygon.
         """
-        warn = True
         cx = self.x - radius * numpy.cos(initial_angle)
         cy = self.y - radius * numpy.sin(initial_angle)
         self.x = cx + radius * numpy.cos(final_angle)
@@ -1274,12 +1266,11 @@ class Path(PolygonSet):
                     ang = numpy.linspace(angles[jj + 1], angles[jj], pts2)
                     rad = numpy.linspace(r0 - widths[jj + 1],
                                          old_r0 - widths[jj], pts2)
-                    if (rad[0] <= 0 or rad[-1] <= 0) and warn:
+                    if poly_warnings and (rad[0] <= 0 or rad[-1] <= 0):
                         warnings.warn(
                             "[GDSPY] Path arc with width larger than radius "
                             "created: possible self-intersecting polygon.",
                             stacklevel=2)
-                        warn = False
                     self.polygons[-1][pts1:, 0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][pts1:, 1] = numpy.sin(ang) * rad + cy
                 self.length += abs((angles[jj + 1] - angles[jj]) * radius)
@@ -2653,26 +2644,25 @@ class Cell(object):
             self.elements = []
             if single_layer is None and single_datatype is None:
                 for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], *ld, verbose=False))
+                    self.add(PolygonSet(poly_dic[ld], *ld))
             elif single_layer is None:
                 for ld in poly_dic.keys():
                     self.add(
                         PolygonSet(
                             poly_dic[ld],
                             ld[0],
-                            single_datatype,
-                            verbose=False))
+                            single_datatype))
             else:
                 for ld in poly_dic.keys():
                     self.add(
                         PolygonSet(
-                            poly_dic[ld], single_layer, ld[1], verbose=False))
+                            poly_dic[ld], single_layer, ld[1]))
         else:
             polygons = self.get_polygons()
             self.elements = []
             self.add(
                 PolygonSet(
-                    polygons, single_layer, single_datatype, verbose=False))
+                    polygons, single_layer, single_datatype))
         return self
 
 
@@ -4225,8 +4215,7 @@ def offset(polygons,
         _gather_polys(polygons), distance, join, tolerance, 1 / precision, 1
         if join_first else 0)
     return None if len(result) == 0 else PolygonSet(
-        result, layer, datatype, verbose=False).fracture(
-            max_points, precision)
+        result, layer, datatype).fracture(max_points, precision)
 
 
 def boolean(operand1,
@@ -4277,7 +4266,7 @@ def boolean(operand1,
         poly2.append(poly1.pop())
     result = clipper.clip(poly1, poly2, operation, 1 / precision)
     return None if len(result) == 0 else PolygonSet(
-        result, layer, datatype, verbose=False).fracture(
+        result, layer, datatype).fracture(
             max_points, precision)
 
 
@@ -4445,4 +4434,9 @@ Current ``GdsLibrary`` instance for automatic creation of GDSII files.
 
 This variable can be freely overwritten by the user with a new instance
 of ``GdsLibrary``.
+"""
+
+poly_warnings = True
+"""
+Flag controlling the emission of warnings relative to polygon creation.
 """
