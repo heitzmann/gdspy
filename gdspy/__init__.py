@@ -3431,6 +3431,10 @@ class GdsLibrary(object):
         rename : dictionary
             Dictionary used to rename the imported cells.  Keys and
             values must be strings.
+        rename_template : string
+            Template string used to rename the imported cells. Appiled
+            only if the cell name is not in the ``rename`` dictionary.
+            Examples: ``'prefix-{name}'``, ``'{name}-suffix'``
         layers : dictionary
             Dictionary used to convert the layers in the imported cells.
             Keys and values must be integers.
@@ -3440,10 +3444,6 @@ class GdsLibrary(object):
         texttypes : dictionary
             Dictionary used to convert the text types in the imported
             cells.  Keys and values must be integers.
-        rename_template : string
-            Template string used to rename the imported cells. Appiled
-            only if the cell name is not in the ``rename`` dictionary.
-            Examples: ``'prefix-{name}'``, ``'{name}-suffix'``
 
         Returns
         -------
