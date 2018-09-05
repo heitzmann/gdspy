@@ -2074,11 +2074,8 @@ class Label(object):
         self.position = numpy.array(position)
         self.anchor = Label._anchor.get(anchor.lower(), None)
         if self.anchor is None:
-            warnings.warn(
-                "[GDSPY] Label anchors must be one of: '" + "', '".join(
-                    Label._anchor.keys()) + "'.",
-                stacklevel=2)
-            self.anchor = Label._anchor['o']
+            raise ValueError("[GDSPY] Label anchors must be one of: '" +
+                             "', '".join(Label._anchor.keys()) + "'.")
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
