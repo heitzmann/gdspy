@@ -3443,7 +3443,7 @@ class GdsLibrary(object):
         rename_template : string
             Template string used to rename the imported cells. Appiled
             only if the cell name is not in the ``rename`` dictionary.
-            Examples: ``'prefix-{name}'``, ``'{name}-postfix'``
+            Examples: ``'prefix-{name}'``, ``'{name}-suffix'``
 
         Returns
         -------
