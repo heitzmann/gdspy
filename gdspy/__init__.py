@@ -253,42 +253,44 @@ class PolygonSet(object):
         data = []
         for ii in range(len(self.polygons)):
             if poly_warnings and len(self.polygons[ii]) > 8190:
-                warnings.warn("[GDSPY] Polygons with more than 8190 are not "
-                              "supported by the official GDSII specification. "
-                              "This extension might not be compatible with "
-                              "all GDSII readers.",
-                              stacklevel=2)
+                warnings.warn(
+                    "[GDSPY] Polygons with more than 8190 are not "
+                    "supported by the official GDSII specification. "
+                    "This extension might not be compatible with "
+                    "all GDSII readers.",
+                    stacklevel=2)
                 data.append(
-                    struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii],
-                                6, 0x0E02, self.datatypes[ii]))
-                xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype=int)
+                    struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02,
+                                self.layers[ii], 6, 0x0E02,
+                                self.datatypes[ii]))
+                xy = numpy.empty(
+                    (self.polygons[ii].shape[0] + 1, 2), dtype=int)
                 xy[:-1, :] = self.polygons[ii] * multiplier
                 xy[-1, :] = xy[0, :]
                 i0 = 0
                 while i0 < xy.shape[0]:
                     i1 = min(i0 + 8191, xy.shape[0])
-                    data.append(
-                        struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
                     data.extend(
                         struct.pack('>2l', point[0], point[1])
                         for point in xy[i0:i1])
                     i0 = i1
-                data.append(
-                    struct.pack('>2H', 4, 0x1100))
+                data.append(struct.pack('>2H', 4, 0x1100))
             else:
                 data.append(
-                    struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii],
-                                6, 0x0E02, self.datatypes[ii],
+                    struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02,
+                                self.layers[ii], 6, 0x0E02, self.datatypes[ii],
                                 12 + 8 * len(self.polygons[ii]), 0x1003))
                 data.extend(
                     struct.pack('>2l', int(round(point[0] * multiplier)),
                                 int(round(point[1] * multiplier)))
                     for point in self.polygons[ii])
                 data.append(
-                    struct.pack('>2l2H',
-                                int(round(self.polygons[ii][0][0] * multiplier)),
-                                int(round(self.polygons[ii][0][1] * multiplier)),
-                                4, 0x1100))
+                    struct.pack(
+                        '>2l2H',
+                        int(round(self.polygons[ii][0][0] * multiplier)),
+                        int(round(self.polygons[ii][0][1] * multiplier)), 4,
+                        0x1100))
         return b''.join(data)
 
     def area(self, by_spec=False):
@@ -2533,8 +2535,11 @@ class Cell(object):
                                     numpy.array(element.polygons[ii])
                                 ]
                     else:
-                        cell_polygons = element.get_polygons(
-                            True, None if depth is None else depth - 1)
+                        if depth is None:
+                            next_depth = None
+                        else:
+                            next_depth = depth - 1
+                        cell_polygons = element.get_polygons(True, next_depth)
                         for kk in cell_polygons.keys():
                             if kk in polygons:
                                 polygons[kk].extend(cell_polygons[kk])
@@ -2547,9 +2552,11 @@ class Cell(object):
                         for points in element.polygons:
                             polygons.append(numpy.array(points))
                     else:
-                        polygons.extend(
-                            element.get_polygons(
-                                depth=None if depth is None else depth - 1))
+                        if depth is None:
+                            next_depth = None
+                        else:
+                            next_depth = depth - 1
+                        polygons.extend(element.get_polygons(depth=next_depth))
         return polygons
 
     def get_labels(self, depth=None):
@@ -2570,14 +2577,14 @@ class Cell(object):
         labels = libCopy.deepcopy(self.labels)
         if depth is None or depth > 0:
             for element in self.elements:
+                if depth is None:
+                    next_depth = None
+                else:
+                    next_depth = depth - 1
                 if isinstance(element, CellReference):
-                    labels.extend(
-                        element.get_labels(None if depth is None else depth -
-                                           1))
+                    labels.extend(element.get_labels(next_depth))
                 elif isinstance(element, CellArray):
-                    labels.extend(
-                        element.get_labels(None if depth is None else depth -
-                                           1))
+                    labels.extend(element.get_labels(next_depth))
         return labels
 
     def get_dependencies(self, recursive=False):
@@ -2644,22 +2651,14 @@ class Cell(object):
                     self.add(PolygonSet(poly_dic[ld], *ld))
             elif single_layer is None:
                 for ld in poly_dic.keys():
-                    self.add(
-                        PolygonSet(
-                            poly_dic[ld],
-                            ld[0],
-                            single_datatype))
+                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype))
             else:
                 for ld in poly_dic.keys():
-                    self.add(
-                        PolygonSet(
-                            poly_dic[ld], single_layer, ld[1]))
+                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1]))
         else:
             polygons = self.get_polygons()
             self.elements = []
-            self.add(
-                PolygonSet(
-                    polygons, single_layer, single_datatype))
+            self.add(PolygonSet(polygons, single_layer, single_datatype))
         return self
 
 
@@ -3802,8 +3801,9 @@ class GdsLibrary(object):
         """
         cell = self.cell_dict.get(cell, cell)
         current_library.add(cell, overwrite_duplicate=overwrite_duplicate)
-        current_library.add(cell.get_dependencies(True),
-                            overwrite_duplicate=overwrite_duplicate)
+        current_library.add(
+            cell.get_dependencies(True),
+            overwrite_duplicate=overwrite_duplicate)
         return cell
 
     def top_level(self):
@@ -4153,8 +4153,11 @@ def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
         for r, p in zip(result, clipper._chop(pol, pos, axis, scaling)):
             r.extend(p)
     for i in range(len(result)):
-        result[i] = None if len(result[i]) == 0 else PolygonSet(
-            result[i], layer[i % len(layer)], datatype[i % len(datatype)])
+        if len(result[i]) == 0:
+            result[i] = None
+        else:
+            result[i] = PolygonSet(result[i], layer[i % len(layer)],
+                                   datatype[i % len(datatype)])
     return result
 
 
@@ -4211,8 +4214,9 @@ def offset(polygons,
     result = clipper.offset(
         _gather_polys(polygons), distance, join, tolerance, 1 / precision, 1
         if join_first else 0)
-    return None if len(result) == 0 else PolygonSet(
-        result, layer, datatype).fracture(max_points, precision)
+    if len(result) == 0:
+        return None
+    return PolygonSet(result, layer, datatype).fracture(max_points, precision)
 
 
 def boolean(operand1,
@@ -4262,9 +4266,9 @@ def boolean(operand1,
     if len(poly2) == 0:
         poly2.append(poly1.pop())
     result = clipper.clip(poly1, poly2, operation, 1 / precision)
-    return None if len(result) == 0 else PolygonSet(
-        result, layer, datatype).fracture(
-            max_points, precision)
+    if len(result) == 0:
+        return None
+    return PolygonSet(result, layer, datatype).fracture(max_points, precision)
 
 
 fast_boolean = boolean

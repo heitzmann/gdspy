@@ -64,8 +64,8 @@ class ColorDict(dict):
             rgb = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([
                 int(255 * c + 0.5) for c in colorsys.hsv_to_rgb(
                     (layer % 3) / 3.0 + (layer % 6 // 3) / 6.0 +
-                    (layer // 6) / 11.0, 1 -
-                    ((layer + datatype) % 8) / 12.0, 1 - (datatype % 3) / 4.0)
+                    (layer // 6) / 11.0, 1 - ((layer + datatype) % 8) / 12.0,
+                    1 - (datatype % 3) / 4.0)
             ])
         else:
             rgb = self.default
