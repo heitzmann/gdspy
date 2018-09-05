@@ -10,10 +10,8 @@ install:
   - pip install -r requirements.txt
   - pip install sphinx
   - pip install sphinx_rtd_theme
-  - if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then pip install yapf; fi
   - python setup.py build build_sphinx
   - python setup.py install
 
 script:
   - pytest
-  - if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then yapf -dr *.py docs/*.py tests/*.py tools/*.py examples/*.py gdspy/*.py; fi
