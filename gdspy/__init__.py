@@ -10,8 +10,11 @@
 gdspy is a Python module that allows the creation of GDSII stream files.
 
 Many features of the GDSII format are implemented, such as cell
-references and arrays, but the support for fonts is quite limited.  Text
-is only available through polygonal objects.
+references and arrays, but the support for fonts is quite limited.
+
+GDSII format references:
+- http://boolean.klaasholwerda.nl/interface/bnf/gdsformat.html
+- http://jupiter.math.nctu.edu.tw/~weng/courses/IC_2007/PROJECT_NCTU_MATH/CELL_LAYOUT/The%20GDSII%20Stream%20Format.htm
 """
 
 from __future__ import division
