@@ -266,8 +266,8 @@ class PolygonSet(object):
                     struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02,
                                 self.layers[ii], 6, 0x0E02,
                                 self.datatypes[ii]))
-                xy = numpy.empty(
-                    (self.polygons[ii].shape[0] + 1, 2), dtype=int)
+                xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2),
+                                 dtype=int)
                 xy[:-1, :] = self.polygons[ii] * multiplier
                 xy[-1, :] = xy[0, :]
                 i0 = 0
@@ -318,9 +318,8 @@ class PolygonSet(object):
                 poly_area = 0
                 for ii in range(1, len(poly) - 1):
                     poly_area += (poly[0][0] - poly[ii + 1][0]) * (
-                        poly[ii][1] - poly[0][1]) - (
-                            poly[0][1] - poly[ii + 1][1]) * (
-                                poly[ii][0] - poly[0][0])
+                        poly[ii][1] - poly[0][1]) - (poly[0][1] - poly[
+                            ii + 1][1]) * (poly[ii][0] - poly[0][0])
                 if key in path_area:
                     path_area[key] += 0.5 * abs(poly_area)
                 else:
@@ -331,9 +330,8 @@ class PolygonSet(object):
                 poly_area = 0
                 for ii in range(1, len(points) - 1):
                     poly_area += (points[0][0] - points[ii + 1][0]) * (
-                        points[ii][1] - points[0][1]) - (
-                            points[0][1] - points[ii + 1][1]) * (
-                                points[ii][0] - points[0][0])
+                        points[ii][1] - points[0][1]) - (points[0][1] - points[
+                            ii + 1][1]) * (points[ii][0] - points[0][0])
                 path_area += 0.5 * abs(poly_area)
         return path_area
 
@@ -403,9 +401,15 @@ class PolygonSet(object):
 
         Parameters
         ----------
-        radius : number
-            Radius of the corners.  If number: All corners filleted by
-            that amount.
+        radius : number, list
+            Radius of the corners.  If number: all corners filleted by
+            that amount.  If list: specify fillet radii on a per-polygon
+            basis (list length must be equal to the number of polygons
+            in this ``PolygonSet``).  Each element in the list can be a
+            number (all corners filleted by the same amount) or a list
+            of numbers, one per polygon vertex.  Alternatively, the list
+            can be flattened to have one radius per ``PolygonSet``
+            vertex, instead of being a list of lists.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The
             number of vertices in each corner of the polygon will be the
@@ -425,6 +429,36 @@ class PolygonSet(object):
         """
         two_pi = 2 * numpy.pi
         fracture = False
+        if hasattr(radius, '__iter__'):
+            if len(radius) == len(self.polygons):
+                radii = []
+                for r, p in zip(radius, self.polygons):
+                    if hasattr(r, '__iter__'):
+                        if len(r) != p.shape[0]:
+                            raise ValueError("[GDSPY] Wrong length in "
+                                             "fillet radius list.  "
+                                             "Expected lengths are {} "
+                                             "or {}; got {}.".format(
+                                                 len(self.polygons), total,
+                                                 len(radius)))
+                        radii.append(r)
+                    else:
+                        radii.append([r] * p.shape[0])
+            else:
+                total = sum(p.shape[0] for p in self.polygons)
+                if len(radius) != total:
+                    raise ValueError("[GDSPY] Wrong length in fillet "
+                                     "radius list.  Expected lengths "
+                                     "are {} or {}; got {}.".format(
+                                         len(self.polygons), total,
+                                         len(radius)))
+                radii = []
+                n = 0
+                for p in self.polygons:
+                    radii.append(radius[n:n + p.shape[0]])
+                    n += p.shape[0]
+        else:
+            radii = [[radius] * p.shape[0] for p in self.polygons]
 
         for jj in range(len(self.polygons)):
             vec = self.polygons[jj].astype(float) - numpy.roll(
@@ -462,12 +496,12 @@ class PolygonSet(object):
                             numpy.ceil(abs(a1 - a0) / two_pi *
                                        points_per_2pi) + 0.5), 2)
                     a = numpy.linspace(a0, a1, n)
-                    ll = radius * tt[ii]
+                    ll = radii[jj][ii] * tt[ii]
                     if ll > 0.49 * length[ii]:
                         r = 0.49 * length[ii] / tt[ii]
                         ll = 0.49 * length[ii]
                     else:
-                        r = radius
+                        r = radii[jj][ii]
                     if ll > 0.49 * length[ii + 1]:
                         r = 0.49 * length[ii + 1] / tt[ii]
                     new_points.extend(r * dvec[ii] / ct[ii] +
@@ -1499,8 +1533,8 @@ class Path(PolygonSet):
                                 number_of_evaluations)
             width = numpy.array([final_width(u) for u in uu]).reshape(
                 number_of_evaluations, 1) * 0.5
-            dist = numpy.array([final_distance(u)
-                                for u in uu]).reshape(number_of_evaluations, 1)
+            dist = numpy.array([final_distance(u) for u in uu]).reshape(
+                number_of_evaluations, 1)
             x0 = numpy.array([curve_function(u) for u in uu]) + orgn
             dx = numpy.array([curve_derivative(u) for u in uu])
             dx = dx[:, ::-1] * refl / numpy.sqrt(
@@ -1753,9 +1787,8 @@ class L1Path(PolygonSet):
         return ("L1Path (end at ({}, {}) towards {}, {} polygons, {}"
                 "vertices, layers {}, datatypes {})").format(
                     self.x, self.y, self.direction, len(self.polygons),
-                    sum([len(p)
-                         for p in self.polygons]), list(set(self.layers)),
-                    list(set(self.datatypes)))
+                    sum([len(p) for p in self.polygons]), list(
+                        set(self.layers)), list(set(self.datatypes)))
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -1865,8 +1898,8 @@ class PolyPath(PolygonSet):
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
-            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) %
-                                                      len_w]
+            points[-1, :] = points[-1, :] + v * width[
+                (points.shape[0] - 1) % len_w]
         elif ends == 1:
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
@@ -4227,8 +4260,8 @@ def offset(polygons,
         Return the offset shape as a set of polygons.
     """
     result = clipper.offset(
-        _gather_polys(polygons), distance, join, tolerance, 1 / precision, 1
-        if join_first else 0)
+        _gather_polys(polygons), distance, join, tolerance, 1 / precision,
+        1 if join_first else 0)
     if len(result) == 0:
         return None
     return PolygonSet(result, layer, datatype).fracture(max_points, precision)
