@@ -72,6 +72,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added support for BGNEXTN and ENDEXTN when reading a GDSII file.
 * Polygon creation warnings are now controlled by `poly_warnings`.
 * Incorrect `anchor` in `Label` now raises an error, instead of emitting a warning.
+* Added correct support for radius in `PolygonSet.fillet` on a per-vertex basis.
 
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
