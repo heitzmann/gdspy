@@ -3775,7 +3775,6 @@ class GdsLibrary(object):
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
         if 'bgnextn' in kwargs or 'endextn' in kwargs:
-            xy = kwargs['xy']
             d = kwargs.pop('bgnextn', 0)
             v = xy[0:2] - xy[2:4]
             xy[0:2] = xy[0:2] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
