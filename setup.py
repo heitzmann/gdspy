@@ -28,9 +28,9 @@ if 'build_sphinx' in sys.argv:
 
 extra_compile_args = []
 extra_link_args = []
-if platform.system() == "Darwin":
-    extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
-    extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
+if platform.system() == 'Darwin':
+    extra_compile_args = ['-std=c++11', '-mmacosx-version-min=10.9']
+    extra_link_args = ['-stdlib=libc++', '-mmacosx-version-min=10.9']
 
 setup(
     name='gdspy',
