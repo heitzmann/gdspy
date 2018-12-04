@@ -538,7 +538,7 @@ class PolygonSet(object):
         self.polygons = [points + vec for points in self.polygons]
         return self
 
-    def mirror(self, p1, p2):
+    def mirror(self, p1, p2=(0, 0)):
         """
         Mirror the polygons over a line through points 1 and 2
 
