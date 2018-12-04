@@ -10,6 +10,7 @@
 import sys
 import platform
 from setuptools import setup, Extension
+from distutils.version import LooseVersion
 
 with open('README.md') as fin:
     long_description = fin.read()
@@ -26,11 +27,14 @@ if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
 if 'build_sphinx' in sys.argv:
     setup_requires.extend(['sphinx', 'sphinx_rtd_theme'])
 
+# Mac OS X Mojave C++ compile + linking arguments
 extra_compile_args = []
 extra_link_args = []
-if platform.system() == 'Darwin':
-    extra_compile_args = ['-std=c++11', '-mmacosx-version-min=10.9']
-    extra_link_args = ['-stdlib=libc++', '-mmacosx-version-min=10.9']
+if platform.system() == 'Darwin' and \
+   LooseVersion(platform.release()) >= LooseVersion('18'):
+        extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
+        extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
+    
 
 setup(
     name='gdspy',
@@ -46,10 +50,7 @@ setup(
     package_dir={'gdspy': 'gdspy'},
     package_data={'gdspy': ['data/*']},
     ext_modules=[
-        Extension(
-            'gdspy.boolext', ['gdspy/boolext.c'],
-            extra_compile_args=extra_compile_args[1:],
-            extra_link_args=extra_link_args[1:]),
+        Extension('gdspy.boolext', ['gdspy/boolext.c']),
         Extension(
             'gdspy.clipper', ['gdspy/clipper.cpp'],
             extra_compile_args=extra_compile_args,
