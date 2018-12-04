@@ -23,7 +23,8 @@ install:
   - pip install sphinx
   - pip install sphinx_rtd_theme
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip install pytest; fi
-  - python setup.py build build_sphinx
+  - python setup.py build
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python setup.py build_sphinx; fi
   - python setup.py install
 
 script:
