@@ -8,6 +8,7 @@
 ######################################################################
 
 import sys
+import platform
 from setuptools import setup, Extension
 
 with open('README.md') as fin:
@@ -25,6 +26,12 @@ if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
 if 'build_sphinx' in sys.argv:
     setup_requires.extend(['sphinx', 'sphinx_rtd_theme'])
 
+extra_compile_args = []
+extra_link_args = []
+if platform.system() == "Darwin":
+    extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
+    extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
+
 setup(
     name='gdspy',
     version=version,
@@ -39,12 +46,18 @@ setup(
     package_dir={'gdspy': 'gdspy'},
     package_data={'gdspy': ['data/*']},
     ext_modules=[
-        Extension('gdspy.boolext', ['gdspy/boolext.c']),
-        Extension('gdspy.clipper', ['gdspy/clipper.cpp'])
+        Extension(
+            'gdspy.boolext', ['gdspy/boolext.c'],
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args),
+        Extension(
+            'gdspy.clipper', ['gdspy/clipper.cpp'],
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args)
     ],
     provides=['gdspy'],
-    install_requires=['numpy'] + (['future']
-                                  if sys.version_info.major < 3 else []),
+    install_requires=['numpy'] +
+    (['future'] if sys.version_info.major < 3 else []),
     setup_requires=setup_requires,
     tests_require=['pytest'],
     platforms='OS Independent',
