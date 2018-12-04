@@ -48,8 +48,8 @@ setup(
     ext_modules=[
         Extension(
             'gdspy.boolext', ['gdspy/boolext.c'],
-            extra_compile_args=extra_compile_args,
-            extra_link_args=extra_link_args),
+            extra_compile_args=extra_compile_args[1:],
+            extra_link_args=extra_link_args[1:]),
         Extension(
             'gdspy.clipper', ['gdspy/clipper.cpp'],
             extra_compile_args=extra_compile_args,
