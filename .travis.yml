@@ -14,17 +14,18 @@ matrix:
     - os: osx
       osx_image: xcode10.1
       language: generic
+      python: "3.6"
     - os: osx
       osx_image: xcode9.4
       language: generic
+      python: "3.6"
 
 install:
   - pip install -r requirements.txt
   - pip install sphinx
   - pip install sphinx_rtd_theme
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip install pytest; fi
-  - python setup.py build
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python setup.py build_sphinx; fi
+  - python setup.py build build_sphinx
   - python setup.py install
 
 script:
