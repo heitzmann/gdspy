@@ -61,6 +61,8 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * Added `PolygonSet.mirror` (thanks to Daan Waardenburg for the contribution).
+* Added `Path.bezier` to create paths based on Bézier curves.
+* Added `Path.smooth` to create paths based on smooth interpolating curves.
 * Added `get_gds_units` to get units used in a GDSII file without loading.
 * Added `get_binary_cells` to load only the binary GDSII representation of cell from a file.
 * Added argument `binary_cells` to GDSII writing functions to support `get_binary_cells`.
