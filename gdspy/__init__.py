@@ -123,6 +123,162 @@ def _eight_byte_real_to_float(value):
     return mantissa * 16.**exponent
 
 
+def _hobby(points,
+           angles=None,
+           curl_start=1,
+           curl_end=1,
+           t_in=1,
+           t_out=1,
+           cycle=False):
+    """
+    Calculate control points for a cubic Bezier curve interpolating the
+    given points.
+
+    Reference: Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+    https://doi.org/10.1007/BF02187690
+
+    Parameters
+    ----------
+    points : Numpy array[N, 2]
+        Vertices in the interpolating curve.
+    angles : array-like[N] or ``None``
+        Tangent angles at each point (in *radians*).  Any angles defined
+        as ``None`` are automatically calculated.
+    curl_start : number
+        Ratio between the mock curvatures at the first point and at its
+        neighbor.  A value of 1 renders the first segment a good
+        approximation for a circular arc.  A value of 0 will better
+        approximate a straight segment.  It has no effect for closed
+        curves or when an angle is defined for the first point.
+    curl_end : number
+        Ratio between the mock curvatures at the last point and at its
+        neighbor.  It has no effect for closed curves or when an angle
+        is defined for the last point.
+    t_in : number or array-like[N]
+        Tension parameter when arriving at each point.  One value per
+        point or a single value used for all points.
+    t_out : number or array-like[N]
+        Tension parameter when leaving each point.  One value per point
+        or a single value used for all points.
+    cycle : bool
+        If ``True``, calculates control points for a closed curve, with
+        an additional segment connecting the first and last points.
+
+    Returns
+    -------
+    out : 2-tuple of Numpy array[M, 2]
+        Pair of control points for each segment in the interpolating
+        curve.  For a closed curve (``cycle = True``), M = N.  For an
+        open curve (``cycle = False``), M = N - 1.
+    """
+    z = points[:, 0] + 1j * points[:, 1]
+    if not hasattr(t_in, '__iter__'):
+        t_in = t_in * numpy.ones(len(z))
+    if not hasattr(t_out, '__iter__'):
+        t_out = t_out * numpy.ones(len(z))
+    if angles is None:
+        angles = [None for _ in range(len(z))]
+    v = numpy.roll(z, -1) - z
+    d = numpy.abs(v)
+    delta = numpy.angle(v)
+    psi = (delta - numpy.roll(delta, 1) + numpy.pi) % (2 * numpy.pi) - numpy.pi
+    theta = numpy.zeros(len(z))
+    phi = numpy.zeros(len(z))
+    for i in range(len(angles)):
+        if angles[i] is not None:
+            theta[i] = angles[i] - delta[i]
+            phi[i] = delta[i - 1] - angles[i]
+    i = 0
+    while i < len(angles):
+        while i < len(angles) and angles[i] is not None:
+            i += 1
+        j = i
+        while j < len(angles) and angles[j] is None:
+            j += 1
+        if j > i:
+            n = 2 * (j - i)
+            m = numpy.zeros((n, n))
+            coeff = numpy.zeros(n)
+            coeff[::2] = -psi[i:j]
+            if i == 0:
+                if cycle:
+                    m[1, n - 2] = -d[0] * t_out[0]**2 * t_out[1]
+                    m[1, 0] = -(
+                        1 - 3 * t_out[1]) * d[-1] * t_in[0]**2 * t_in[-1]
+                    m[1, 1] = (1 - 3 * t_in[-1]) * d[0] * t_out[0]**2 * t_out[1]
+                    m[1, 3] = -d[-1] * t_in[0]**2 * t_in[-1]
+                else:
+                    m[1, 0] = t_in[0]**3 * (
+                        1 - 3 * t_out[1]) - curl_start * t_out[1]**3
+                    m[1, 3] = t_in[0]**3 - curl_start * t_out[1]**3 * (
+                        1 - 3 * t_in[0])
+            else:
+                coeff[1] = -d[i] * t_out[i]**2 * t_out[i + 1] * theta[i - 1]
+                m[1, 0] = -(1 - 3 * t_out[i + 1]) * d[
+                    i - 1] * t_in[i]**2 * t_in[i - 1]
+                m[1, 1] = (
+                    1 - 3 * t_in[i - 1]) * d[i] * t_out[i]**2 * t_out[i + 1]
+                m[1, 3] = -d[i - 1] * t_in[i]**2 * t_in[i - 1]
+            if j == len(angles):
+                if cycle:
+                    m[n - 1, n - 4] = d[j - 1] * t_out[j - 1]**2 * t_out[0]
+                    m[n - 1, n - 2] = -(1 - 3 * t_out[0]) * d[j - 2] * t_in[
+                        j - 1]**2 * t_in[j - 2]
+                    m[n - 1, n - 1] = (1 - 3 * t_in[j - 2]) * d[j - 1] * t_out[
+                        j - 1]**2 * t_out[0]
+                    m[n - 1, 1] = d[j - 2] * t_in[j - 1]**2 * t_in[j - 2]
+                else:
+                    m[n - 1, n - 4] = t_out[j - 1]**3 - curl_end * t_in[
+                        j - 2]**3 * (1 - 3 * t_out[j - 1])
+                    m[n - 1, n - 1] = t_out[j - 1]**3 * (
+                        1 - 3 * t_in[j - 2]) - curl_end * t_in[j - 2]**3
+            else:
+                m[n - 1, n - 4] = d[j - 1] * t_out[j - 1]**2 * t_out[j]
+                m[n - 1, n - 2] = -(1 - 3 * t_out[j]) * d[j - 2] * t_in[
+                    j - 1]**2 * t_in[j - 2]
+                m[n - 1, n - 1] = (1 - 3 * t_in[j - 2]
+                                   ) * d[j - 1] * t_out[j - 1]**2 * t_out[j]
+                coeff[n - 1] = d[j - 2] * t_in[j - 1]**2 * t_in[j - 2] * phi[j]
+            m[0, 0] = 1
+            m[0, 1] = 1
+            m[n - 2, n - 2] = 1
+            m[n - 2, n - 1] = 1
+            for k in range(i + 1, j - 1):
+                row = 2 * (k - i)
+                m[row, row] = 1
+                m[row, row + 1] = 1
+                m[row + 1, row - 2] = d[k] * t_out[k]**2 * t_out[k + 1]
+                m[row + 1, row] = -(1 - 3 * t_out[k + 1]) * d[
+                    k - 1] * t_in[k]**2 * t_in[k - 1]
+                m[row + 1, row + 1] = (
+                    1 - 3 * t_in[k - 1]) * d[k] * t_out[k]**2 * t_out[k + 1]
+                m[row + 1, row + 3] = -d[k - 1] * t_in[k]**2 * t_in[k - 1]
+            sol = numpy.linalg.solve(m, coeff)
+            theta[i:j] = sol[::2]
+            phi[i:j] = sol[1::2]
+            i = j
+    w = numpy.exp(1j * (theta + delta))
+    a = numpy.sqrt(2)
+    b = 1.0 / 16
+    c = (3 - numpy.sqrt(5)) / 2
+    sintheta = numpy.sin(theta)
+    costheta = numpy.cos(theta)
+    sinphi = numpy.sin(numpy.roll(phi, -1))
+    cosphi = numpy.cos(numpy.roll(phi, -1))
+    alpha = a * (sintheta - b * sinphi) * (sinphi - b * sintheta) * (
+        costheta - cosphi)
+    cta = z + w * d * (
+        (2 + alpha) / (1 + (1 - c) * costheta + c * cosphi)) / (3 * t_in)
+    ctb = numpy.roll(z, -1) - numpy.roll(w, -1) * d * (
+        (2 - alpha) /
+        (1 + (1 - c) * cosphi + c * costheta)) / (3 * numpy.roll(t_out, -1))
+    if not cycle:
+        cta = cta[:-1]
+        ctb = ctb[:-1]
+    return (numpy.vstack((cta.real, cta.imag)).transpose(),
+            numpy.vstack((ctb.real, ctb.imag)).transpose())
+
+
 class PolygonSet(object):
     """
     Set of polygonal objects.
@@ -179,7 +335,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : Numpy array[2,2] or ``None``
+        out : Numpy array[2, 2] or ``None``
             Bounding box of this polygon in the form [[x_min, y_min],
             [x_max, y_max]], or ``None`` if the polygon is empty.
         """
@@ -1456,7 +1612,7 @@ class Path(PolygonSet):
             one argument (that varies from 0 to 1) and returns the width
             of the path.
         final_distance : number or function
-            If set to ta number, the distance between paths is linearly
+            If set to a number, the distance between paths is linearly
             change from its current value to this one.  If set to a
             function, it must be a function of one argument (that varies
             from 0 to 1) and returns the width of the path.
@@ -1563,6 +1719,195 @@ class Path(PolygonSet):
         self.x = x0[-1, 0]
         self.y = x0[-1, 1]
         self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
+        return self
+
+    def bezier(self,
+               points,
+               number_of_evaluations=99,
+               max_points=199,
+               final_width=None,
+               final_distance=None,
+               layer=0,
+               datatype=0):
+        """
+        Add a Bezier curve to the path.
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Control points defining the Bezier curve.
+        number_of_evaluations : integer
+            Number of points where the curve function will be evaluated.
+            The final segment will have twice this number of points.
+        max_points : integer
+            If ``2 * number_of_evaluations > max_points``, the element
+            will be fractured in smaller polygons with at most
+            ``max_points`` each.
+        final_width : number or function
+            If set to a number, the paths of this segment will have
+            their widths linearly changed from their current value to
+            this one.  If set to a function, it must be a function of
+            one argument (that varies from 0 to 1) and returns the width
+            of the path.
+        final_distance : number or function
+            If set to a number, the distance between paths is linearly
+            change from its current value to this one.  If set to a
+            function, it must be a function of one argument (that varies
+            from 0 to 1) and returns the width of the path.
+        layer : integer, list
+            The GDSII layer numbers for the elements of each path.  If
+            the number of layers in the list is less than the number of
+            paths, the list is repeated.
+        datatype : integer, list
+            The GDSII datatype for the elements of each path (between 0
+            and 255).  If the number of datatypes in the list is less
+            than the number of paths, the list is repeated.
+
+        Returns
+        -------
+        out : ``Path``
+            This object.
+
+        Notes
+        -----
+        The GDSII specification supports only a maximum of 199 vertices
+        per polygon.
+        """
+
+        def bez(ctrl):
+            def _bez(u):
+                p = ctrl
+                for _ in range(ctrl.shape[0] - 1):
+                    p = p[1:] * u + p[:-1] * (1 - u)
+                return p[0]
+
+            return _bez
+
+        pts = numpy.array(points)
+        dpts = (pts.shape[0] - 1) * (pts[1:] - pts[:-1])
+        self.parametric(
+            bez(pts), bez(dpts), number_of_evaluations, max_points,
+            final_width, final_distance, layer, datatype)
+        return self
+
+    def smooth(self,
+               points,
+               angles=None,
+               curl_start=1,
+               curl_end=1,
+               t_in=1,
+               t_out=1,
+               cycle=False,
+               number_of_evaluations=99,
+               max_points=199,
+               final_widths=None,
+               final_distances=None,
+               layer=0,
+               datatype=0):
+        """
+        Add a smooth interpolating curve that passes through the given
+        points.
+
+        Uses the Hobby algorithm to calculate a smooth interpolating
+        curve made of cubic Bezier segments between each pair of points.
+
+        Reference: Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+        https://doi.org/10.1007/BF02187690
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Vertices in the interpolating curve.
+        angles : array-like[N] or ``None``
+            Tangent angles at each point (in *radians*).  Any angles
+            defined as ``None`` are automatically calculated.
+        curl_start : number
+            Ratio between the mock curvatures at the first point and at
+            its neighbor.  A value of 1 renders the first segment a good
+            approximation for a circular arc.  A value of 0 will better
+            approximate a straight segment.  It has no effect for closed
+            curves or when an angle is defined for the first point.
+        curl_end : number
+            Ratio between the mock curvatures at the last point and at
+            its neighbor.  It has no effect for closed curves or when an
+            angle is defined for the first point.
+        t_in : number or array-like[N]
+            Tension parameter when arriving at each point.  One value
+            per point or a single value used for all points.
+        t_out : number or array-like[N]
+            Tension parameter when leaving each point.  One value per
+            point or a single value used for all points.
+        cycle : bool
+            If ``True``, calculates control points for a closed curve,
+            with an additional segment connecting the first and last
+            points.
+        number_of_evaluations : integer
+            Number of points where each section of the curve will be
+            evaluated.  Each segment will have twice this number of
+            points.
+        max_points : integer
+            If ``2 * number_of_evaluations > max_points``, each segment
+            will be fractured in smaller polygons with at most
+            ``max_points`` each.
+        final_widths : array-like[M]
+            Each element corresponds to the final width of a segment in
+            the whole curve.  If an element is a number, the paths of
+            this segment will have their widths linearly changed to this
+            value.  If a function, it must be a function of one argument
+            (that varies from 0 to 1) and returns the width of the path.
+            The length of the array must be equal to the number of
+            segments in the curve, i.e., M = N - 1 for an open curve and
+            M = N for a closed one.
+        final_distances : array-like[M]
+            Each element corresponds to the final distance between paths
+            of a segment in the whole curve.  If an element is a number,
+            the distance between paths is linearly change to this value.
+            If a function, it must be a function of one argument (that
+            varies from 0 to 1) and returns the width of the path.  The
+            length of the array must be equal to the number of segments
+            in the curve, i.e., M = N - 1 for an open curve and M = N
+            for a closed one.
+        layer : integer, list
+            The GDSII layer numbers for the elements of each path.  If
+            the number of layers in the list is less than the number of
+            paths, the list is repeated.
+        datatype : integer, list
+            The GDSII datatype for the elements of each path (between 0
+            and 255).  If the number of datatypes in the list is less
+            than the number of paths, the list is repeated.
+
+        Returns
+        -------
+        out : ``Path``
+            This object.
+
+        Notes
+        -----
+        The GDSII specification supports only a maximum of 199 vertices
+        per polygon.
+        """
+        if not isinstance(points, numpy.ndarray):
+            points = numpy.array(points)
+        cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out,
+                          cycle)
+        if final_widths is None:
+            final_widths = [None for _ in range(cta.shape[0])]
+        if final_distances is None:
+            final_distances = [None for _ in range(cta.shape[0])]
+        x = self.x
+        y = self.y
+        for i in range(points.shape[0] - 1):
+            self.x = x
+            self.y = y
+            self.bezier([points[i], cta[i], ctb[i], points[i + 1]],
+                        number_of_evaluations, max_points, final_widths[i],
+                        final_distances[i], layer, datatype)
+        if cycle:
+            self.x = x
+            self.y = y
+            self.bezier([points[-1], cta[-1], ctb[-1], points[0]],
+                        number_of_evaluations, max_points, final_widths[-1],
+                        final_distances[-1], layer, datatype)
         return self
 
 
@@ -2494,7 +2839,7 @@ class Cell(object):
 
         Returns
         -------
-        out : Numpy array[2,2] or ``None``
+        out : Numpy array[2, 2] or ``None``
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
             or ``None`` if the cell is empty.
         """
@@ -2936,7 +3281,7 @@ class CellReference(object):
 
         Returns
         -------
-        out : Numpy array[2,2] or ``None``
+        out : Numpy array[2, 2] or ``None``
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
             or ``None`` if the cell is empty.
         """
@@ -3291,7 +3636,7 @@ class CellArray(object):
 
         Returns
         -------
-        out : Numpy array[2,2] or ``None``
+        out : Numpy array[2, 2] or ``None``
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
             or ``None`` if the cell is empty.
         """
