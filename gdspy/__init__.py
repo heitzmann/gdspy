@@ -48,7 +48,6 @@ import numpy
 import copy as libCopy
 import hashlib
 
-from gdspy import boolext
 from gdspy import clipper
 try:
     from gdspy.viewer import LayoutViewer

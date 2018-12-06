@@ -34,7 +34,7 @@ if platform.system() == 'Darwin' and \
    LooseVersion(platform.release()) >= LooseVersion('18'):
         extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
         extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
-    
+
 
 setup(
     name='gdspy',
@@ -50,7 +50,6 @@ setup(
     package_dir={'gdspy': 'gdspy'},
     package_data={'gdspy': ['data/*']},
     ext_modules=[
-        Extension('gdspy.boolext', ['gdspy/boolext.c']),
         Extension(
             'gdspy.clipper', ['gdspy/clipper.cpp'],
             extra_compile_args=extra_compile_args,
