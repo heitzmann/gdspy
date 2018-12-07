@@ -30,11 +30,9 @@ if 'build_sphinx' in sys.argv:
 # Mac OS X Mojave C++ compile + linking arguments
 extra_compile_args = []
 extra_link_args = []
-if platform.system() == 'Darwin' and \
-   LooseVersion(platform.release()) >= LooseVersion('18'):
-        extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
-        extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
-
+if platform.system() == 'Darwin' and LooseVersion(platform.release()) >= LooseVersion('18'):
+    extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
+    extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
 
 setup(
     name='gdspy',
@@ -56,18 +54,21 @@ setup(
             extra_link_args=extra_link_args)
     ],
     provides=['gdspy'],
-    install_requires=['numpy'] +
-    (['future'] if sys.version_info.major < 3 else []),
+    install_requires=['numpy'] + (['future'] if sys.version_info.major < 3 else []),
     setup_requires=setup_requires,
     tests_require=['pytest'],
     platforms='OS Independent',
     classifiers=[
-        'Development Status :: 4 - Beta', 'Environment :: Console',
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Manufacturing',
-        'Intended Audience :: Science/Research', 'License :: OSI Approved',
-        'Operating System :: OS Independent', 'Programming Language :: C',
-        'Programming Language :: C++', 'Programming Language :: Python',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved',
+        'Operating System :: OS Independent',
+        'Programming Language :: C',
+        'Programming Language :: C++',
+        'Programming Language :: Python',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
     ],

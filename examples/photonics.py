@@ -11,14 +11,8 @@ import numpy
 import gdspy
 
 
-def waveguide(path,
-              points,
-              finish,
-              bend_radius,
-              number_of_points=0.01,
-              direction=None,
-              layer=0,
-              datatype=0):
+def waveguide(path, points, finish, bend_radius, number_of_points=0.01,
+              direction=None, layer=0, datatype=0):
     '''
     Easy waveguide creation tool with absolute positioning.
 
@@ -43,39 +37,22 @@ def waveguide(path,
     else:
         path.direction = ['-x', '-y'][axis]
     for i in range(n):
-        path.segment(
-            abs(points[i] - (path.x, path.y)[axis]) - bend_radius,
-            layer=layer,
-            datatype=datatype)
+        path.segment(abs(points[i] - (path.x, path.y)[axis]) - bend_radius,
+                     layer=layer, datatype=datatype)
         axis = 1 - axis
         if i < n - 1:
             goto = points[i + 1]
         else:
             goto = finish[axis]
-        if (goto > (path.x, path.y)[axis]) ^ ((path.direction[0] == '+') ^
-                                              (path.direction[1] == 'x')):
+        if (goto > (path.x, path.y)[axis]) ^ ((path.direction[0] == '+') ^ (path.direction[1] == 'x')):
             bend = 'l'
         else:
             bend = 'r'
-        path.turn(
-            bend_radius,
-            bend,
-            number_of_points=number_of_points,
-            layer=layer,
-            datatype=datatype)
-    return path.segment(
-        abs(finish[axis] - (path.x, path.y)[axis]),
-        layer=layer,
-        datatype=datatype)
+        path.turn(bend_radius, bend, number_of_points=number_of_points, layer=layer, datatype=datatype)
+    return path.segment(abs(finish[axis] - (path.x, path.y)[axis]), layer=layer, datatype=datatype)
 
 
-def taper(path,
-          length,
-          final_width,
-          final_distance,
-          direction=None,
-          layer=0,
-          datatype=0):
+def taper(path, length, final_width, final_distance, direction=None, layer=0, datatype=0):
     '''
     Linear tapers for the lazy.
 
@@ -98,31 +75,18 @@ def taper(path,
         layer = [layer]
         datatype = [datatype]
     else:
-        raise ValueError('Parameters layer and datatype must have the same '
-                         'type (either int or list) and length.')
+        raise ValueError('Parameters layer and datatype must have the same type (either int or list) and length.')
     n = len(layer)
     w = numpy.linspace(2 * path.w, final_width, n + 1)[1:]
     d = numpy.linspace(path.distance, final_distance, n + 1)[1:]
     l = float(length) / n
     for i in range(n):
-        path.segment(
-            l, direction, w[i], d[i], layer=layer[i], datatype=datatype[i])
+        path.segment(l, direction, w[i], d[i], layer=layer[i], datatype=datatype[i])
     return path
 
 
-def grating(period,
-            number_of_teeth,
-            fill_frac,
-            width,
-            position,
-            direction,
-            lda=1,
-            sin_theta=0,
-            focus_distance=-1,
-            focus_width=-1,
-            evaluations=99,
-            layer=0,
-            datatype=0):
+def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=1, sin_theta=0,
+            focus_distance=-1, focus_width=-1, evaluations=99, layer=0, datatype=0):
     '''
     Straight or focusing grating.
 
@@ -146,15 +110,14 @@ def grating(period,
     Return `PolygonSet`
     '''
     if focus_distance < 0:
-        path = gdspy.L1Path(
-            (position[0] - 0.5 * width,
-             position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
-            '+x',
-            period * fill_frac, [width], [],
-            number_of_teeth,
-            period,
-            layer=layer,
-            datatype=datatype)
+        path = gdspy.L1Path((position[0] - 0.5 * width,
+                             position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
+                            '+x',
+                            period * fill_frac, [width], [],
+                            number_of_teeth,
+                            period,
+                            layer=layer,
+                            datatype=datatype)
     else:
         neff = lda / float(period) + sin_theta
         qmin = int(focus_distance / float(period) + 0.5)
@@ -166,20 +129,20 @@ def grating(period,
             c1 = q * lda * sin_theta
             c2 = (q * lda)**2
             path.parametric(
-                lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (
-                    width * t - w)**2)) / c3),
+                lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
                 number_of_evaluations=evaluations,
                 max_points=max_points,
                 layer=layer,
                 datatype=datatype)
             path.x = position[0]
             path.y = position[1]
-        if focus_width >= 0:
-            path.polygons[0] = numpy.vstack(
-                (path.polygons[0][:evaluations, :],
-                 ([position] if focus_width == 0 else
-                  [(position[0] + 0.5 * focus_width, position[1]),
-                   (position[0] - 0.5 * focus_width, position[1])])))
+        if focus_width == 0:
+            path.polygons[0] = numpy.vstack((path.polygons[0][:evaluations, :], [position]))
+            path.fracture()
+        elif focus_width > 0:
+            path.polygons[0] = numpy.vstack((path.polygons[0][:evaluations, :],
+                                             [(position[0] + 0.5 * focus_width, position[1]),
+                                              (position[0] - 0.5 * focus_width, position[1])]))
             path.fracture()
     if direction == '-x':
         return path.rotate(0.5 * numpy.pi, position)
@@ -206,30 +169,11 @@ if __name__ == '__main__':
     c2 = gdspy.Cell('Example2')
     for i in range(3):
         path = gdspy.Path(0.120, (50 * i, 0))
-        taper(
-            path,
-            75,
-            0.450,
-            0,
-            '+y',
-            layer=list(range(5, 1, -1)),
-            datatype=list(range(1, 5)))
-        waveguide(
-            path, [300 - 20 * i], (500 + 50 * i, 425), 50, layer=1, datatype=1)
+        taper(path, 75, 0.450, 0, '+y', layer=list(range(5, 1, -1)), datatype=list(range(1, 5)))
+        waveguide(path, [300 - 20 * i], (500 + 50 * i, 425), 50, layer=1, datatype=1)
         c2.add(path)
-        c2.add(
-            grating(
-                0.626,
-                28,
-                0.5,
-                19, (path.x, path.y),
-                path.direction,
-                1.55,
-                numpy.sin(numpy.pi * 8 / 180),
-                21.5,
-                2 * path.w,
-                layer=1,
-                datatype=1))
+        c2.add(grating(0.626, 28, 0.5, 19, (path.x, path.y), path.direction, 1.55,
+                       numpy.sin(numpy.pi * 8 / 180), 21.5, 2 * path.w, layer=1, datatype=1))
 
     # Straight grating and positive resist example
     c3 = gdspy.Cell('Example3')
@@ -241,18 +185,15 @@ if __name__ == '__main__':
     wg_clad = 4
     wg_width = 0.45
     tp_len = 700
-    c3.add(
-        grating(gr_per, gr_teeth, 0.5, gr_width, (gr_per * gr_teeth, 0), '-x',
-                lda, numpy.sin(numpy.pi * 8 / 180), **spec))
-    path = gdspy.Path(
-        wg_clad, (0, 0), number_of_paths=2, distance=gr_width + wg_clad)
+    c3.add(grating(gr_per, gr_teeth, 0.5, gr_width, (gr_per * gr_teeth, 0), '-x', lda,
+                   numpy.sin(numpy.pi * 8 / 180), **spec))
+    path = gdspy.Path(wg_clad, (0, 0), number_of_paths=2, distance=gr_width + wg_clad)
     path.segment(gr_per * gr_teeth, '+x', **spec)
     taper(path, tp_len, wg_clad, wg_width + wg_clad, **spec)
     waveguide(path, [800], (tp_len + gr_per * gr_teeth, 200), 50, 0.1, **spec)
     taper(path, tp_len, wg_clad, gr_width + wg_clad, **spec)
-    c3.add(
-        grating(gr_per, gr_teeth, 0.5, gr_width, (path.x, path.y),
-                path.direction, lda, numpy.sin(numpy.pi * 8 / 180), **spec))
+    c3.add(grating(gr_per, gr_teeth, 0.5, gr_width, (path.x, path.y), path.direction, lda,
+                   numpy.sin(numpy.pi * 8 / 180), **spec))
     path.segment(gr_per * gr_teeth, **spec)
     c3.add(path)
 

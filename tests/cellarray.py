@@ -50,13 +50,9 @@ def test_notempty():
     err = numpy.array(((0, 0), (8, 5))) - ref.get_bounding_box()
     assert numpy.max(numpy.abs(err)) < 1e-15
     assert ref.origin[0] == ref.origin[1] == 0
-    r = gdspy.boolean(
-        [gdspy.Rectangle((0, 0), (8, 2)),
-         gdspy.Rectangle((0, 3), (8, 5))], ref.get_polygons(), 'xor', 1e-6, 0)
+    r = gdspy.boolean([gdspy.Rectangle((0, 0), (8, 2)), gdspy.Rectangle((0, 3), (8, 5))], ref.get_polygons(), 'xor', 1e-6, 0)
     assert r is None
     d = ref.get_polygons(True)
     assert len(d.keys()) == 1
-    r = gdspy.boolean(
-        [gdspy.Rectangle((0, 0), (8, 2)),
-         gdspy.Rectangle((0, 3), (8, 5))], d[(2, 3)], 'xor', 1e-6, 0)
+    r = gdspy.boolean([gdspy.Rectangle((0, 0), (8, 2)), gdspy.Rectangle((0, 3), (8, 5))], d[(2, 3)], 'xor', 1e-6, 0)
     assert r is None

@@ -27,16 +27,14 @@ def test_fillet():
     #gdspy.Cell('3').add(r)
     assert len(r.polygons) == 1
     assert r.polygons[0].shape[0] == 64
-    r = gdspy.PolygonSet([[(0, 0), (0, 1), (0.5, 1), (0.5, 0)],
-                          [(0.5, 0), (0.5, 1), (1, 1), (1, 0)]])
+    r = gdspy.PolygonSet([[(0, 0), (0, 1), (0.5, 1), (0.5, 0)], [(0.5, 0), (0.5, 1), (1, 1), (1, 0)]])
     r.fillet([0.1, [0.1, 0.3, 0.1, 0.3]], points_per_2pi=64)
     #gdspy.Cell('4').add(r)
     assert len(r.polygons) == 2
     assert r.polygons[0].shape[0] == 64
     assert r.polygons[1].shape[0] == 64
     r = gdspy.Rectangle((0, 0), (1, 1))
-    r = gdspy.PolygonSet([[(0, 0), (0, 1), (0.5, 1), (0.5, 0)],
-                          [(0.5, 0), (0.5, 1), (1, 1), (1, 0)]])
+    r = gdspy.PolygonSet([[(0, 0), (0, 1), (0.5, 1), (0.5, 0)], [(0.5, 0), (0.5, 1), (1, 1), (1, 0)]])
     r.fillet([0.1, 0.3, 0.1, 0.3, 0.1, 0.3, 0.1, 0.3], points_per_2pi=64)
     #gdspy.Cell('5').add(r)
     assert len(r.polygons) == 2

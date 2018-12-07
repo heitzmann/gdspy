@@ -257,8 +257,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'gdspy.tex', 'gdspy Documentation', 'Lucas H. Gabrielli',
-     'manual'),
+    (master_doc, 'gdspy.tex', 'gdspy Documentation', 'Lucas H. Gabrielli', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -296,8 +295,7 @@ man_pages = [(master_doc, 'gdspy', 'gdspy Documentation', [author], 1)]
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'gdspy', 'gdspy Documentation', author, 'gdspy',
-     'A Python GDSII importer/exporter.', 'Scientific/Engineering'),
+    (master_doc, 'gdspy', 'gdspy Documentation', author, 'gdspy', 'A Python GDSII importer/exporter.', 'Scientific/Engineering'),
 ]
 
 # Documents to append as an appendix to all manuals.

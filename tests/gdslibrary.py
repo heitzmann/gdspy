@@ -38,10 +38,7 @@ def test_duplicate():
     lib.add(c, True)
     assert lib.cell_dict == {name: c}
 
-    cl = [
-        gdspy.Cell(name, exclude_from_current=True),
-        gdspy.Cell(name + '1', exclude_from_current=True)
-    ]
+    cl = [gdspy.Cell(name, exclude_from_current=True), gdspy.Cell(name + '1', exclude_from_current=True)]
     with pytest.raises(ValueError) as e:
         lib.add(cl)
     assert name in str(e.value)
@@ -68,8 +65,7 @@ def tree():
 def test_top_level_1(tree):
     lib, c = tree
     tl = lib.top_level()
-    assert len(tl) == 4 and c[0] in tl and c[4] in tl and c[6] in tl and c[7] \
-        in tl
+    assert len(tl) == 4 and c[0] in tl and c[4] in tl and c[6] in tl and c[7] in tl
 
 
 def test_top_level_2(tree):
@@ -107,12 +103,7 @@ def test_extract():
     assert gdspy.current_library.cell_dict == {c[7].name: c[7]}
 
     lib.extract(c[1])
-    assert gdspy.current_library.cell_dict == {
-        c[7].name: c[7],
-        c[1].name: c[1],
-        c[2].name: c[2],
-        c[3].name: c[3]
-    }
+    assert gdspy.current_library.cell_dict == {c[7].name: c[7], c[1].name: c[1], c[2].name: c[2], c[3].name: c[3]}
 
     lib.extract(c[0])
     assert gdspy.current_library.cell_dict == {
@@ -139,20 +130,12 @@ def test_rw_gds(tmpdir):
 
     fname1 = str(tmpdir.join('test1.gds'))
     lib.write_gds(fname1)
-    lib1 = gdspy.GdsLibrary(
-        infile=fname1,
-        unit=1e-3,
-        precision=1e-6,
-        units='convert',
-        rename={'gl_rw_gds_1': '1'},
-        layers={2: 4},
-        datatypes={4: 2},
-        texttypes={6: 7})
+    lib1 = gdspy.GdsLibrary(infile=fname1, unit=1e-3, precision=1e-6, units='convert',
+                            rename={'gl_rw_gds_1': '1'}, layers={2: 4}, datatypes={4: 2},
+                            texttypes={6: 7})
     assert lib1.name == 'lib'
     assert len(lib1.cell_dict) == 4
-    assert set(lib1.cell_dict.keys()) == {
-        '1', 'gl_rw_gds_2', 'gl_rw_gds_3', 'gl_rw_gds_4'
-    }
+    assert set(lib1.cell_dict.keys()) == {'1', 'gl_rw_gds_2', 'gl_rw_gds_3', 'gl_rw_gds_4'}
     c = lib1.cell_dict['1']
     assert len(c.elements) == len(c.labels) == 1
     assert c.elements[0].area() == 12.0
@@ -169,8 +152,7 @@ def test_rw_gds(tmpdir):
 
     c = lib1.cell_dict['gl_rw_gds_2']
     assert len(c.elements) == 2
-    assert isinstance(c.elements[0], gdspy.Polygon) \
-           and isinstance(c.elements[1], gdspy.Polygon)
+    assert isinstance(c.elements[0], gdspy.Polygon) and isinstance(c.elements[1], gdspy.Polygon)
 
     c = lib1.cell_dict['gl_rw_gds_3']
     assert len(c.elements) == 1
