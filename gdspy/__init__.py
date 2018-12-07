@@ -253,7 +253,7 @@ class PolygonSet(object):
         out : string
             The GDSII binary string that represents this object.
         """
-        data = b''
+        data = []
         for ii in range(len(self.polygons)):
             if poly_warnings and len(self.polygons[ii]) > 8190:
                 warnings.warn(
@@ -262,9 +262,9 @@ class PolygonSet(object):
                     "This extension might not be compatible with "
                     "all GDSII readers.",
                     stacklevel=2)
-                data += struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02,
+                data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02,
                                 self.layers[ii], 6, 0x0E02,
-                                self.datatypes[ii])
+                                self.datatypes[ii]))
                 xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2),
                                  dtype='>i4')
                 xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
@@ -272,24 +272,23 @@ class PolygonSet(object):
                 i0 = 0
                 while i0 < xy.shape[0]:
                     i1 = min(i0 + 8191, xy.shape[0])
-                    data += struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003)
-                    
-                    data += xy[i0:i1].tostring()
+                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.append(xy[i0:i1].tostring())
                     i0 = i1
-                data += struct.pack('>2H', 4, 0x1100)
+                data.append(struct.pack('>2H', 4, 0x1100))
             else:
-                data += struct.pack('>10H', 4, 0x0800, 6, 0x0D02,
+                data.append(struct.pack('>10H', 4, 0x0800, 6, 0x0D02,
                             self.layers[ii], 6, 0x0E02, self.datatypes[ii],
-                            12 + 8 * len(self.polygons[ii]), 0x1003)
+                            12 + 8 * len(self.polygons[ii]), 0x1003))
                 crds = numpy.array(numpy.round(self.polygons[ii] * multiplier),
                                      dtype='>i4')
-                data += crds.tostring()
-                data += struct.pack('>2l2H',
+                data.append(crds.tostring())
+                data.append(struct.pack('>2l2H',
                             int(round(self.polygons[ii][0][0] * multiplier)),
                             int(round(self.polygons[ii][0][1] * multiplier)),
-                            4, 0x1100)
+                            4, 0x1100))
                 
-        return data
+        return b''.join(data)
 
     def area(self, by_spec=False):
         """
