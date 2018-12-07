@@ -46,13 +46,9 @@ poly_cell.add(gdspy.Round((27, 2), 2, layer=2))
 
 # The Round class is quite versatile: it provides circles, pie slices,
 # rings and ring sections, like this one in layer 2.
-poly_cell.add(
-    gdspy.Round((23.5, 7),
-                15,
-                inner_radius=14,
-                initial_angle=-2.0 * numpy.pi / 3.0,
-                final_angle=-numpy.pi / 3.0,
-                layer=2))
+poly_cell.add(gdspy.Round((23.5, 7), 15, inner_radius=14,
+                          initial_angle=-2.0 * numpy.pi / 3.0,
+                          final_angle=-numpy.pi / 3.0, layer=2))
 
 # ------------------------------------------------------------------ #
 #      PATHS
@@ -141,11 +137,9 @@ def dspiral_dt(t):
 # the curve smoother, we increase the number of evaluations of the
 # function (fracture will be performed automatically to ensure polygons
 # with less than 200 points).
-path3.parametric(spiral,
-                 dspiral_dt,
+path3.parametric(spiral, dspiral_dt,
                  final_width=lambda t: 0.1 + abs(0.4 * (1 - 2 * t)**3),
-                 number_of_evaluations=600,
-                 layer=3)
+                 number_of_evaluations=600, layer=3)
 path_cell.add(path3)
 
 # Polygonal paths are defined by the points they pass through.  The
@@ -200,9 +194,7 @@ oper_cell.add(gdspy.boolean(gdspy.Rectangle((10, -4), (17, 4)), path3, 'not', la
 # define safety margins around shapes.
 
 spec = {'layer': 7}
-path4 = gdspy.Path(0.5, (21, -5)).segment(3, '+x', **spec)\
-        .turn(4, 'r', **spec).turn(4, 'rr', **spec)\
-        .segment(3, **spec)
+path4 = gdspy.Path(0.5, (21, -5)).segment(3, '+x', **spec).turn(4, 'r', **spec).turn(4, 'rr', **spec).segment(3, **spec)
 oper_cell.add(path4)
 
 # Merge all parts into a single polygon.
@@ -314,21 +306,14 @@ gdspy.write_gds('tutorial.gds', unit=1.0e-6, precision=1.0e-9)
 # Import the file we just created, and extract the cell 'POLYGONS'. To
 # avoid naming conflict, we will rename all cells.
 gdsii = gdspy.GdsLibrary()
-gdsii.read_gds(
-    'tutorial.gds',
-    rename={
-        'POLYGONS': 'IMPORT_POLY',
-        'PATHS': 'IMPORT_PATHS',
-        'OPERATIONS': 'IMPORT_OPER',
-        'SLICE': 'IMPORT_SLICE',
-        'REFS': 'IMPORT_REFS',
-        'TRANS': 'IMPORT_TRANS'
-    },
-    layers={
-        1: 7,
-        2: 8,
-        3: 9
-    })
+gdsii.read_gds('tutorial.gds',
+               rename={'POLYGONS': 'IMPORT_POLY',
+                       'PATHS': 'IMPORT_PATHS',
+                       'OPERATIONS': 'IMPORT_OPER',
+                       'SLICE': 'IMPORT_SLICE',
+                       'REFS': 'IMPORT_REFS',
+                       'TRANS': 'IMPORT_TRANS'},
+               layers={1: 7, 2: 8, 3: 9})
 
 # Now we extract the cells we want to actually include in our current
 # structure. Note that the referenced cells will be automatically

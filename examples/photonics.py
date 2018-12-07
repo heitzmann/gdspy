@@ -110,14 +110,8 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
     Return `PolygonSet`
     '''
     if focus_distance < 0:
-        path = gdspy.L1Path((position[0] - 0.5 * width,
-                             position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
-                            '+x',
-                            period * fill_frac, [width], [],
-                            number_of_teeth,
-                            period,
-                            layer=layer,
-                            datatype=datatype)
+        path = gdspy.L1Path((position[0] - 0.5 * width, position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
+                            '+x', period * fill_frac, [width], [], number_of_teeth, period, layer=layer, datatype=datatype)
     else:
         neff = lda / float(period) + sin_theta
         qmin = int(focus_distance / float(period) + 0.5)
@@ -128,12 +122,8 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
         for q in range(qmin, qmin + number_of_teeth):
             c1 = q * lda * sin_theta
             c2 = (q * lda)**2
-            path.parametric(
-                lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
-                number_of_evaluations=evaluations,
-                max_points=max_points,
-                layer=layer,
-                datatype=datatype)
+            path.parametric(lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
+                            number_of_evaluations=evaluations, max_points=max_points, layer=layer, datatype=datatype)
             path.x = position[0]
             path.y = position[1]
         if focus_width == 0:

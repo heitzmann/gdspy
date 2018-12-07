@@ -127,7 +127,7 @@ def test_flatten_00(tree):
     c3.flatten()
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6)
+        assert c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6
         assert c3.elements[i].layers == c3.elements[i].datatypes
     assert len(c3.labels) == 12
 
@@ -137,7 +137,7 @@ def test_flatten_01(tree):
     c3.flatten(None, 2, 3)
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6)
+        assert c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6
         assert c3.elements[i].datatypes == [2] * 6
     assert len(c3.labels) == 12
     assert all(lbl.texttype == 3 for lbl in c3.labels)
@@ -148,7 +148,7 @@ def test_flatten_10(tree):
     c3.flatten(2)
     assert len(c3.elements) == 2
     for i in range(2):
-        assert (c3.elements[i].datatypes == [0] * 6 or c3.elements[i].datatypes == [1] * 6)
+        assert c3.elements[i].datatypes == [0] * 6 or c3.elements[i].datatypes == [1] * 6
         assert c3.elements[i].layers == [2] * 6
     assert len(c3.labels) == 12
     assert all(lbl.layer == 2 for lbl in c3.labels)
