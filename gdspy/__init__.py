@@ -14,7 +14,8 @@ references and arrays, but the support for fonts is quite limited.
 
 GDSII format references:
 - http://boolean.klaasholwerda.nl/interface/bnf/gdsformat.html
-- http://jupiter.math.nctu.edu.tw/~weng/courses/IC_2007/PROJECT_NCTU_MATH/CELL_LAYOUT/The%20GDSII%20Stream%20Format.htm
+- http://www.artwork.com/gdsii/gdsii/
+- http://www.buchanan1.net/stream_description.html
 """
 
 from __future__ import division
@@ -1937,7 +1938,7 @@ class PolyPath(PolygonSet):
 
     Notes
     -----
-    The bevel join will give  strange results if the number of paths is
+    The bevel join will give strange results if the number of paths is
     greater than 1.
     """
     __slots__ = 'layers', 'datatypes', 'polygons'
