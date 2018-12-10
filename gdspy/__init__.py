@@ -731,13 +731,16 @@ class Round(PolygonSet):
         Initial angle of the circular/ring section (in *radians*).
     final_angle : number
         Final angle of the circular/ring section (in *radians*).
-    number_of_points : integer or float
-        If integer: number of vertices that form the object (polygonal
-        approximation).  If float: approximate curvature resolution.
-        The actual number of points is automatically calculated.
+    tolerance : float
+        Approximate curvature resolution.  The number of points is
+        automatically calculated.
+    number_of_points : integer or ``None``
+        Manually define the number of vertices that form the object
+        (polygonal approximation).  Overrides ``tolerance``.
     max_points : integer
-        if ``number_of_points > max_points``, the element will be
-        fractured in smaller polygons with at most ``max_points`` each.
+        If the number of points in the element is greater than
+        ``max_points``, it will be fractured in smaller polygons with
+        at most ``max_points`` each.
     layer : integer
         The GDSII layer number for this element.
     datatype : integer
@@ -762,7 +765,7 @@ class Round(PolygonSet):
     __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self, center, radius, inner_radius=0, initial_angle=0, final_angle=0,
-                 number_of_points=0.01, max_points=199, layer=0, datatype=0):
+                 tolerance=0.01, number_of_points=None, max_points=199, layer=0, datatype=0):
         if hasattr(radius, '__iter__'):
             orx, ory = radius
             radius = max(radius)
@@ -794,16 +797,22 @@ class Round(PolygonSet):
                 return a
 
         if isinstance(number_of_points, float):
+            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", stacklevel=2)
+            tolerance = number_of_points
+            number_of_points = None
+
+        if number_of_points is None:
             if inner_radius <= 0:
                 if final_angle == initial_angle:
-                    number_of_points = int(2 * radius * numpy.pi / number_of_points + 0.5)
+                    number_of_points = int(2 * radius * numpy.pi / tolerance + 0.5)
                 else:
-                    number_of_points = int(abs(final_angle - initial_angle) * radius / number_of_points + 0.5) + 2
+                    number_of_points = int(abs(final_angle - initial_angle) * radius / tolerance + 0.5) + 2
             else:
                 if final_angle == initial_angle:
-                    number_of_points = 2 * int(2 * radius * numpy.pi / number_of_points + 0.5) + 2
+                    number_of_points = 2 * int(2 * radius * numpy.pi / tolerance + 0.5) + 2
                 else:
-                    number_of_points = 2 * int(abs(final_angle - initial_angle) * radius / number_of_points + 0.5) + 2
+                    number_of_points = 2 * int(abs(final_angle - initial_angle) * radius / tolerance + 0.5) + 2
+
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1192,8 +1201,8 @@ class Path(PolygonSet):
                 self.datatypes.extend(datatype for _ in range(self.n))
         return self
 
-    def arc(self, radius, initial_angle, final_angle, number_of_points=0.01, max_points=199,
-            final_width=None, final_distance=None, layer=0, datatype=0):
+    def arc(self, radius, initial_angle, final_angle, tolerance=0.01, number_of_points=None,
+            max_points=199, final_width=None, final_distance=None, layer=0, datatype=0):
         """
         Add a curved section to the path.
 
@@ -1205,15 +1214,16 @@ class Path(PolygonSet):
             Initial angle of the curve (in *radians*).
         final_angle : number
             Final angle of the curve (in *radians*).
-        number_of_points : integer or float
-            If integer: number of vertices that form the object
-            (polygonal approximation).  If float: approximate curvature
-            resolution.  The actual number of points is automatically
-            calculated.
+        tolerance : float
+            Approximate curvature resolution.  The number of points is
+            automatically calculated.
+        number_of_points : integer or ``None``
+            Manually define the number of vertices that form the object
+            (polygonal approximation).  Overrides ``tolerance``.
         max_points : integer
-            if ``number_of_points > max_points``, the element will be
-            fractured in smaller polygons with at most ``max_points``
-            each.
+            If the number of points in the element is greater than
+            ``max_points``, it will be fractured in smaller polygons
+            with at most ``max_points`` each.
         final_width : number
             If set, the paths of this segment will have their widths
             linearly changed from their current value to this one.
@@ -1254,8 +1264,12 @@ class Path(PolygonSet):
         if final_distance is not None:
             self.distance = final_distance
         if isinstance(number_of_points, float):
+            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", stacklevel=2)
+            tolerance = number_of_points
+            number_of_points = None
+        if number_of_points is None:
             number_of_points = 2 * int(abs((final_angle - initial_angle) * (radius + max(old_distance, self.distance)
-                                           * (self.n - 1) * 0.5 + max(old_w, self.w)) / number_of_points) + 0.5) + 2
+                                           * (self.n - 1) * 0.5 + max(old_w, self.w)) / tolerance) + 0.5) + 2
         number_of_points = max(number_of_points, 3)
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
@@ -1298,8 +1312,8 @@ class Path(PolygonSet):
                     self.datatypes.extend(datatype for _ in range(self.n))
         return self
 
-    def turn(self, radius, angle, number_of_points=0.01, max_points=199, final_width=None,
-             final_distance=None, layer=0, datatype=0):
+    def turn(self, radius, angle, tolerance=0.01, number_of_points=None, max_points=199,
+             final_width=None, final_distance=None, layer=0, datatype=0):
         """
         Add a curved section to the path.
 
@@ -1312,15 +1326,16 @@ class Path(PolygonSet):
             'r' and 'l' represent 90-degree turns cw and ccw,
             respectively; the values 'rr' and 'll' represent analogous
             180-degree turns.
-        number_of_points : integer or float
-            If integer: number of vertices that form the object
-            (polygonal approximation).  If float: approximate curvature
-            resolution.  The actual number of points is automatically
-            calculated.
+        tolerance : float
+            Approximate curvature resolution.  The number of points is
+            automatically calculated.
+        number_of_points : integer or ``None``
+            Manually define the number of vertices that form the object
+            (polygonal approximation).  Overrides ``tolerance``.
         max_points : integer
-            if ``number_of_points > max_points``, the element will be
-            fractured in smaller polygons with at most ``max_points``
-            each.
+            If the number of points in the element is greater than
+            ``max_points``, it will be fractured in smaller polygons
+            with at most ``max_points`` each.
         final_width : number
             If set, the paths of this segment will have their widths
             linearly changed from their current value to this one.
@@ -1377,8 +1392,8 @@ class Path(PolygonSet):
             self.direction = -_halfpi
         elif exact:
             exact = False
-        self.arc(radius, self.direction + delta_i, self.direction + delta_f, number_of_points,
-                 max_points, final_width, final_distance, layer, datatype)
+        self.arc(radius, self.direction + delta_i, self.direction + delta_f, tolerance,
+                 number_of_points, max_points, final_width, final_distance, layer, datatype)
         if exact:
             self.direction = _directions_list[int(round(self.direction / _halfpi)) % 4]
         return self
