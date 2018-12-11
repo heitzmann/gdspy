@@ -442,8 +442,8 @@ class PolygonSet(object):
         Parameters
         ----------
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (at least
+            5 for the fracture to occur).
         precision : float
             Desired precision for rounding vertice coordinates.
 
@@ -500,8 +500,8 @@ class PolygonSet(object):
             fraction of this number corresponding to the angle
             encompassed by that corner with respect to 2 pi.
         max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
+            Maximal number of points in each resulting polygon (at least
+            5, otherwise the resulting polygon is not fractured).
         precision : float
             Desired precision for rounding vertice coordinates in case
             of fracturing.
@@ -740,7 +740,8 @@ class Round(PolygonSet):
     max_points : integer
         If the number of points in the element is greater than
         ``max_points``, it will be fractured in smaller polygons with
-        at most ``max_points`` each.
+        at most ``max_points`` each.  If ``max_points = 0`` no fracture
+        will occur.
     layer : integer
         The GDSII layer number for this element.
     datatype : integer
@@ -814,7 +815,7 @@ class Round(PolygonSet):
                     number_of_points = 2 * int(abs(final_angle - initial_angle) * radius / tolerance + 0.5) + 2
 
         number_of_points = max(number_of_points, 3)
-        pieces = int(numpy.ceil(number_of_points / float(max_points)))
+        pieces = 1 if max_points == 0 else int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         self.layers = [layer] * pieces
         self.datatypes = [datatype] * pieces
@@ -1223,7 +1224,8 @@ class Path(PolygonSet):
         max_points : integer
             If the number of points in the element is greater than
             ``max_points``, it will be fractured in smaller polygons
-            with at most ``max_points`` each.
+            with at most ``max_points`` each.  If ``max_points = 0`` no
+            fracture will occur.
         final_width : number
             If set, the paths of this segment will have their widths
             linearly changed from their current value to this one.
@@ -1271,7 +1273,7 @@ class Path(PolygonSet):
             number_of_points = 2 * int(abs((final_angle - initial_angle) * (radius + max(old_distance, self.distance)
                                            * (self.n - 1) * 0.5 + max(old_w, self.w)) / tolerance) + 0.5) + 2
         number_of_points = max(number_of_points, 3)
-        pieces = int(numpy.ceil(number_of_points / float(max_points)))
+        pieces = 1 if max_points == 0 else int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         widths = numpy.linspace(old_w, self.w, pieces + 1)
         distances = numpy.linspace(old_distance, self.distance, pieces + 1)
@@ -1335,7 +1337,8 @@ class Path(PolygonSet):
         max_points : integer
             If the number of points in the element is greater than
             ``max_points``, it will be fractured in smaller polygons
-            with at most ``max_points`` each.
+            with at most ``max_points`` each.  If ``max_points = 0`` no
+            fracture will occur.
         final_width : number
             If set, the paths of this segment will have their widths
             linearly changed from their current value to this one.
@@ -1429,7 +1432,8 @@ class Path(PolygonSet):
             will be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.
+            ``max_points``.  If ``max_points = 0`` no fracture will
+            occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
@@ -1532,7 +1536,7 @@ class Path(PolygonSet):
         self.y = x0[-1, 1]
         self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
 
-        max_points = max(3, max_points // 2)
+        max_points = max(np, max_points // 2)
         i0 = 0
         while i0 < np - 1:
             i1 = min(i0 + max_points, np)
@@ -1573,7 +1577,8 @@ class Path(PolygonSet):
             will be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.
+            ``max_points``.  If ``max_points = 0`` no fracture will
+            occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
@@ -1669,7 +1674,8 @@ class Path(PolygonSet):
             will be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.
+            ``max_points``.  If ``max_points = 0`` no fracture will
+            occur.
         final_widths : array-like[M]
             Each element corresponds to the final width of a segment in
             the whole curve.  If an element is a number, the paths of
@@ -1753,6 +1759,10 @@ class L1Path(PolygonSet):
         Number of parallel paths to create simultaneously.
     distance : number
         Distance between the centers of adjacent paths.
+    max_points : integer
+        The paths will be fractured in polygons with at most
+        ``max_points`` (must be at least 6).  If ``max_points = 0`` no
+        fracture will occur.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -1795,7 +1805,7 @@ class L1Path(PolygonSet):
         layer = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
         datatype = (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
         w = width * 0.5
-        points = max_points // 2 - 1
+        points = len(turn) + 1 if max_points == 0 else max_points // 2 - 1
         paths = [[[], []] for ii in range(number_of_paths)]
         self.polygons = []
         self.layers = []
@@ -1967,7 +1977,8 @@ class PolyPath(PolygonSet):
         by half width
     max_points : integer
         The paths will be fractured in polygons with at most
-        ``max_points``.
+        ``max_points`` (must be at least 4).  If ``max_points = 0`` no
+        fracture will occur.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -2070,7 +2081,7 @@ class PolyPath(PolygonSet):
                             paths[ii][kk].append(pp[ii][kk])
                         else:
                             paths[ii][kk].append(p)
-                if len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points:
+                if max_points > 0 and len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points:
                     if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
                         paths[ii][1] = paths[ii][1][1:]
                     if numpy.sum((paths[ii][0][-1] - paths[ii][1][-1])**2) == 0:

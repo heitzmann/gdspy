@@ -11,19 +11,19 @@ import numpy
 import gdspy
 
 
-def waveguide(path, points, finish, bend_radius, number_of_points=0.01,
+def waveguide(path, points, finish, bend_radius, tolerance=0.005,
               direction=None, layer=0, datatype=0):
     '''
     Easy waveguide creation tool with absolute positioning.
 
-    path             : starting `gdspy.Path`
-    points           : coordinates along which the waveguide will travel
-    finish           : end point of the waveguide
-    bend_radius      : radius of the turns in the waveguide
-    number_of_points : same as in `path.turn`
-    direction        : starting direction
-    layer            : GDSII layer number
-    datatype         : GDSII datatype number
+    path        : starting `gdspy.Path`
+    points      : coordinates along which the waveguide will travel
+    finish      : end point of the waveguide
+    bend_radius : radius of the turns in the waveguide
+    tolerance   : same as in `path.turn`
+    direction   : starting direction
+    layer       : GDSII layer number
+    datatype    : GDSII datatype number
 
     Return `path`.
     '''
@@ -48,7 +48,7 @@ def waveguide(path, points, finish, bend_radius, number_of_points=0.01,
             bend = 'l'
         else:
             bend = 'r'
-        path.turn(bend_radius, bend, number_of_points=number_of_points, layer=layer, datatype=datatype)
+        path.turn(bend_radius, bend, tolerance=tolerance, layer=layer, datatype=datatype)
     return path.segment(abs(finish[axis] - (path.x, path.y)[axis]), layer=layer, datatype=datatype)
 
 
@@ -86,7 +86,7 @@ def taper(path, length, final_width, final_distance, direction=None, layer=0, da
 
 
 def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=1, sin_theta=0,
-            focus_distance=-1, focus_width=-1, evaluations=99, layer=0, datatype=0):
+            focus_distance=-1, focus_width=-1, tolerance=0.005, layer=0, datatype=0):
     '''
     Straight or focusing grating.
 
@@ -103,7 +103,7 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
                       the result (usually for negative resists) and this
                       is the width of the waveguide connecting to the
                       grating
-    evaluations     : number of evaluations of `path.parametric`
+    tolerance       : same as in `path.parametric`
     layer           : GDSII layer number
     datatype        : GDSII datatype number
 
@@ -116,24 +116,23 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
         neff = lda / float(period) + sin_theta
         qmin = int(focus_distance / float(period) + 0.5)
         path = gdspy.Path(period * fill_frac, position)
-        max_points = 199 if focus_width < 0 else 2 * evaluations
         c3 = neff**2 - sin_theta**2
         w = 0.5 * width
         for q in range(qmin, qmin + number_of_teeth):
             c1 = q * lda * sin_theta
             c2 = (q * lda)**2
             path.parametric(lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
-                            number_of_evaluations=evaluations, max_points=max_points, layer=layer, datatype=datatype)
+                            tolerance=tolerance, max_points=0, layer=layer, datatype=datatype)
             path.x = position[0]
             path.y = position[1]
+        sz = path.polygons[0].shape[0] // 2
         if focus_width == 0:
-            path.polygons[0] = numpy.vstack((path.polygons[0][:evaluations, :], [position]))
-            path.fracture()
+            path.polygons[0] = numpy.vstack((path.polygons[0][:sz, :], [position]))
         elif focus_width > 0:
-            path.polygons[0] = numpy.vstack((path.polygons[0][:evaluations, :],
+            path.polygons[0] = numpy.vstack((path.polygons[0][:sz, :],
                                              [(position[0] + 0.5 * focus_width, position[1]),
                                               (position[0] - 0.5 * focus_width, position[1])]))
-            path.fracture()
+        path.fracture()
     if direction == '-x':
         return path.rotate(0.5 * numpy.pi, position)
     elif direction == '+x':
