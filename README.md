@@ -65,6 +65,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added `Path.smooth` to create paths based on smooth interpolating curves.
 * Added `get_gds_units` to get units used in a GDSII file without loading.
 * Added `get_binary_cells` to load only the binary GDSII representation of cell from a file.
+* Added argument `tolerance` to `Round`, `Path.arc`, `Path.turn`, and `Path.parametric` to automatically control the number of points in the final polygons.
 * Added argument `binary_cells` to GDSII writing functions to support `get_binary_cells`.
 * Added argument `rename_template` to `GdsLibrary.read_gds` for flexible cell renaming (thanks to @yoshi74ls181 for the contribution).
 * Changed return value of `slice` to avoid creating empty `PolygonSet`.
