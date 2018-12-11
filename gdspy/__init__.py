@@ -377,7 +377,7 @@ class PolygonSet(object):
         data = []
         for ii in range(len(self.polygons)):
             if poly_warnings and len(self.polygons[ii]) > 8190:
-                warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=2)
+                warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
                 data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
                                         self.datatypes[ii]))
                 xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
@@ -798,7 +798,7 @@ class Round(PolygonSet):
                 return a
 
         if isinstance(number_of_points, float):
-            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", stacklevel=2)
+            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", category=DeprecationWarning, stacklevel=2)
             tolerance = number_of_points
             number_of_points = None
 
@@ -1266,7 +1266,7 @@ class Path(PolygonSet):
         if final_distance is not None:
             self.distance = final_distance
         if isinstance(number_of_points, float):
-            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", stacklevel=2)
+            warnings.warn("[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.", category=DeprecationWarning, stacklevel=2)
             tolerance = number_of_points
             number_of_points = None
         if number_of_points is None:
@@ -2778,7 +2778,7 @@ class CellReference(object):
         self.magnification = magnification
         self.x_reflection = x_reflection
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
-            warnings.warn("[GDSPY] Cell {0} not found; operations on this CellReference may not work.".format(self.ref_cell))
+            warnings.warn("[GDSPY] Cell {0} not found; operations on this CellReference may not work.".format(self.ref_cell), stacklevel=2)
 
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
@@ -3059,7 +3059,7 @@ class CellArray(object):
         self.magnification = magnification
         self.x_reflection = x_reflection
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
-            warnings.warn("[GDSPY] Cell {0} not found; operations on this CellArray may not work.".format(self.ref_cell))
+            warnings.warn("[GDSPY] Cell {0} not found; operations on this CellArray may not work.".format(self.ref_cell), stacklevel=2)
 
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
