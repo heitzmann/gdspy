@@ -192,7 +192,7 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
             coeff[::2] = -psi[i:j]
             if i == 0:
                 if cycle:
-                    m[1, n - 2] = -d[0] * t_out[0]**2 * t_out[1]
+                    m[1, n - 2] = d[0] * t_out[0]**2 * t_out[1]
                     m[1, 0] = -(1 - 3 * t_out[1]) * d[-1] * t_in[0]**2 * t_in[-1]
                     m[1, 1] = (1 - 3 * t_in[-1]) * d[0] * t_out[0]**2 * t_out[1]
                     m[1, 3] = -d[-1] * t_in[0]**2 * t_in[-1]
@@ -200,16 +200,16 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
                     m[1, 0] = t_in[0]**3 * (1 - 3 * t_out[1]) - curl_start * t_out[1]**3
                     m[1, 3] = t_in[0]**3 - curl_start * t_out[1]**3 * (1 - 3 * t_in[0])
             else:
-                coeff[1] = -d[i] * t_out[i]**2 * t_out[i + 1] * theta[i - 1]
                 m[1, 0] = -(1 - 3 * t_out[i + 1]) * d[i - 1] * t_in[i]**2 * t_in[i - 1]
                 m[1, 1] = (1 - 3 * t_in[i - 1]) * d[i] * t_out[i]**2 * t_out[i + 1]
                 m[1, 3] = -d[i - 1] * t_in[i]**2 * t_in[i - 1]
+                coeff[1] = -d[i] * t_out[i]**2 * t_out[i + 1] * theta[i - 1]
             if j == len(angles):
                 if cycle:
                     m[n - 1, n - 4] = d[j - 1] * t_out[j - 1]**2 * t_out[0]
                     m[n - 1, n - 2] = -(1 - 3 * t_out[0]) * d[j - 2] * t_in[j - 1]**2 * t_in[j - 2]
                     m[n - 1, n - 1] = (1 - 3 * t_in[j - 2]) * d[j - 1] * t_out[j - 1]**2 * t_out[0]
-                    m[n - 1, 1] = d[j - 2] * t_in[j - 1]**2 * t_in[j - 2]
+                    m[n - 1, 1] = -d[j - 2] * t_in[j - 1]**2 * t_in[j - 2]
                 else:
                     m[n - 1, n - 4] = t_out[j - 1]**3 - curl_end * t_in[j - 2]**3 * (1 - 3 * t_out[j - 1])
                     m[n - 1, n - 1] = t_out[j - 1]**3 * (1 - 3 * t_in[j - 2]) - curl_end * t_in[j - 2]**3
@@ -1398,10 +1398,16 @@ class Path(PolygonSet):
             self.direction = _directions_list[int(round(self.direction / _halfpi)) % 4]
         return self
 
-    def parametric(self, curve_function, curve_derivative=None, number_of_evaluations=99, max_points=199,
-                   final_width=None, final_distance=None, layer=0, datatype=0):
+    def parametric(self, curve_function, curve_derivative=None, tolerance=0.01, number_of_evaluations=5,
+                   max_points=199, final_width=None, final_distance=None, layer=0, datatype=0):
         """
         Add a parametric curve to the path.
+
+        The ``curve_function`` will be evaluated homogeneously in the
+        interval [0, 1] at least ``number_of_points`` times.  More
+        points will be added to the curve at the midpoint between
+        evaluations if that points presents error larger than
+        ``tolerance``.
 
         Parameters
         ----------
@@ -1414,13 +1420,16 @@ class Path(PolygonSet):
             Must be a function of one argument (that varies from 0 to 1)
             that returns a 2-element list, tuple or array (x,y).  If
             ``None``, the derivative will be calculated numerically.
+        tolerance : number
+            Acceptable tolerance for the approximation of the curve
+            function by a finite number of evaluations.
         number_of_evaluations : integer
-            Number of points where the curve function will be evaluated.
-            The final segment will have twice this number of points.
+            Initial number of points where the curve function will be
+            evaluated.  According to ``tolerance``, more evaluations
+            will be performed.
         max_points : integer
-            If ``2 * number_of_evaluations > max_points``, the element
-            will be fractured in smaller polygons with at most
-            ``max_points`` each.
+            Elements will be fractured until each polygon has at most
+            ``max_points``.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
@@ -1463,57 +1472,76 @@ class Path(PolygonSet):
         >>> my_path.parametric(my_parametric_curve,
         ...                    my_parametric_curve_derivative)
         """
-        pieces = int(numpy.ceil(2 * number_of_evaluations / float(max_points)))
-        number_of_evaluations = number_of_evaluations // pieces
-        boundaries = numpy.linspace(0, 1, pieces + 1)
-        if not callable(final_width):
-            old_w = self.w
-            if final_width is not None:
-                self.w = final_width * 0.5
+        err = tolerance ** 2
+        points = list(numpy.linspace(0, 1, number_of_evaluations))
+        values = list(numpy.array(curve_function(u)) for u in points)
+        delta = points[1]
+        i = 1
+        while i < len(points):
+            midpoint = 0.5 * (points[i] + points[i - 1])
+            midvalue = numpy.array(curve_function(midpoint))
+            if (((values[i] + values[i - 1]) / 2 - midvalue)**2).sum() > err:
+                delta = min(delta, points[i] - midpoint)
+                points.insert(i, midpoint)
+                values.insert(i, midvalue)
+            else:
+                i += 1
+        points = numpy.array(points)
+        values = numpy.array(values)
+        self.length += numpy.sqrt(((values[1:, :] - values[:-1, :])**2).sum(1)).sum()
 
-            def final_width(u):
-                return 2 * (old_w + u * (self.w - old_w))
+        delta *= 0.5
+        if curve_derivative is None:
+            derivs = numpy.vstack((
+                numpy.array(curve_function(delta)) - values[0],
+                [numpy.array(curve_function(u + delta)) - numpy.array(curve_function(u - delta))
+                    for u in points[1:-1]],
+                values[-1] - numpy.array(curve_function(1 - delta))
+            ))
+        else:
+            derivs = numpy.array([curve_derivative(u) for u in points])
+
+        if not callable(final_width):
+            if final_width is None:
+                width = numpy.full_like(points, self.w)
+            else:
+                width = self.w + (final_width * 0.5 - self.w) * points
+                self.w = final_width * 0.5
+        else:
+            width = numpy.array([0.5 * final_width(u) for u in points])
+            self.w = width[-1]
 
         if not callable(final_distance):
-            old_distance = self.distance
-            if final_distance is not None:
+            if final_distance is None:
+                dist = numpy.full_like(points, self.distance)
+            else:
+                dist = self.distance + (final_distance - self.distance) * points
                 self.distance = final_distance
+        else:
+            dist = numpy.array([final_distance(u) for u in points])
+            self.distance = dist[-1]
 
-            def final_distance(u):
-                return old_distance + u * (self.distance - old_distance)
+        np = points.shape[0]
+        sh = (np, 1)
+        x0 = values + numpy.array((self.x, self.y))
+        dx = derivs[:, ::-1] * numpy.array((-1, 1)) / numpy.sqrt((derivs**2).sum(1)).reshape(sh)
+        width = width.reshape(sh)
+        dist = dist.reshape(sh)
 
-        if curve_derivative is None:
+        self.x = x0[-1, 0]
+        self.y = x0[-1, 1]
+        self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
 
-            def numerical_diff(t):
-                delta = 0.5 / (number_of_evaluations - 1.0)
-                if t == 0:
-                    x0, y0 = curve_function(0)
-                    x1, y1 = curve_function(delta)
-                elif t == 1:
-                    x0, y0 = curve_function(1 - delta)
-                    x1, y1 = curve_function(1)
-                else:
-                    x0, y0 = curve_function(t - delta)
-                    x1, y1 = curve_function(t + delta)
-                return (x1 - x0, y1 - y0)
-
-            curve_derivative = numerical_diff
-        orgn = numpy.array((self.x, self.y))
-        refl = numpy.array((-1, 1))
-        for kk in range(pieces):
-            uu = numpy.linspace(boundaries[kk], boundaries[kk + 1], number_of_evaluations)
-            width = numpy.array([final_width(u) for u in uu]).reshape(number_of_evaluations, 1) * 0.5
-            dist = numpy.array([final_distance(u) for u in uu]).reshape(number_of_evaluations, 1)
-            x0 = numpy.array([curve_function(u) for u in uu]) + orgn
-            dx = numpy.array([curve_derivative(u) for u in uu])
-            dx = dx[:, ::-1] * refl / numpy.sqrt((dx * dx).sum(1)).reshape(number_of_evaluations, 1)
-            self.length += numpy.sqrt(((x0[1:, :] - x0[:-1, :])**2).sum(1)).sum()
+        max_points = max(3, max_points // 2)
+        i0 = 0
+        while i0 < np - 1:
+            i1 = min(i0 + max_points, np)
             for ii in range(self.n):
-                p1 = x0 + dx * (dist * (ii - (self.n - 1) * 0.5) + width)
-                p2 = (x0 + dx * (dist * (ii - (self.n - 1) * 0.5) - width))[::-1, :]
-                if width[number_of_evaluations - 1, 0] == 0:
+                p1 = x0[i0:i1] + dx[i0:i1] * (dist[i0:i1] * (ii - (self.n - 1) * 0.5) + width[i0:i1])
+                p2 = (x0[i0:i1] + dx[i0:i1] * (dist[i0:i1] * (ii - (self.n - 1) * 0.5) - width[i0:i1]))[::-1, :]
+                if width[i1 - 1, 0] == 0:
                     p2 = p2[1:]
-                if width[0, 0] == 0:
+                if width[i0, 0] == 0:
                     p1 = p1[1:]
                 self.polygons.append(numpy.concatenate((p1, p2)))
             if isinstance(layer, list):
@@ -1524,13 +1552,11 @@ class Path(PolygonSet):
                 self.datatypes.extend((datatype * (self.n // len(datatype) + 1))[:self.n])
             else:
                 self.datatypes.extend(datatype for _ in range(self.n))
-        self.x = x0[-1, 0]
-        self.y = x0[-1, 1]
-        self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
+            i0 = i1 - 1
         return self
 
-    def bezier(self, points, number_of_evaluations=99, max_points=199, final_width=None,
-               final_distance=None, layer=0, datatype=0):
+    def bezier(self, points, tolerance=0.01, number_of_evaluations=5, max_points=199,
+               final_width=None, final_distance=None, layer=0, datatype=0):
         """
         Add a Bezier curve to the path.
 
@@ -1538,13 +1564,16 @@ class Path(PolygonSet):
         ----------
         points : array-like[N][2]
             Control points defining the Bezier curve.
+        tolerance : number
+            Acceptable tolerance for the approximation of the curve
+            function by a finite number of evaluations.
         number_of_evaluations : integer
-            Number of points where the curve function will be evaluated.
-            The final segment will have twice this number of points.
+            Initial number of points where the curve function will be
+            evaluated.  According to ``tolerance``, more evaluations
+            will be performed.
         max_points : integer
-            If ``2 * number_of_evaluations > max_points``, the element
-            will be fractured in smaller polygons with at most
-            ``max_points`` each.
+            Elements will be fractured until each polygon has at most
+            ``max_points``.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
@@ -1587,13 +1616,13 @@ class Path(PolygonSet):
 
         pts = numpy.array(points)
         dpts = (pts.shape[0] - 1) * (pts[1:] - pts[:-1])
-        self.parametric(bez(pts), bez(dpts), number_of_evaluations, max_points, final_width,
-                        final_distance, layer, datatype)
+        self.parametric(bez(pts), bez(dpts), tolerance, number_of_evaluations, max_points,
+                        final_width, final_distance, layer, datatype)
         return self
 
     def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
-               number_of_evaluations=99, max_points=199, final_widths=None, final_distances=None,
-               layer=0, datatype=0):
+               tolerance=0.01, number_of_evaluations=5, max_points=199, final_widths=None,
+               final_distances=None, layer=0, datatype=0):
         """
         Add a smooth interpolating curve that passes through the given
         points.
@@ -1631,14 +1660,16 @@ class Path(PolygonSet):
             If ``True``, calculates control points for a closed curve,
             with an additional segment connecting the first and last
             points.
+        tolerance : number
+            Acceptable tolerance for the approximation of the curve
+            function by a finite number of evaluations.
         number_of_evaluations : integer
-            Number of points where each section of the curve will be
-            evaluated.  Each segment will have twice this number of
-            points.
+            Initial number of points where the curve function will be
+            evaluated.  According to ``tolerance``, more evaluations
+            will be performed.
         max_points : integer
-            If ``2 * number_of_evaluations > max_points``, each segment
-            will be fractured in smaller polygons with at most
-            ``max_points`` each.
+            Elements will be fractured until each polygon has at most
+            ``max_points``.
         final_widths : array-like[M]
             Each element corresponds to the final width of a segment in
             the whole curve.  If an element is a number, the paths of
@@ -1688,13 +1719,13 @@ class Path(PolygonSet):
         for i in range(points.shape[0] - 1):
             self.x = x
             self.y = y
-            self.bezier([points[i], cta[i], ctb[i], points[i + 1]], number_of_evaluations, max_points,
-                        final_widths[i], final_distances[i], layer, datatype)
+            self.bezier([points[i], cta[i], ctb[i], points[i + 1]], tolerance, number_of_evaluations,
+                        max_points, final_widths[i], final_distances[i], layer, datatype)
         if cycle:
             self.x = x
             self.y = y
-            self.bezier([points[-1], cta[-1], ctb[-1], points[0]], number_of_evaluations, max_points,
-                        final_widths[-1], final_distances[-1], layer, datatype)
+            self.bezier([points[-1], cta[-1], ctb[-1], points[0]], tolerance, number_of_evaluations,
+                        max_points, final_widths[-1], final_distances[-1], layer, datatype)
         return self
 
 

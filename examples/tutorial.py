@@ -133,13 +133,10 @@ def dspiral_dt(t):
 
 
 # Add the parametric spiral to the path in layer 3.  Note that we can
-# still tapper the width (linearly or with a taper function).  To make
-# the curve smoother, we increase the number of evaluations of the
-# function (fracture will be performed automatically to ensure polygons
-# with less than 200 points).
+# still tapper the width (linearly or with a taper function).
 path3.parametric(spiral, dspiral_dt,
                  final_width=lambda t: 0.1 + abs(0.4 * (1 - 2 * t)**3),
-                 number_of_evaluations=600, layer=3)
+                 layer=3)
 path_cell.add(path3)
 
 # Polygonal paths are defined by the points they pass through.  The
