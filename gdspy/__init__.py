@@ -1058,7 +1058,7 @@ class Path(PolygonSet):
         *Half*-width of each path.
     n : integer
         Number of parallel paths.
-    direction : {'+x', '-x', '+y', '-y'} or number
+    direction : '+x', '-x', '+y', '-y' or number
         Direction or angle (in *radians*) the path points to.
     distance : number
         Distance between the centers of adjacent paths.
@@ -1123,7 +1123,7 @@ class Path(PolygonSet):
         ----------
         length : number
             Length of the section to add.
-        direction : {'+x', '-x', '+y', '-y'} or number
+        direction : '+x', '-x', '+y', '-y' or number
             Direction or angle (in *radians*) of rotation of the
             segment.
         final_width : number
@@ -1744,7 +1744,7 @@ class L1Path(PolygonSet):
     ----------
     initial_point : array-like[2]
         Starting position of the path.
-    direction : {'+x', '+y', '-x', '-y'}
+    direction : '+x', '+y', '-x', '-y'
         Starting direction of the path.
     width : number
         The initial width of each path.
@@ -1783,7 +1783,7 @@ class L1Path(PolygonSet):
         Final position of the path in the x direction.
     y : number
         Final position of the path in the y direction.
-    direction : {'+x', '-x', '+y', '-y'} or number
+    direction : '+x', '-x', '+y', '-y' or number
         Direction or angle (in *radians*) the path points to.  The
         numerical angle is returned only after a rotation of the object.
 
@@ -1961,7 +1961,7 @@ class PolyPath(PolygonSet):
     Parameters
     ----------
     points : array-like[N][2]
-        Endpoints of each path segment.
+        Points along the center of the path.
     width : number or array-like[N]
         Width of the path.  If an array is given, width at each
         endpoint.
@@ -1970,11 +1970,10 @@ class PolyPath(PolygonSet):
     distance : number or array-like[N]
         Distance between the centers of adjacent paths.  If an array is
         given, distance at each endpoint.
-    corners : positive integer
-        Type of joins: 0 - miter join, 1 - bevel join
-    ends : positive integer
-        Type of path ends: 0 - no extension, 1 - rounded, 2 - extended
-        by half width
+    corners : 'miter' or 'bevel'
+        Type of joins.
+    ends : 'flush', 'round', 'extended'
+        Type of end caps for the paths.
     max_points : integer
         The paths will be fractured in polygons with at most
         ``max_points`` (must be at least 4).  If ``max_points = 0`` no
@@ -2000,7 +1999,7 @@ class PolyPath(PolygonSet):
     """
     __slots__ = 'layers', 'datatypes', 'polygons'
 
-    def __init__(self, points, width, number_of_paths=1, distance=0, corners=0, ends=0,
+    def __init__(self, points, width, number_of_paths=1, distance=0, corners='miter', ends='flush',
                  max_points=199, layer=0, datatype=0):
         if not isinstance(layer, list):
             layer = [layer]
@@ -2018,14 +2017,27 @@ class PolyPath(PolygonSet):
         self.layers = []
         self.datatypes = []
         points = numpy.array(points, dtype=float)
-        if ends == 2:
+        if corners not in ['miter', 'bevel']:
+            if corners in [0, 1]:
+                corners = ['miter', 'bevel'][corners]
+                warnings.warn("[GDSPY] Argument corners must be one of 'miter' or 'bevel'.", category=DeprecationWarning, stacklevel=2)
+            else:
+                raise ValueError("[GDSPY] Argument corners must be one of 'miter' or 'bevel'.")
+        bevel = corners == 'bevel'
+        if ends not in ['flush', 'round', 'extended']:
+            if ends in [0, 1, 2]:
+                ends = ['flush', 'round', 'extended'][ends]
+                warnings.warn("[GDSPY] Argument ends must be one of 'flush', 'round', or 'extended'.", category=DeprecationWarning, stacklevel=2)
+            else:
+                raise ValueError("[GDSPY] Argument ends must be one of 'flush', 'round', or 'extended'.")
+        if ends == 'extended':
             v = points[0, :] - points[1, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
             points[0, :] = points[0, :] + v * width[0]
             v = points[-1, :] - points[-2, :]
             v = v / numpy.sqrt(numpy.sum(v * v))
             points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) % len_w]
-        elif ends == 1:
+        elif ends == 'round':
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
             v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0 * v0))
@@ -2075,8 +2087,7 @@ class PolyPath(PolygonSet):
                     vec = p0m[0] * p1p[1] - p1p[0] * p0m[1]
                     if abs(vec) > 1e-30:
                         p = numpy.array((1, -1)) * (p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1] * p0[ii][kk] + p0m * p1p * (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
-                        if corners > 0 and numpy.sum((p - pp[ii][kk]) * p1p) > 0 and numpy.sum(
-                            (p - p0[ii][kk]) * p0m) < 0:
+                        if bevel and numpy.sum((p - pp[ii][kk]) * p1p) > 0 and numpy.sum((p - p0[ii][kk]) * p0m) < 0:
                             paths[ii][kk].append(p0[ii][kk])
                             paths[ii][kk].append(pp[ii][kk])
                         else:
@@ -4144,7 +4155,7 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
         an array-like[N][2] of vertices of a polygon.
     distance : number
         Offset distance.  Positive to expand, negative to shrink.
-    join : {'miter', 'bevel', 'round'}
+    join : 'miter', 'bevel', 'round'
         Type of join used to create the offset polygon.
     tolerance : number
         For miter joints, this number must be at least 2 and it
