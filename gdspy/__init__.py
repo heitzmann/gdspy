@@ -2117,6 +2117,86 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
+class SimplePath:
+    """
+    Path object according to GDSII specification.
+
+    This class is stored internaly as a sequence of points, instead of
+    polygonal boundaries that compose a path.  It can be used when the
+    width of the path is constant.
+
+    Parameters
+    ----------
+    points : array-like[N][2]
+        Points along the center of the path.
+    width : number, list
+        Width of each parallel path being created.
+    number_of_paths : positive integer
+        Number of parallel paths to create simultaneously.
+    distance : number or array-like[N]
+        Distance between the centers of adjacent paths.  If an array is
+        given, distance at each endpoint.
+    ends : 'flush', 'round', 'extended', or array-like[2]
+        Type of end caps for the paths.  An array represents the start
+        and end extensions to the paths.
+    layer : integer, list
+        The GDSII layer numbers for the elements of each path.  If the
+        number of layers in the list is less than the number of paths,
+        the list is repeated.
+    datatype : integer, list
+        The GDSII datatype for the elements of each path (between 0 and
+        255).  If the number of datatypes in the list is less than the
+        number of paths, the list is repeated.
+
+    Returns
+    -------
+    out : ``SimplePath``
+        This object.
+
+    Notes
+    -----
+    Acute joins are automatically bevelled when drawing the path.  The
+    amount of beveling is implementation-dependent (the GDSII file does
+    not store this information).
+    """
+    __slots__ = 'layers', 'datatypes', 'paths', 'widths', 'ends'
+
+    def __init__(self, points, width, number_of_paths=1, distance=0, ends='flush', layer=0, datatype=0):
+        self.ends = ends
+
+        if isinstance(width, list):
+            self.widths = (width * (number_of_paths // len(width) + 1))[:number_of_paths]
+        else:
+            self.widths = [width for _ in range(number_of_paths)]
+
+        if isinstance(layer, list):
+            self.layers = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
+        else:
+            self.layers = [layer for _ in range(number_of_paths)]
+
+        if isinstance(datatype, list):
+            self.datatypes = (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
+        else:
+            self.datatypes = [datatype for _ in range(number_of_paths)]
+
+        if not hasattr(distance, '__iter__'):
+            distance = (distance, )
+        len_d = len(distance)
+
+        self.paths = []
+
+        points = numpy.array(points, dtype=float)
+
+    def __str__(self):
+        pass
+    def __repr__(self):
+        pass
+    def polygons():
+        pass
+    def to_gds():
+        pass
+
+
 class Label(object):
     """
     Text that can be used to label parts of the geometry or display
