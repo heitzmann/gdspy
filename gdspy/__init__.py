@@ -162,9 +162,9 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
         open curve (``cycle = False``), M = N - 1.
     """
     z = points[:, 0] + 1j * points[:, 1]
-    if not hasattr(t_in, '__iter__'):
+    if not hasattr(t_in, '__getitem__'):
         t_in = t_in * numpy.ones(len(z))
-    if not hasattr(t_out, '__iter__'):
+    if not hasattr(t_out, '__getitem__'):
         t_out = t_out * numpy.ones(len(z))
     if angles is None:
         angles = [None for _ in range(len(z))]
@@ -513,11 +513,11 @@ class PolygonSet(object):
         """
         two_pi = 2 * numpy.pi
         fracture = False
-        if hasattr(radius, '__iter__'):
+        if hasattr(radius, '__getitem__'):
             if len(radius) == len(self.polygons):
                 radii = []
                 for r, p in zip(radius, self.polygons):
-                    if hasattr(r, '__iter__'):
+                    if hasattr(r, '__getitem__'):
                         if len(r) != p.shape[0]:
                             raise ValueError("[GDSPY] Wrong length in fillet radius list.  Expected lengths are {} or {}; got {}.".format(len(self.polygons), total, len(radius)))
                         radii.append(r)
@@ -767,7 +767,7 @@ class Round(PolygonSet):
 
     def __init__(self, center, radius, inner_radius=0, initial_angle=0, final_angle=0,
                  tolerance=0.01, number_of_points=None, max_points=199, layer=0, datatype=0):
-        if hasattr(radius, '__iter__'):
+        if hasattr(radius, '__getitem__'):
             orx, ory = radius
             radius = max(radius)
 
@@ -782,7 +782,7 @@ class Round(PolygonSet):
             def outer_transform(a):
                 return a
 
-        if hasattr(inner_radius, '__iter__'):
+        if hasattr(inner_radius, '__getitem__'):
             irx, iry = inner_radius
             inner_radius = max(inner_radius)
 
@@ -2010,7 +2010,7 @@ class PolyPath(PolygonSet):
         else:
             width = numpy.array([width * 0.5])
         len_w = len(width)
-        if not hasattr(distance, '__iter__'):
+        if not hasattr(distance, '__getitem__'):
             distance = (distance, )
         len_d = len(distance)
         self.polygons = []
@@ -2117,6 +2117,30 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
+def _nummerical_diff(f):
+    def _df(u, h):
+        u0 = max(0, u - h)
+        u1 = min(1, u + h)
+        return (f(u1) - f(u0)) / (u1 - u0)
+    return _df
+
+
+class SubPath:
+    def __init__(self, x, dx, off, doff, width, layer, datatype):
+        self.x = x
+        self.dx = dx
+        self.off = off
+        self.doff = doff
+        self.width = width
+        self.layer = layer
+        self.datatype = datatype
+
+    def __call__(self, u, h=1e-3):
+        v = self.dx(u, h)
+        return self.x(u) + v * self.off(u) / numpy.sqrt(numpy.sum(v**2))
+        
+
+
 class UPath:
     """
     Path object according to GDSII specification.
@@ -2125,6 +2149,7 @@ class UPath:
     polygonal boundaries that compose a path.  It can be used when the
     width of the path is constant.
 
+    store spines/derivatives (if given)/widths: create polys on get_polygons
 
     offsets instead of distances, list of (number|callable|array), 1 per path
         number = constant
@@ -2178,42 +2203,83 @@ class UPath:
     amount of beveling is implementation-dependent (the GDSII file does
     not store this information).
     """
-    __slots__ = 'layers', 'datatypes', 'paths', 'widths', 'ends'
+    #__slots__ = 'layers', 'datatypes', 'paths', 'widths', 'ends'
 
-    def __init__(self, points, width, number_of_paths=1, distance=0, ends='flush', layer=0, datatype=0):
+    def __init__(self, width, initial_point=(0, 0), offsets=(0,), corners='miter', ends='flush'):
+        self.n = len(self.offsets)
+        self.corners = corners
         self.ends = ends
-
-        if isinstance(width, list):
-            self.widths = (width * (number_of_paths // len(width) + 1))[:number_of_paths]
-        else:
-            self.widths = [width for _ in range(number_of_paths)]
-
-        if isinstance(layer, list):
-            self.layers = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
-        else:
-            self.layers = [layer for _ in range(number_of_paths)]
-
-        if isinstance(datatype, list):
-            self.datatypes = (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
-        else:
-            self.datatypes = [datatype for _ in range(number_of_paths)]
-
-        if not hasattr(distance, '__iter__'):
-            distance = (distance, )
-        len_d = len(distance)
-
-        self.paths = []
-
-        points = numpy.array(points, dtype=float)
+        self.x = numpy.array(inital_point)
+        self.offsets = offsets
+        if not isinstance(width, list):
+            self.widths = [width] * self.n
+        self.subpaths = [[] for _ in range(self.n)]
 
     def __str__(self):
         pass
     def __repr__(self):
         pass
-    def polygons():
+    def __call__(self, u):
+        pass
+    def grad(self, u, h=1e-3, side='-'):
+        pass
+    def width(self, u):
+        pass
+    def get_polygons():
         pass
     def to_gds():
         pass
+    def rotate():
+        pass
+    def scale():
+        pass
+    def mirror():
+        pass
+    def get_bounding_box():
+        pass
+
+    def _parse_width(self, widths):
+        if widths is None:
+            ret = [(lambda u: c) for c in self.widths]
+        elif hasattr(widths, '__getitem__'):
+            ret = [widths[i] if callable(widths[i]) else
+                   (lambda u: self.widths[i] * (1 - u) + widths[i] * u) for i in range(self.n)]
+        elif callable(widths):
+            ret = [widths for _ in range(self.n)]
+        else:
+            ret = [(lambda u: self.widths[i] * (1 - u) + widths * u) for i in range(self.n)]
+        return ret
+
+    def _parse_offsets(self, offsets):
+        if offsets is None:
+            ret = [((lambda u: c), (lambda u, h: 0)) for c in self.offsets]
+        elif hasattr(offsets, '__getitem__'):
+            ret = [(offsets[i], _nummerical_diff(offsets[i])) if callable(offsets[i]) else
+                   ((lambda u: self.offsets[i] * (1 - u) + offsets[i] * u),
+                    (lambda u, h: offsets[i] - self.offsets[i])) for i in range(self.n)]
+        elif callable(offsets):
+            oo = (offsets, _nummerical_diff(offsets))
+            ret = [oo for _ in range(self.n)]
+        else:
+            ret = [((lambda u: self.offsets[i] * (1 - u) + offsets * u),
+                    (lambda u, h: offsets - self.offsets[i])) for i in range(self.n)]
+        return ret
+
+    def segment(self, end_point=(0, 0), width=None, offsets=None, layer=0, datatype=0):
+        ws = self._parse_widths(widths)
+        os = self._parse_offsets(offsets)
+        if not isinstance(layer, list):
+            layer = [layer]
+        if not isinstance(datatype, list):
+            datatype = [datatype]
+        x = numpy.array(end_point)
+        for i in range(self.n):
+            self.subpaths[i].append(SubPath(lambda u: self.x * (1 - u) + x * u,
+                                            lambda u, h: x - self.x, os[i][0], os[i][1], ws[i],
+                                            layer[i % len(layer)], datatype[i % len(datatype)]))
+            self.widths[i] = ws[i](1)
+            self.offsets[i] = os[i][0](1)
+        self.x = x
 
 
 class Label(object):
@@ -4368,7 +4434,7 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         groups is inside the set of polygons.
     """
     polys = _gather_polys(polygons)
-    if hasattr(points[0][0], '__iter__'):
+    if hasattr(points[0][0], '__getitem__'):
         pts = points
         sc = 1 if short_circuit == 'any' else -1
     else:
