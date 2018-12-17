@@ -2117,13 +2117,32 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-class SimplePath:
+class UPath:
     """
     Path object according to GDSII specification.
 
     This class is stored internaly as a sequence of points, instead of
     polygonal boundaries that compose a path.  It can be used when the
     width of the path is constant.
+
+
+    offsets instead of distances, list of (number|callable|array), 1 per path
+        number = constant
+        array = 1 per vertex (extarpolate constant)
+        callable = func(u = 0 thru #subpaths)
+
+    path(u) = position
+    grad(u) = velocity
+
+    all methods from Path: subpaths
+    PolyPath/L1Path = N subpaths
+
+    get_polygons(corners, ends, tolerance, max_points)
+
+    to_gds(as_path=True/False)
+
+    from_svg()
+
 
     Parameters
     ----------
