@@ -2117,28 +2117,108 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-def _nummerical_diff(f):
-    def _df(u, h):
-        u0 = max(0, u - h)
-        u1 = min(1, u + h)
-        return (f(u1) - f(u0)) / (u1 - u0)
-    return _df
+def _func_const(n, c):
+    if n == 1:
+        return lambda u: c
+    elif n == 2:
+        return lambda u, h: c
+    return lambda *args: c
 
 
-class SubPath:
-    def __init__(self, x, dx, off, doff, width, layer, datatype):
+def _func_linear(n, c0, c1):
+    if n == 1:
+        return lambda u: c0 * (1 - u) + c1 * u
+    elif n == 2:
+        return lambda u, h: c0 * (1 - u) + c1 * u
+    return lambda *args: c0 * (1 - args[0]) + c1 * args[0]
+
+
+def _intersect(f0, f1, df0, df1, u0, u1, step=1e-3, tolerance=1e-3):
+    """
+    Find intesection between curves f0 and f1 close to f0(u0) ≅ f1(u1).
+
+    Returns
+    out : 2-tuple of float
+        The intersection point is f0(out[0]) = f1(out[1]).
+    """
+    tol = tolerance**2
+    delta = f0(u0) - f1(u1)
+    err = numpy.sum(delta**2)
+    iters = 0
+    while err > tol:
+        iters += 1
+        if iters > 1000:
+            warnings.warn('[GDSPY] Intersection not found.')
+            break
+        new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * df0(u0))))
+        new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * df1(u1))))
+        new_delta = f0(new_u0) - f1(new_u1)
+        new_err = numpy.sum(delta**2)
+        if new_err >= err:
+            step /= 2
+            continue
+        u0 = new_u0
+        u1 = new_u1
+        delta = new_delta
+        err = new_err
+    print('Iterations:', iters)
+    return u0, u1, 0.5 * (f0(u0) + f1(u1))
+
+
+def _cross(p0, v0, p1, v1):
+    """
+    Crossing between lines
+
+    The first line is defined by point p0 and direction v0, and the
+    second by point p1 and direction d1.
+
+    Returns
+    -------
+    out : 2-tuple of float
+        The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
+    """
+    den = v1[1] * v0[0] - v1[0] * v0[1]
+    lim = 1e-3 * (numpy.sum(v0**2) * numpy.sum(v1**2))
+    if den**2 < lim:
+        return 0, 0, 0.5 * (p0 + p1)
+    u0 = (v1[1] * (p1[0] - p0[0]) - v1[0] * (p1[1] - p0[1])) / den
+    u1 = (v0[1] * (p1[0] - p0[0]) - v0[0] * (p1[1] - p0[1])) / den
+    return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
+
+
+class _SubPath:
+    """
+    Single path component.
+    """
+    __slots__ = 'x', 'dx', 'off', 'wid'
+
+    def __init__(self, x, dx, off, wid):
         self.x = x
         self.dx = dx
         self.off = off
-        self.doff = doff
-        self.width = width
-        self.layer = layer
-        self.datatype = datatype
+        self.wid = wid
 
-    def __call__(self, u, h=1e-3):
-        v = self.dx(u, h)
-        return self.x(u) + v * self.off(u) / numpy.sqrt(numpy.sum(v**2))
-        
+    def __str__(self):
+        return 'SubPath ({} - {})'.format(self(0), self(1))
+
+    def __call__(self, u, h=1e-3, side=0):
+        v = self.dx(u, h)[::-1] * numpy.array((1.0, -1.0))
+        v /= numpy.sqrt(numpy.sum(v**2))
+        x = self.x(u) + self.off(u) * v
+        if side == 0:
+            return x
+        u0 = max(0, u - h)
+        u1 = min(1, u + h)
+        w = (self(u1, h) - self(u0, h))[::-1] * numpy.array((1.0, -1.0))
+        w /= numpy.sqrt(numpy.sum(w**2))
+        if side < 0:
+            return x - 0.5 * self.wid(u) * w
+        return x + 0.5 * self.wid(u) * w
+
+    def grad(self, u, h=1e-3, side=0):
+        u0 = max(0, u - h)
+        u1 = min(1, u + h)
+        return (self(u1, h, side) - self(u0, h, side)) / (u1 - u0)
 
 
 class UPath:
@@ -2203,30 +2283,128 @@ class UPath:
     amount of beveling is implementation-dependent (the GDSII file does
     not store this information).
     """
-    #__slots__ = 'layers', 'datatypes', 'paths', 'widths', 'ends'
+    __slots__ = 'n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes'
 
-    def __init__(self, width, initial_point=(0, 0), offsets=(0,), corners='miter', ends='flush'):
-        self.n = len(self.offsets)
-        self.corners = corners
+    def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', layer=0, datatype=0):
+        if isinstance(width, list):
+            self.n = len(width)
+            self.widths = width
+            if isinstance(offset, list):
+                self.offsets = offset
+            else:
+                self.offsets = [offset for _ in range(self.n)]
+        else:
+            if isinstance(offset, list):
+                self.n = len(offset)
+                self.offsets = offset
+            else:
+                self.n = 1
+                self.offsets = [offset]
+            self.widths = [width for _ in range(self.n)]
+        self.x = numpy.array(initial_point)
         self.ends = ends
-        self.x = numpy.array(inital_point)
-        self.offsets = offsets
-        if not isinstance(width, list):
-            self.widths = [width] * self.n
-        self.subpaths = [[] for _ in range(self.n)]
+        self.paths = [[] for _ in range(self.n)]
+        if isinstance(layer, list):
+            self.layers = [layer[i % len(layer)] for i in range(self.n)]
+        else:
+            self.layers = [layer for _ in range(self.n)]
+        if isinstance(datatype, list):
+            self.datatypes = [datatype[i % len(datatype)] for i in range(self.n)]
+        else:
+            self.datatypes = [datatype for _ in range(self.n)]
 
-    def __str__(self):
-        pass
-    def __repr__(self):
-        pass
-    def __call__(self, u):
-        pass
+    #def __str__(self):
+    #    pass
+
+    def __len__(self):
+        return len(self.paths[0])
+
+    def __call__(self, u, h=1e-3, side=0):
+        i = int(u)
+        u -= i
+        if u == 0 and i == len(self.paths[0]):
+            i -= 1
+            u = 1
+        return numpy.array([p[i](u, h, side) for p in self.paths])
+
     def grad(self, u, h=1e-3, side='-'):
-        pass
+        i = int(u)
+        u -= i
+        if u == 0 and (side == '-' or i == len(self.paths[0])):
+            i -= 1
+            u = 1
+        return numpy.array([p[i].grad(u, h) for p in self.paths])
+
     def width(self, u):
-        pass
-    def get_polygons():
-        pass
+        i = int(u)
+        u -= i
+        if u == 0 and i == len(self.paths[0]):
+            i -= 1
+            u = 1
+        return numpy.array([p[i].wid(u) for p in self.paths])
+
+    def get_polygons(self, by_spec=False, max_evals=1000, tolerance=0.01):
+        h = 0.5 / max_evals
+        if by_spec:
+            all_polygons = {}
+        else:
+            all_polygons = []
+        for path, layer, datatype in zip(self.paths, self.layers, self.datatypes):
+            poly = []
+            for side in [-1, 1]:
+                arm = []
+                start = 0
+                for sub0, sub1 in zip(path[:-1], path[1:]):
+                    print(sub0)
+                    print(sub1)
+                    p0 = sub0(1, h, side)
+                    v0 = sub0.grad(1, h, side)
+                    p1 = sub1(0, h, side)
+                    v1 = sub1.grad(0, h, side)
+                    u0, u1, px = _cross(p0, v0, p1, v1)
+                    print('  ×₀', 1 + u0, '≅', p0 + u0 * v0)
+                    print('  ×₁', u1, '≅', p1 + u1 * v1, flush=True)
+                    u0 = 1 + u0
+                    if u0 < 1 and u1 > 0:
+                        u0, u1, px = _intersect(lambda u: sub0(u, h, side),
+                                            lambda u: sub1(u, h, side),
+                                            lambda u: sub0.grad(u, h, side),
+                                            lambda u: sub1.grad(u, h, side),
+                                            u0, u1, 0.5, tolerance)
+                        print('  I₀', u0, '=', sub0(u0, h, side))
+                        print('  I₁', u1, '=', sub1(u1, h, side), flush=True)
+                    if u1 >= 0:
+                        if u0 <= 1:
+                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, u0, 50)[:-1])
+                        else:
+                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, 1, 50))
+                        start = u1
+                    else:
+                        if u0 <= 1:
+                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, u0, 50))
+                        else:
+                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, 1, 50))
+                            arm.append(px)
+                        start = 0
+                        
+                arm.extend(sub1(u, h, side) for u in numpy.linspace(start, 1, 50))
+                poly.extend(arm[::side])
+            if by_spec:
+                key = (layer, datatype)
+                if key in all_polygons:
+                    all_polygons[key].append(poly)
+                else:
+                    all_polygons[key] = [poly]
+            else:
+                all_polygons.append(poly)
+        return all_polygons
+
+    def to_polygonset(self, max_evals=1000, tolerance=0.01, max_points=199, precision=1e-3):
+        pol = PolygonSet(self.get_polygons(False, max_evals, tolerance), 0, 0)
+        pol.layers = list(self.layers)
+        pol.datatypes = list(self.datatypes)
+        return pol.fracture(max_points, precision)
+
     def to_gds():
         pass
     def rotate():
@@ -2235,50 +2413,26 @@ class UPath:
         pass
     def mirror():
         pass
-    def get_bounding_box():
-        pass
 
-    def _parse_width(self, widths):
-        if widths is None:
-            ret = [(lambda u: c) for c in self.widths]
-        elif hasattr(widths, '__getitem__'):
-            ret = [widths[i] if callable(widths[i]) else
-                   (lambda u: self.widths[i] * (1 - u) + widths[i] * u) for i in range(self.n)]
-        elif callable(widths):
-            ret = [widths for _ in range(self.n)]
-        else:
-            ret = [(lambda u: self.widths[i] * (1 - u) + widths * u) for i in range(self.n)]
-        return ret
+    def _parse(self, arg, cur, idx):
+        if arg is None:
+            return _func_const(1, cur[idx])
+        elif hasattr(arg, '__getitem__'):
+            if callable(arg[idx]):
+                return arg[idx]
+            return _func_linear(1, cur[idx], arg[idx])
+        elif callable(arg):
+            return arg
+        return _func_linear(1, cur[idx], arg)
 
-    def _parse_offsets(self, offsets):
-        if offsets is None:
-            ret = [((lambda u: c), (lambda u, h: 0)) for c in self.offsets]
-        elif hasattr(offsets, '__getitem__'):
-            ret = [(offsets[i], _nummerical_diff(offsets[i])) if callable(offsets[i]) else
-                   ((lambda u: self.offsets[i] * (1 - u) + offsets[i] * u),
-                    (lambda u, h: offsets[i] - self.offsets[i])) for i in range(self.n)]
-        elif callable(offsets):
-            oo = (offsets, _nummerical_diff(offsets))
-            ret = [oo for _ in range(self.n)]
-        else:
-            ret = [((lambda u: self.offsets[i] * (1 - u) + offsets * u),
-                    (lambda u, h: offsets - self.offsets[i])) for i in range(self.n)]
-        return ret
-
-    def segment(self, end_point=(0, 0), width=None, offsets=None, layer=0, datatype=0):
-        ws = self._parse_widths(widths)
-        os = self._parse_offsets(offsets)
-        if not isinstance(layer, list):
-            layer = [layer]
-        if not isinstance(datatype, list):
-            datatype = [datatype]
+    def segment(self, end_point, width=None, offset=None):
         x = numpy.array(end_point)
         for i in range(self.n):
-            self.subpaths[i].append(SubPath(lambda u: self.x * (1 - u) + x * u,
-                                            lambda u, h: x - self.x, os[i][0], os[i][1], ws[i],
-                                            layer[i % len(layer)], datatype[i % len(datatype)]))
-            self.widths[i] = ws[i](1)
-            self.offsets[i] = os[i][0](1)
+            off = self._parse(offset, self.offsets, i)
+            wid = self._parse(width, self.widths, i)
+            self.paths[i].append(_SubPath(_func_linear(1, self.x, x), _func_const(2, x - self.x), off, wid))
+            self.widths[i] = wid(1)
+            self.offsets[i] = off(1)
         self.x = x
 
 
