@@ -2133,7 +2133,7 @@ def _func_linear(n, c0, c1):
     return lambda *args: c0 * (1 - args[0]) + c1 * args[0]
 
 
-def _intersect(f0, f1, df0, df1, u0, u1, step=1e-3, tolerance=1e-3):
+def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
     """
     Find intesection between curves f0 and f1 close to f0(u0) ≅ f1(u1).
 
@@ -2145,15 +2145,16 @@ def _intersect(f0, f1, df0, df1, u0, u1, step=1e-3, tolerance=1e-3):
     delta = f0(u0) - f1(u1)
     err = numpy.sum(delta**2)
     iters = 0
+    step = 0.5
     while err > tol:
         iters += 1
-        if iters > 1000:
+        if iters > 100:
             warnings.warn('[GDSPY] Intersection not found.')
             break
         new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * df0(u0))))
         new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * df1(u1))))
         new_delta = f0(new_u0) - f1(new_u1)
-        new_err = numpy.sum(delta**2)
+        new_err = numpy.sum(new_delta**2)
         if new_err >= err:
             step /= 2
             continue
@@ -2370,7 +2371,7 @@ class UPath:
                                             lambda u: sub1(u, h, side),
                                             lambda u: sub0.grad(u, h, side),
                                             lambda u: sub1.grad(u, h, side),
-                                            u0, u1, 0.5, tolerance)
+                                            u0, u1, tolerance)
                         print('  I₀', u0, '=', sub0(u0, h, side))
                         print('  I₁', u1, '=', sub1(u1, h, side), flush=True)
                     if u1 >= 0:
