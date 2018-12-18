@@ -1478,7 +1478,7 @@ class Path(PolygonSet):
         """
         err = tolerance ** 2
         points = list(numpy.linspace(0, 1, number_of_evaluations))
-        values = list(numpy.array(curve_function(u)) for u in points)
+        values = [numpy.array(curve_function(u)) for u in points]
         delta = points[1]
         i = 1
         while i < len(points):
@@ -2125,12 +2125,12 @@ def _func_const(n, c):
     return lambda *args: c
 
 
-def _func_linear(n, c0, c1):
-    if n == 1:
-        return lambda u: c0 * (1 - u) + c1 * u
-    elif n == 2:
-        return lambda u, h: c0 * (1 - u) + c1 * u
-    return lambda *args: c0 * (1 - args[0]) + c1 * args[0]
+def _func_linear(c0, c1):
+    return lambda u: c0 * (1 - u) + c1 * u
+
+
+def _func_add(f, c):
+    return lambda u: f(u) + c
 
 
 def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
@@ -2162,7 +2162,7 @@ def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
         u1 = new_u1
         delta = new_delta
         err = new_err
-    print('Iterations:', iters)
+    #print('Iterations:', iters)
     return u0, u1, 0.5 * (f0(u0) + f1(u1))
 
 
@@ -2220,6 +2220,26 @@ class _SubPath:
         u0 = max(0, u - h)
         u1 = min(1, u + h)
         return (self(u1, h, side) - self(u0, h, side)) / (u1 - u0)
+
+    def points(self, u0, u1, h=1e-3, side=0, tolerance=0.01):
+        err = tolerance ** 2
+        u = [u0, u1]
+        pts = [numpy.array(self(u[0], h, side)), numpy.array(self(u[1], h, side))]
+        i = 1
+        while i < len(pts):
+            f = 0.125
+            while f < 1:
+                test_u = u[i - 1] * (1 - f) +  u[i] * f
+                test_pt = numpy.array(self(test_u, h, side))
+                if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > err:
+                    u.insert(i, test_u)
+                    pts.insert(i, test_pt)
+                    break
+                else:
+                    f += 0.25
+            else:
+                i += 1
+        return u, pts
 
 
 class UPath:
@@ -2344,8 +2364,7 @@ class UPath:
             u = 1
         return numpy.array([p[i].wid(u) for p in self.paths])
 
-    def get_polygons(self, by_spec=False, max_evals=1000, tolerance=0.01):
-        h = 0.5 / max_evals
+    def get_polygons(self, by_spec=False, tolerance=0.01, eps=1e-6):
         if by_spec:
             all_polygons = {}
         else:
@@ -2356,39 +2375,40 @@ class UPath:
                 arm = []
                 start = 0
                 for sub0, sub1 in zip(path[:-1], path[1:]):
-                    print(sub0)
-                    print(sub1)
-                    p0 = sub0(1, h, side)
-                    v0 = sub0.grad(1, h, side)
-                    p1 = sub1(0, h, side)
-                    v1 = sub1.grad(0, h, side)
+                    #print(sub0)
+                    #print(sub1)
+                    p0 = sub0(1, eps, side)
+                    v0 = sub0.grad(1, eps, side)
+                    p1 = sub1(0, eps, side)
+                    v1 = sub1.grad(0, eps, side)
                     u0, u1, px = _cross(p0, v0, p1, v1)
-                    print('  ×₀', 1 + u0, '≅', p0 + u0 * v0)
-                    print('  ×₁', u1, '≅', p1 + u1 * v1, flush=True)
+                    #print('  ×₀', 1 + u0, '≅', p0 + u0 * v0)
+                    #print('  ×₁', u1, '≅', p1 + u1 * v1, flush=True)
                     u0 = 1 + u0
                     if u0 < 1 and u1 > 0:
-                        u0, u1, px = _intersect(lambda u: sub0(u, h, side),
-                                            lambda u: sub1(u, h, side),
-                                            lambda u: sub0.grad(u, h, side),
-                                            lambda u: sub1.grad(u, h, side),
+                        u0, u1, px = _intersect(lambda u: sub0(u, eps, side),
+                                            lambda u: sub1(u, eps, side),
+                                            lambda u: sub0.grad(u, eps, side),
+                                            lambda u: sub1.grad(u, eps, side),
                                             u0, u1, tolerance)
-                        print('  I₀', u0, '=', sub0(u0, h, side))
-                        print('  I₁', u1, '=', sub1(u1, h, side), flush=True)
+                        #print('  I₀', u0, '=', sub0(u0, eps, side))
+                        #print('  I₁', u1, '=', sub1(u1, eps, side), flush=True)
+                    _, pts = sub0.points(start, min(1, u0), eps, side, tolerance)
                     if u1 >= 0:
                         if u0 <= 1:
-                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, u0, 50)[:-1])
+                            arm.extend(pts[:-1])
                         else:
-                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, 1, 50))
+                            arm.extend(pts)
                         start = u1
                     else:
                         if u0 <= 1:
-                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, u0, 50))
+                            arm.extend(pts)
                         else:
-                            arm.extend(sub0(u, h, side) for u in numpy.linspace(start, 1, 50))
+                            arm.extend(pts)
                             arm.append(px)
                         start = 0
-                        
-                arm.extend(sub1(u, h, side) for u in numpy.linspace(start, 1, 50))
+                _, pts = path[-1].points(start, 1, eps, side, tolerance)
+                arm.extend(pts)
                 poly.extend(arm[::side])
             if by_spec:
                 key = (layer, datatype)
@@ -2400,8 +2420,8 @@ class UPath:
                 all_polygons.append(poly)
         return all_polygons
 
-    def to_polygonset(self, max_evals=1000, tolerance=0.01, max_points=199, precision=1e-3):
-        pol = PolygonSet(self.get_polygons(False, max_evals, tolerance), 0, 0)
+    def to_polygonset(self, tolerance=0.01, max_points=199, precision=1e-3, eps=1e-6):
+        pol = PolygonSet(self.get_polygons(False, tolerance, eps), 0, 0)
         pol.layers = list(self.layers)
         pol.datatypes = list(self.datatypes)
         return pol.fracture(max_points, precision)
@@ -2415,26 +2435,47 @@ class UPath:
     def mirror():
         pass
 
-    def _parse(self, arg, cur, idx):
+    def _parse(self, arg, cur, idx, delta):
         if arg is None:
             return _func_const(1, cur[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
-                return arg[idx]
-            return _func_linear(1, cur[idx], arg[idx])
+                return _func_add(arg[idx], cur[idx]) if delta else arg[idx]
+            return _func_linear(cur[idx], cur[idx] + arg[idx]) if delta else _func_linear(cur[idx], arg[idx])
         elif callable(arg):
-            return arg
-        return _func_linear(1, cur[idx], arg)
+            return _func_add(arg, cur[idx]) if delta else arg
+        return _func_linear(cur[idx], cur[idx] + arg) if delta else _func_linear(cur[idx], arg)
 
     def segment(self, end_point, width=None, offset=None):
         x = numpy.array(end_point)
+        f = _func_linear(self.x, x)
+        df = _func_const(2, x - self.x)
+        self.x = x
         for i in range(self.n):
-            off = self._parse(offset, self.offsets, i)
-            wid = self._parse(width, self.widths, i)
-            self.paths[i].append(_SubPath(_func_linear(1, self.x, x), _func_const(2, x - self.x), off, wid))
+            off = self._parse(offset, self.offsets, i, True)
+            wid = self._parse(width, self.widths, i, False)
+            self.paths[i].append(_SubPath(f, df, off, wid))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
-        self.x = x
+        return self
+
+    def arc(self, radius, initial_angle, final_angle, width=None, offset=None):
+        x0 = self.x - numpy.array((radius * numpy.cos(initial_angle), radius * numpy.sin(initial_angle)))
+        def f(u):
+            angle = initial_angle * (1 - u) + final_angle * u
+            return x0 + numpy.array((radius * numpy.cos(angle), radius * numpy.sin(angle)))
+        def df(u, h):
+            angle = initial_angle * (1 - u) + final_angle * u
+            r = radius * (final_angle - initial_angle)
+            return numpy.array((-r * numpy.sin(angle), r * numpy.cos(angle)))
+        self.x = f(1)
+        for i in range(self.n):
+            off = self._parse(offset, self.offsets, i, True)
+            wid = self._parse(width, self.widths, i, False)
+            self.paths[i].append(_SubPath(f, df, off, wid))
+            self.widths[i] = wid(1)
+            self.offsets[i] = off(1)
+        return self
 
 
 class Label(object):
