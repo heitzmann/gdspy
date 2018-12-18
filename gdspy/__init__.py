@@ -4234,7 +4234,7 @@ def boolean(operand1, operand2, operation, precision=0.001, max_points=199, laye
         if operation in ['not', 'xor']:
             if len(poly1) == 0:
                 return None
-            return PolygonSet(poly1, layer, datatype).farcture(max_points, precision)
+            return PolygonSet(poly1, layer, datatype).fracture(max_points, precision)
         poly2.append(poly1.pop())
     result = clipper.clip(poly1, poly2, operation, 1 / precision)
     if len(result) == 0:
