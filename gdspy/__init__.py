@@ -2382,8 +2382,8 @@ class UPath:
                     p1 = sub1(0, eps, side)
                     v1 = sub1.grad(0, eps, side)
                     u0, u1, px = _cross(p0, v0, p1, v1)
-                    #print('  ×₀', 1 + u0, '≅', p0 + u0 * v0)
-                    #print('  ×₁', u1, '≅', p1 + u1 * v1, flush=True)
+                    #print('  ×0', 1 + u0, '≅', p0 + u0 * v0)
+                    #print('  ×1', u1, '≅', p1 + u1 * v1, flush=True)
                     u0 = 1 + u0
                     if u0 < 1 and u1 > 0:
                         u0, u1, px = _intersect(lambda u: sub0(u, eps, side),
@@ -2391,8 +2391,8 @@ class UPath:
                                             lambda u: sub0.grad(u, eps, side),
                                             lambda u: sub1.grad(u, eps, side),
                                             u0, u1, tolerance)
-                        #print('  I₀', u0, '=', sub0(u0, eps, side))
-                        #print('  I₁', u1, '=', sub1(u1, eps, side), flush=True)
+                        #print('  I0', u0, '=', sub0(u0, eps, side))
+                        #print('  I1', u1, '=', sub1(u1, eps, side), flush=True)
                     _, pts = sub0.points(start, min(1, u0), eps, side, tolerance)
                     if u1 >= 0:
                         if u0 <= 1:
