@@ -2135,7 +2135,7 @@ def _func_add(f, c):
 
 def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
     """
-    Find intesection between curves f0 and f1 close to f0(u0) ≅ f1(u1).
+    Find intesection between curves f0 and f1 around f0(u0) and f1(u1).
 
     Returns
     out : 2-tuple of float
@@ -2227,7 +2227,7 @@ class _SubPath:
         pts = [numpy.array(self(u[0], h, side)), numpy.array(self(u[1], h, side))]
         i = 1
         while i < len(pts):
-            f = 0.125
+            f = 0.2
             while f < 1:
                 test_u = u[i - 1] * (1 - f) +  u[i] * f
                 test_pt = numpy.array(self(test_u, h, side))
@@ -2236,7 +2236,7 @@ class _SubPath:
                     pts.insert(i, test_pt)
                     break
                 else:
-                    f += 0.25
+                    f += 0.3
             else:
                 i += 1
         return u, pts
