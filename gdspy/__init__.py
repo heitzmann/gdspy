@@ -2162,7 +2162,7 @@ def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
         u1 = new_u1
         delta = new_delta
         err = new_err
-    #print('Iterations:', iters)
+    #print('    Iterations:', iters)
     return u0, u1, 0.5 * (f0(u0) + f1(u1))
 
 
@@ -2179,7 +2179,7 @@ def _cross(p0, v0, p1, v1):
         The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
     """
     den = v1[1] * v0[0] - v1[0] * v0[1]
-    lim = 1e-3 * (numpy.sum(v0**2) * numpy.sum(v1**2))
+    lim = 1e-12 * (numpy.sum(v0**2) * numpy.sum(v1**2))
     if den**2 < lim:
         return 0, 0, 0.5 * (p0 + p1)
     u0 = (v1[1] * (p1[0] - p0[0]) - v1[0] * (p1[1] - p0[1])) / den
@@ -2200,37 +2200,37 @@ class _SubPath:
         self.wid = wid
 
     def __str__(self):
-        return 'SubPath ({} - {})'.format(self(0), self(1))
+        return 'SubPath ({} - {})'.format(self(0, 1e-6, 0), self(1, 1e-6, 0))
 
-    def __call__(self, u, h=1e-3, side=0):
+    def __call__(self, u, h, arm):
         v = self.dx(u, h)[::-1] * numpy.array((1.0, -1.0))
         v /= numpy.sqrt(numpy.sum(v**2))
         x = self.x(u) + self.off(u) * v
-        if side == 0:
+        if arm == 0:
             return x
         u0 = max(0, u - h)
         u1 = min(1, u + h)
-        w = (self(u1, h) - self(u0, h))[::-1] * numpy.array((1.0, -1.0))
+        w = (self(u1, h, 0) - self(u0, h, 0))[::-1] * numpy.array((1.0, -1.0))
         w /= numpy.sqrt(numpy.sum(w**2))
-        if side < 0:
+        if arm < 0:
             return x - 0.5 * self.wid(u) * w
         return x + 0.5 * self.wid(u) * w
 
-    def grad(self, u, h=1e-3, side=0):
+    def grad(self, u, h, arm):
         u0 = max(0, u - h)
         u1 = min(1, u + h)
-        return (self(u1, h, side) - self(u0, h, side)) / (u1 - u0)
+        return (self(u1, h, arm) - self(u0, h, arm)) / (u1 - u0)
 
-    def points(self, u0, u1, h=1e-3, side=0, tolerance=0.01):
+    def points(self, u0, u1, h, arm, tolerance, max_evals):
         err = tolerance ** 2
         u = [u0, u1]
-        pts = [numpy.array(self(u[0], h, side)), numpy.array(self(u[1], h, side))]
+        pts = [numpy.array(self(u[0], h, arm)), numpy.array(self(u[1], h, arm))]
         i = 1
-        while i < len(pts):
+        while i < len(pts) < max_evals:
             f = 0.2
             while f < 1:
                 test_u = u[i - 1] * (1 - f) +  u[i] * f
-                test_pt = numpy.array(self(test_u, h, side))
+                test_pt = numpy.array(self(test_u, h, arm))
                 if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > err:
                     u.insert(i, test_u)
                     pts.insert(i, test_pt)
@@ -2239,7 +2239,7 @@ class _SubPath:
                     f += 0.3
             else:
                 i += 1
-        return u, pts
+        return pts
 
 
 class UPath:
@@ -2249,21 +2249,6 @@ class UPath:
     This class is stored internaly as a sequence of points, instead of
     polygonal boundaries that compose a path.  It can be used when the
     width of the path is constant.
-
-    store spines/derivatives (if given)/widths: create polys on get_polygons
-
-    offsets instead of distances, list of (number|callable|array), 1 per path
-        number = constant
-        array = 1 per vertex (extarpolate constant)
-        callable = func(u = 0 thru #subpaths)
-
-    path(u) = position
-    grad(u) = velocity
-
-    all methods from Path: subpaths
-    PolyPath/L1Path = N subpaths
-
-    get_polygons(corners, ends, tolerance, max_points)
 
     to_gds(as_path=True/False)
 
@@ -2334,19 +2319,22 @@ class UPath:
         else:
             self.datatypes = [datatype for _ in range(self.n)]
 
-    #def __str__(self):
-    #    pass
+    def __str__(self):
+        if self.n > 1:
+            return "UPath (x{}, end at ({}, {}), length {}, layers {}, datatypes {})".format(self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes)
+        else:
+            return "UPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
 
     def __len__(self):
         return len(self.paths[0])
 
-    def __call__(self, u, h=1e-3, side=0):
+    def __call__(self, u, h=1e-3, arm=0):
         i = int(u)
         u -= i
-        if u == 0 and i == len(self.paths[0]):
+        if i == len(self.paths[0]):
             i -= 1
             u = 1
-        return numpy.array([p[i](u, h, side) for p in self.paths])
+        return numpy.array([p[i](u, h, arm) for p in self.paths])
 
     def grad(self, u, h=1e-3, side='-'):
         i = int(u)
@@ -2364,52 +2352,53 @@ class UPath:
             u = 1
         return numpy.array([p[i].wid(u) for p in self.paths])
 
-    def get_polygons(self, by_spec=False, tolerance=0.01, eps=1e-6):
+    def get_polygons(self, by_spec=False, tolerance=0.01, max_evals=1000):
+        eps = 0.5 / max_evals
         if by_spec:
             all_polygons = {}
         else:
             all_polygons = []
         for path, layer, datatype in zip(self.paths, self.layers, self.datatypes):
             poly = []
-            for side in [-1, 1]:
-                arm = []
+            for arm in [-1, 1]:
+                path_arm = []
                 start = 0
                 for sub0, sub1 in zip(path[:-1], path[1:]):
                     #print(sub0)
                     #print(sub1)
-                    p0 = sub0(1, eps, side)
-                    v0 = sub0.grad(1, eps, side)
-                    p1 = sub1(0, eps, side)
-                    v1 = sub1.grad(0, eps, side)
+                    p0 = sub0(1, eps, arm)
+                    v0 = sub0.grad(1, eps, arm)
+                    p1 = sub1(0, eps, arm)
+                    v1 = sub1.grad(0, eps, arm)
                     u0, u1, px = _cross(p0, v0, p1, v1)
-                    #print('  ×0', 1 + u0, '≅', p0 + u0 * v0)
-                    #print('  ×1', u1, '≅', p1 + u1 * v1, flush=True)
+                    #print('  ×0', 1 + u0, '=', p0 + u0 * v0)
+                    #print('  ×1', u1, '=', p1 + u1 * v1, flush=True)
                     u0 = 1 + u0
                     if u0 < 1 and u1 > 0:
-                        u0, u1, px = _intersect(lambda u: sub0(u, eps, side),
-                                            lambda u: sub1(u, eps, side),
-                                            lambda u: sub0.grad(u, eps, side),
-                                            lambda u: sub1.grad(u, eps, side),
+                        u0, u1, px = _intersect(lambda u: sub0(u, eps, arm),
+                                            lambda u: sub1(u, eps, arm),
+                                            lambda u: sub0.grad(u, eps, arm),
+                                            lambda u: sub1.grad(u, eps, arm),
                                             u0, u1, tolerance)
-                        #print('  I0', u0, '=', sub0(u0, eps, side))
-                        #print('  I1', u1, '=', sub1(u1, eps, side), flush=True)
-                    _, pts = sub0.points(start, min(1, u0), eps, side, tolerance)
+                        #print('  I0', u0, '=', sub0(u0, eps, arm))
+                        #print('  I1', u1, '=', sub1(u1, eps, arm), flush=True)
                     if u1 >= 0:
                         if u0 <= 1:
-                            arm.extend(pts[:-1])
+                            path_arm.extend(sub0.points(start, u0, eps, arm, tolerance, max_evals)[:-1])
                         else:
-                            arm.extend(pts)
+                            path_arm.extend(sub0.points(start, 1, eps, arm, tolerance, max_evals))
+                            warnings.warn("[GDSPY] UPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
                         start = u1
                     else:
                         if u0 <= 1:
-                            arm.extend(pts)
+                            path_arm.extend(sub0.points(start, u0, eps, arm, tolerance, max_evals))
+                            warnings.warn("[GDSPY] UPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
                         else:
-                            arm.extend(pts)
-                            arm.append(px)
+                            path_arm.extend(sub0.points(start, 1, eps, arm, tolerance, max_evals))
+                            path_arm.append(px)
                         start = 0
-                _, pts = path[-1].points(start, 1, eps, side, tolerance)
-                arm.extend(pts)
-                poly.extend(arm[::side])
+                path_arm.extend(path[-1].points(start, 1, eps, arm, tolerance, max_evals))
+                poly.extend(path_arm[::arm])
             if by_spec:
                 key = (layer, datatype)
                 if key in all_polygons:
@@ -2420,19 +2409,13 @@ class UPath:
                 all_polygons.append(poly)
         return all_polygons
 
-    def to_polygonset(self, tolerance=0.01, max_points=199, precision=1e-3, eps=1e-6):
-        pol = PolygonSet(self.get_polygons(False, tolerance, eps), 0, 0)
+    def to_polygonset(self, tolerance=0.01, max_points=199, precision=1e-3, max_evals=1000):
+        pol = PolygonSet(self.get_polygons(False, tolerance, max_evals), 0, 0)
         pol.layers = list(self.layers)
         pol.datatypes = list(self.datatypes)
         return pol.fracture(max_points, precision)
 
-    def to_gds():
-        pass
-    def rotate():
-        pass
-    def scale():
-        pass
-    def mirror():
+    def to_gds(self, as_path):
         pass
 
     def _parse(self, arg, cur, idx, delta):
@@ -2440,13 +2423,13 @@ class UPath:
             return _func_const(1, cur[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
-                return _func_add(arg[idx], cur[idx]) if delta else arg[idx]
-            return _func_linear(cur[idx], cur[idx] + arg[idx]) if delta else _func_linear(cur[idx], arg[idx])
+                return arg[idx]
+            return _func_linear(cur[idx], arg[idx])
         elif callable(arg):
             return _func_add(arg, cur[idx]) if delta else arg
         return _func_linear(cur[idx], cur[idx] + arg) if delta else _func_linear(cur[idx], arg)
 
-    def segment(self, end_point, width=None, offset=None):
+    def line(self, end_point, width=None, offset=None):
         x = numpy.array(end_point)
         f = _func_linear(self.x, x)
         df = _func_const(2, x - self.x)
@@ -2475,6 +2458,80 @@ class UPath:
             self.paths[i].append(_SubPath(f, df, off, wid))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
+        return self
+
+    def turn(self, radius, angle, width=None, offset=None):
+        i = len(self.paths[0]) - 1
+        if i < 0:
+            raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty UPath.")
+        initial_angle = 0
+        for p in self.paths:
+            v = p[i].grad(1, 1e-6, 0)
+            initial_angle += numpy.arctan2(v[1], v[0])
+        initial_angle = initial_angle / len(self.paths) + ((0.5 * numpy.pi) if angle < 0 else (-0.5 * numpy.pi))
+        #print(initial_angle, flush=True)
+        self.arc(radius, initial_angle, initial_angle + angle, width, offset)
+        return self
+
+    def parametric(self, curve_function, curve_derivative=None, width=None, offset=None):
+        x0 = self.x.copy()
+        def f(u):
+            return x0 + numpy.array(curve_function(u))
+        if curve_derivative is None:
+            def df(u, h):
+                u0 = max(0, u - h)
+                u1 = min(1, u + h)
+                return (numpy.array(curve_function(u1)) - numpy.array(curve_function(u0))) / (u1 - u0)
+        else:
+            def df(u, h):
+                return curve_derivative(u)
+        self.x = f(1)
+        for i in range(self.n):
+            off = self._parse(offset, self.offsets, i, True)
+            wid = self._parse(width, self.widths, i, False)
+            self.paths[i].append(_SubPath(f, df, off, wid))
+            self.widths[i] = wid(1)
+            self.offsets[i] = off(1)
+        return self
+
+
+    def bezier(self, points, width=None, offset=None):
+        ctrl = numpy.vstack((self.x, points))
+        def f(u):
+            p = ctrl
+            for _ in range(ctrl.shape[0] - 1):
+                p = p[:-1] * (1 - u) + p[1:] * u
+            return p[0]
+        dctrl = (ctrl.shape[0] - 1) * (ctrl[1:] - ctrl[:-1])
+        def df(u, h):
+            p = dctrl
+            for _ in range(dctrl.shape[0] - 1):
+                p = p[:-1] * (1 - u) + p[1:] * u
+            return p[0]
+        self.x = ctrl[-1]
+        for i in range(self.n):
+            off = self._parse(offset, self.offsets, i, True)
+            wid = self._parse(width, self.widths, i, False)
+            self.paths[i].append(_SubPath(f, df, off, wid))
+            self.widths[i] = wid(1)
+            self.offsets[i] = off(1)
+        return self
+
+
+    def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
+               width=None, offset=None):
+        """
+        Notes
+        -----
+        Arguments ``width`` and ``offset`` are repeated for each cubic
+        Bezier that composes this path element.
+        """
+        points = numpy.vstack((self.x, points))
+        cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
+        for i in range(points.shape[0] - 1):
+            self.bezier((cta[i], ctb[i], points[i + 1]), width, offset)
+        if cycle:
+            self.bezier((cta[-1], ctb[-1], points[0]), width, offset)
         return self
 
 

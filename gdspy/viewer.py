@@ -287,7 +287,7 @@ class LayoutViewer(tkinter.Frame):
         self.shown_depth = depth
         self.canvas_margins = None
         self._update_canvas()
-        self.master.title('gdspy - Layout Viewer')
+        self.master.title('Gdspy - Layout Viewer')
         self.mainloop()
 
     def _update_depth(self, *args):
