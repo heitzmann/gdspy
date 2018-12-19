@@ -2371,8 +2371,8 @@ class UPath:
                     p1 = sub1(0, eps, arm)
                     v1 = sub1.grad(0, eps, arm)
                     u0, u1, px = _cross(p0, v0, p1, v1)
-                    #print('  ×0', 1 + u0, '=', p0 + u0 * v0)
-                    #print('  ×1', u1, '=', p1 + u1 * v1, flush=True)
+                    #print('  X0', 1 + u0, '=', p0 + u0 * v0)
+                    #print('  X1', u1, '=', p1 + u1 * v1, flush=True)
                     u0 = 1 + u0
                     if u0 < 1 and u1 > 0:
                         u0, u1, px = _intersect(lambda u: sub0(u, eps, arm),
