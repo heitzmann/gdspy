@@ -323,4 +323,4 @@ gdsii.extract('IMPORT_REFS')
 
 # View the layout using a GUI.  Full description of the controls can
 # be found in the online help at http://gdspy.sourceforge.net/
-gdspy.LayoutViewer()
+gdspy.LayoutViewer(cells=[path_cell])
