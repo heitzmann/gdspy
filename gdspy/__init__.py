@@ -1421,15 +1421,15 @@ class Path(PolygonSet):
 
         Parameters
         ----------
-        curve_function : function
+        curve_function : callable
             Function that defines the curve.  Must be a function of one
             argument (that varies from 0 to 1) that returns a 2-element
-            list, tuple or array (x, y).
-        curve_derivative : function
+            array with the coordinates of the curve.
+        curve_derivative : callable
             If set, it should be the derivative of the curve function.
             Must be a function of one argument (that varies from 0 to 1)
-            that returns a 2-element list, tuple or array (x,y).  If
-            ``None``, the derivative will be calculated numerically.
+            that returns a 2-element array.  If ``None``, the derivative
+            will be calculated numerically.
         tolerance : number
             Acceptable tolerance for the approximation of the curve
             function by a finite number of evaluations.
@@ -1572,7 +1572,7 @@ class Path(PolygonSet):
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
-        position and finishing athe the last point in the ``points``
+        position and finishing at the last point in the ``points``
         array.
 
         All coordinates in the ``points`` array are used as offsets from
@@ -1583,8 +1583,8 @@ class Path(PolygonSet):
         Parameters
         ----------
         points : array-like[N][2]
-            Control points defining the Bezier curve with referenced by
-            the current path position.
+            Control points defining the Bezier curve as offsets from the
+            current path position.
         tolerance : number
             Acceptable tolerance for the approximation of the curve
             function by a finite number of evaluations.
@@ -1731,10 +1731,6 @@ class Path(PolygonSet):
         cur = numpy.array((self.x, self.y))
         points = numpy.vstack(([(0.0, 0.0)], points)) + numpy.array((self.x, self.y))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
-        print(cur)
-        print(points)
-        print(cta)
-        print(ctb, flush=True)
         if final_widths is None:
             final_widths = [None for _ in range(cta.shape[0])]
         if final_distances is None:
@@ -2598,10 +2594,10 @@ class LazyPath:
         """
         Convert this object to a series of GDSII elements.
 
-        If ``LazyPath.gdsii_path`` is true, GDSII path elements are created
-        instead of boundaries.  Such paths do not support variable
-        widths, but their memeory footprint is smaller than full
-        polygonal boundaries.
+        If ``LazyPath.gdsii_path`` is true, GDSII path elements are
+        created instead of boundaries.  Such paths do not support
+        variable widths, but their memeory footprint is smaller than
+        full polygonal boundaries.
 
         Parameters
         ----------
@@ -2614,33 +2610,34 @@ class LazyPath:
         out : string
             The GDSII binary string that represents this object.
         """
+        if len(self.paths[0]) == 0:
+            return b''
         if not self.gdsii_path:
             return self.to_polygonset().to_gds(multiplier)
-
         data = []
-        for ii in range(self.n):
-            points = self.paths[ii].points(0, 1, 0)
-            if len(points) > 8190:
-                warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
-                data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
-                                        self.datatypes[ii]))
-                xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
-                xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
-                xy[-1, :] = xy[0, :]
-                i0 = 0
-                while i0 < xy.shape[0]:
-                    i1 = min(i0 + 8191, xy.shape[0])
-                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
-                    data.append(xy[i0:i1].tostring())
-                    i0 = i1
-                data.append(struct.pack('>2H', 4, 0x1100))
-            else:
-                data.append(struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
-                                        self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
-                xy = numpy.round(self.polygons[ii] * multiplier).astype('>i4')
-                data.append(xy.tostring())
-                data.append(xy[0].tostring())
-                data.append(struct.pack('>2H', 4, 0x1100))
+        #for ii in range(self.n):
+        #    points = self.paths[ii].points(0, 1, 0)
+        #    if len(points) > 8190:
+        #        warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
+        #        data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
+        #                                self.datatypes[ii]))
+        #        xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
+        #        xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
+        #        xy[-1, :] = xy[0, :]
+        #        i0 = 0
+        #        while i0 < xy.shape[0]:
+        #            i1 = min(i0 + 8191, xy.shape[0])
+        #            data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+        #            data.append(xy[i0:i1].tostring())
+        #            i0 = i1
+        #        data.append(struct.pack('>2H', 4, 0x1100))
+        #    else:
+        #        data.append(struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
+        #                                self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
+        #        xy = numpy.round(self.polygons[ii] * multiplier).astype('>i4')
+        #        data.append(xy.tostring())
+        #        data.append(xy[0].tostring())
+        #        data.append(struct.pack('>2H', 4, 0x1100))
         return b''.join(data)
 
     def _parse_offset(self, arg, idx):
@@ -2668,6 +2665,34 @@ class LazyPath:
         return _func_linear(self.widths[idx], arg)
 
     def line(self, end_point, width=None, offset=None):
+        """
+        Add a straight section to the path.
+
+        Parameters
+        ----------
+        end_point : array-like[2]
+            End position of the straight line.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
         x = numpy.array(end_point)
         f = _func_linear(self.x, x)
         df = _func_const(x - self.x, 2)
@@ -2681,6 +2706,38 @@ class LazyPath:
         return self
 
     def arc(self, radius, initial_angle, final_angle, width=None, offset=None):
+        """
+        Add a circular arc section to the path.
+
+        Parameters
+        ----------
+        radius : number
+            Radius of the circular arc.
+        initial_angle : number
+            Initial angle of the arc.
+        final_angle : number
+            Final angle of the arc.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
         x0 = self.x - numpy.array((radius * numpy.cos(initial_angle), radius * numpy.sin(initial_angle)))
         def f(u):
             angle = initial_angle * (1 - u) + final_angle * u
@@ -2699,6 +2756,39 @@ class LazyPath:
         return self
 
     def turn(self, radius, angle, width=None, offset=None):
+        """
+        Add a circular turn to the path.
+
+        The initial angle of the arc is calculated from an average of
+        the current directions of all parallel paths in this object.
+
+        Parameters
+        ----------
+        radius : number
+            Radius of the circular arc.
+        angle : number
+            Turning angle of the arc.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
         i = len(self.paths[0]) - 1
         if i < 0:
             raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty LazyPath.")
@@ -2712,6 +2802,44 @@ class LazyPath:
         return self
 
     def parametric(self, curve_function, curve_derivative=None, width=None, offset=None):
+        """
+        Add a parametric curve to the path.
+
+        The return values of ``curve_function`` are translated in order
+        for the central path to be continuous.
+
+        Parameters
+        ----------
+        curve_function : callable
+            Function that defines the curve.  Must be a function of one
+            argument (that varies from 0 to 1) that returns a 2-element
+            array with the coordinates of the curve.
+        curve_derivative : callable
+            If set, it should be the derivative of the curve function.
+            Must be a function of one argument (that varies from 0 to 1)
+            that returns a 2-element array.  If ``None``, the derivative
+            will be calculated numerically.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
         x0 = self.x.copy()
         def f(u):
             return x0 + numpy.array(curve_function(u))
@@ -2734,7 +2862,45 @@ class LazyPath:
 
 
     def bezier(self, points, width=None, offset=None):
-        ctrl = numpy.vstack((self.x, points))
+        """
+        Add a Bezier curve to the path.
+
+        A Bezier curve is added to the path starting from its current
+        position and finishing at the last point in the ``points``
+        array.
+
+        All coordinates in the ``points`` array are used as offsets from
+        the current path position, i.e., if the path is at (1, -2) and
+        the ``points`` array ends at (10, 25), the constructed Bezier
+        will end at (1 + 10, -2 + 25) = (11, 23).
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Control points defining the Bezier curve as offsets from the
+            current path position.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
+        ctrl = self.x + numpy.vstack(((0, 0), points))
         dctrl = (ctrl.shape[0] - 1) * (ctrl[1:] - ctrl[:-1])
         self.x = ctrl[-1]
         f = _func_bezier(ctrl)
@@ -2751,17 +2917,82 @@ class LazyPath:
     def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
                width=None, offset=None):
         """
+        Add a smooth interpolating curve through the given points.
+
+        Uses the Hobby algorithm [1]_ to calculate a smooth
+        interpolating curve made of cubic Bezier segments between each
+        pair of points.
+
+        All coordinates in the ``points`` array are used as offsets from
+        the current path position, i.e., if the path is at (1, -2) and
+        the ``points`` array ends at (10, 25), the constructed curve
+        will end at (1 + 10, -2 + 25) = (11, 23).
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Vertices in the interpolating curve.
+        angles : array-like[N] or ``None``
+            Tangent angles at each point (in *radians*).  Any angles
+            defined as ``None`` are automatically calculated.
+        curl_start : number
+            Ratio between the mock curvatures at the first point and at
+            its neighbor.  A value of 1 renders the first segment a good
+            approximation for a circular arc.  A value of 0 will better
+            approximate a straight segment.  It has no effect for closed
+            curves or when an angle is defined for the first point.
+        curl_end : number
+            Ratio between the mock curvatures at the last point and at
+            its neighbor.  It has no effect for closed curves or when an
+            angle is defined for the first point.
+        t_in : number or array-like[N]
+            Tension parameter when arriving at each point.  One value
+            per point or a single value used for all points.
+        t_out : number or array-like[N]
+            Tension parameter when leaving each point.  One value per
+            point or a single value used for all points.
+        cycle : bool
+            If ``True``, calculates control points for a closed curve,
+            with an additional segment connecting the first and last
+            points.
+        width : number, callable, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  If this is callable, it must be a
+            function of one argument (that varies from 0 to 1) that
+            returns the width of the path.  A list can be used where
+            each element (number or callable) defines the width for one
+            of the parallel paths in this object.
+        offset : number, callable, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  If this
+            is callable, it must be a function of one argument (that
+            varies from 0 to 1) that returns the offset *increase*.  A
+            list can be used where each element (number or callable)
+            defines the *absolute* offset (not offset increase) for one
+            of the parallel paths in this object.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+
         Notes
         -----
-        Arguments ``width`` and ``offset`` are repeated for each cubic
+        Arguments ``width`` and ``offset`` are repeated for *each* cubic
         Bezier that composes this path element.
+
+        References
+        ----------
+        .. [1] Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+           `DOI: 10.1007/BF02187690
+           <https://doi.org/10.1007/BF02187690>`_
         """
-        points = numpy.vstack((self.x, points))
+        points = self.x + numpy.vstack(((0, 0), points))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
         for i in range(points.shape[0] - 1):
-            self.bezier((cta[i], ctb[i], points[i + 1]), width, offset)
+            self.bezier(numpy.array((cta[i], ctb[i], points[i + 1])) - self.x, width, offset)
         if cycle:
-            self.bezier((cta[-1], ctb[-1], points[0]), width, offset)
+            self.bezier(numpy.array((cta[-1], ctb[-1], points[0])) - self.x, width, offset)
         return self
 
 
