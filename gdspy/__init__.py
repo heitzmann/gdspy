@@ -293,7 +293,7 @@ class PolygonSet(object):
         self.polygons = [numpy.array(p) for p in polygons]
         self.layers = [layer] * len(self.polygons)
         self.datatypes = [datatype] * len(self.polygons)
-        if any(p.shape[0] > 199 for p in self.polygons):
+        if poly_warnings and any(p.shape[0] > 199 for p in self.polygons):
             warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
 
     def __str__(self):
@@ -380,7 +380,7 @@ class PolygonSet(object):
         """
         data = []
         for ii in range(len(self.polygons)):
-            if len(self.polygons[ii]) > 8190:
+            if poly_warnings and len(self.polygons[ii]) > 8190:
                 warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
                 data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
                                         self.datatypes[ii]))
@@ -666,7 +666,7 @@ class Polygon(PolygonSet):
     __slots__ = 'layers', 'datatypes', 'polygons'
 
     def __init__(self, points, layer=0, datatype=0):
-        if len(points) > 199:
+        if poly_warnings and len(points) > 199:
             warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
         self.layers = [layer]
         self.datatypes = [datatype]
@@ -1303,7 +1303,7 @@ class Path(PolygonSet):
                         pts2 += 1
                     ang = numpy.linspace(angles[jj + 1], angles[jj], pts2)
                     rad = numpy.linspace(r0 - widths[jj + 1], old_r0 - widths[jj], pts2)
-                    if rad[0] <= 0 or rad[-1] <= 0:
+                    if poly_warnings and (rad[0] <= 0 or rad[-1] <= 0):
                         warnings.warn("[GDSPY] Path arc with width larger than radius created: possible self-intersecting polygon.", stacklevel=2)
                     self.polygons[-1][pts1:, 0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][pts1:, 1] = numpy.sin(ang) * rad + cy
@@ -4423,4 +4423,9 @@ Current ``GdsLibrary`` instance for automatic creation of GDSII files.
 
 This variable can be freely overwritten by the user with a new instance
 of ``GdsLibrary``.
+"""
+
+poly_warnings = True
+"""
+Flag controlling the emission of warnings relative to polygon creation.
 """
