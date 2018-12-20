@@ -121,11 +121,10 @@ def _eight_byte_real_to_float(value):
 
 def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
     """
-    Calculate control points for a cubic Bezier curve interpolating the
-    given points.
+    Calculate control points for a smooth interpolating curve.
 
-    Reference: Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
-    https://doi.org/10.1007/BF02187690
+    Uses the Hobby algorithm [1]_ to calculate a smooth interpolating
+    curve made of cubic Bezier segments between each pair of points.
 
     Parameters
     ----------
@@ -160,6 +159,11 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
         Pair of control points for each segment in the interpolating
         curve.  For a closed curve (``cycle = True``), M = N.  For an
         open curve (``cycle = False``), M = N - 1.
+
+    References
+    ----------
+    .. [1] Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+       `DOI: 10.1007/BF02187690 <https://doi.org/10.1007/BF02187690>`_
     """
     z = points[:, 0] + 1j * points[:, 1]
     if not hasattr(t_in, '__iter__'):
@@ -1406,11 +1410,14 @@ class Path(PolygonSet):
         """
         Add a parametric curve to the path.
 
-        The ``curve_function`` will be evaluated homogeneously in the
-        interval [0, 1] at least ``number_of_points`` times.  More
-        points will be added to the curve at the midpoint between
-        evaluations if that points presents error larger than
-        ``tolerance``.
+        The return values of ``curve_function`` are understood as
+        offsets from the current path position, i.e., to ensure a
+        continuous path, ``curve_function(0)`` must be (0, 0).
+
+        ``curve_function`` will be evaluated uniformly in the interval
+        [0, 1] at least ``number_of_points`` times.  More points will be
+        added to the curve at the midpoint between evaluations if that
+        points presents error larger than ``tolerance``.
 
         Parameters
         ----------
@@ -1564,10 +1571,20 @@ class Path(PolygonSet):
         """
         Add a Bezier curve to the path.
 
+        A Bezier curve is added to the path starting from its current
+        position and finishing athe the last point in the ``points``
+        array.
+
+        All coordinates in the ``points`` array are used as offsets from
+        the current path position, i.e., if the path is at (1, -2) and
+        the ``points`` array ends at (10, 25), the constructed Bezier
+        will end at (1 + 10, -2 + 25) = (11, 23).
+
         Parameters
         ----------
         points : array-like[N][2]
-            Control points defining the Bezier curve.
+            Control points defining the Bezier curve with referenced by
+            the current path position.
         tolerance : number
             Acceptable tolerance for the approximation of the curve
             function by a finite number of evaluations.
@@ -1616,10 +1633,8 @@ class Path(PolygonSet):
                 for _ in range(ctrl.shape[0] - 1):
                     p = p[1:] * u + p[:-1] * (1 - u)
                 return p[0]
-
             return _bez
-
-        pts = numpy.array(points)
+        pts = numpy.vstack(([(0, 0)], points))
         dpts = (pts.shape[0] - 1) * (pts[1:] - pts[:-1])
         self.parametric(bez(pts), bez(dpts), tolerance, number_of_evaluations, max_points,
                         final_width, final_distance, layer, datatype)
@@ -1629,14 +1644,16 @@ class Path(PolygonSet):
                tolerance=0.01, number_of_evaluations=5, max_points=199, final_widths=None,
                final_distances=None, layer=0, datatype=0):
         """
-        Add a smooth interpolating curve that passes through the given
-        points.
+        Add a smooth interpolating curve through the given points.
 
-        Uses the Hobby algorithm to calculate a smooth interpolating
-        curve made of cubic Bezier segments between each pair of points.
+        Uses the Hobby algorithm [1]_ to calculate a smooth
+        interpolating curve made of cubic Bezier segments between each
+        pair of points.
 
-        Reference: Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
-        https://doi.org/10.1007/BF02187690
+        All coordinates in the ``points`` array are used as offsets from
+        the current path position, i.e., if the path is at (1, -2) and
+        the ``points`` array ends at (10, 25), the constructed curve
+        will end at (1 + 10, -2 + 25) = (11, 23).
 
         Parameters
         ----------
@@ -1712,25 +1729,30 @@ class Path(PolygonSet):
         -----
         The GDSII specification supports only a maximum of 199 vertices
         per polygon.
+
+        References
+        ----------
+        .. [1] Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+           `DOI: 10.1007/BF02187690
+           <https://doi.org/10.1007/BF02187690>`_
         """
-        if not isinstance(points, numpy.ndarray):
-            points = numpy.array(points)
+        cur = numpy.array((self.x, self.y))
+        points = numpy.vstack(([(0.0, 0.0)], points)) + numpy.array((self.x, self.y))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
+        print(cur)
+        print(points)
+        print(cta)
+        print(ctb, flush=True)
         if final_widths is None:
             final_widths = [None for _ in range(cta.shape[0])]
         if final_distances is None:
             final_distances = [None for _ in range(cta.shape[0])]
-        x = self.x
-        y = self.y
         for i in range(points.shape[0] - 1):
-            self.x = x
-            self.y = y
-            self.bezier([points[i], cta[i], ctb[i], points[i + 1]], tolerance, number_of_evaluations,
+            self.bezier([cta[i] - cur, ctb[i] - cur, points[i + 1] - cur], tolerance, number_of_evaluations,
                         max_points, final_widths[i], final_distances[i], layer, datatype)
+            cur = numpy.array((self.x, self.y))
         if cycle:
-            self.x = x
-            self.y = y
-            self.bezier([points[-1], cta[-1], ctb[-1], points[0]], tolerance, number_of_evaluations,
+            self.bezier([cta[-1] - cur, ctb[-1] - cur, points[0] - cur], tolerance, number_of_evaluations,
                         max_points, final_widths[-1], final_distances[-1], layer, datatype)
         return self
 
