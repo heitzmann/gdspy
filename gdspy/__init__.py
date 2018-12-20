@@ -2282,8 +2282,6 @@ class UPath:
     polygonal boundaries that compose a path.  It can be used when the
     width of the path is constant.
 
-    to_gds(as_path=True/False)
-
     from_svg()
 
     tolerance: used for intersections at joins/drawing path/fracturing
@@ -2325,10 +2323,11 @@ class UPath:
     not store this information).
     """
     __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes',
-                 'tolerance', 'precision', 'max_points', 'max_evals', 'gdsii_path')
+                 'tolerance', 'precision', 'max_points', 'max_evals', 'gdsii_path',
+                 'width_transform')
 
-    def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', tolerance=0.01,
-                 precision=1e-3, max_points=199, max_evals=1000, gdsii_path=False, layer=0, datatype=0):
+    def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', tolerance=0.01, precision=1e-3,
+                 max_points=199, max_evals=1000, gdsii_path=False, width_transform=True, layer=0, datatype=0):
         if isinstance(width, list):
             self.n = len(width)
             self.widths = width
@@ -2492,19 +2491,78 @@ class UPath:
         pol.datatypes = list(self.datatypes)
         return pol.fracture(self.max_points, self.precision)
 
-    def to_gds(self):
-        pass
+    def to_gds(self, multiplier):
+        """
+        Convert this object to a series of GDSII elements.
 
-    def _parse(self, arg, cur, idx, delta):
+        If ``UPath.gdsii_path`` is true, GDSII path elements are created
+        instead of boundaries.  Such paths do not support variable
+        widths, but their memeory footprint is smaller than full
+        polygonal boundaries.
+
+        Parameters
+        ----------
+        multiplier : number
+            A number that multiplies all dimensions written in the GDSII
+            elements.
+
+        Returns
+        -------
+        out : string
+            The GDSII binary string that represents this object.
+        """
+        if not self.gdsii_path:
+            return self.to_polygonset().to_gds(multiplier)
+
+        data = []
+        for ii in range(self.n):
+            points = self.paths[ii].points(0, 1, 0)
+            if len(points) > 8190:
+                warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
+                data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
+                                        self.datatypes[ii]))
+                xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
+                xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
+                xy[-1, :] = xy[0, :]
+                i0 = 0
+                while i0 < xy.shape[0]:
+                    i1 = min(i0 + 8191, xy.shape[0])
+                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.append(xy[i0:i1].tostring())
+                    i0 = i1
+                data.append(struct.pack('>2H', 4, 0x1100))
+            else:
+                data.append(struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
+                                        self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
+                xy = numpy.round(self.polygons[ii] * multiplier).astype('>i4')
+                data.append(xy.tostring())
+                data.append(xy[0].tostring())
+                data.append(struct.pack('>2H', 4, 0x1100))
+        return b''.join(data)
+
+    def _parse_offset(self, arg, idx):
         if arg is None:
-            return _func_const(cur[idx])
+            return _func_const(self.offsets[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
                 return arg[idx]
-            return _func_linear(cur[idx], arg[idx])
+            return _func_linear(self.offsets[idx], arg[idx])
         elif callable(arg):
-            return _func_add(arg, cur[idx]) if delta else arg
-        return _func_linear(cur[idx], cur[idx] + arg) if delta else _func_linear(cur[idx], arg)
+            return _func_add(arg, self.offsets[idx])
+        return _func_linear(self.offsets[idx], self.offsets[idx] + arg)
+
+    def _parse_width(self, arg, idx):
+        if arg is None or self.gdsii_path:
+            if arg is not None:
+                warnings.warn("[GDSPY] Argument `width` ignored in UPath with `gdsii_path == True`.", stacklevel=3)
+            return _func_const(self.widths[idx])
+        elif hasattr(arg, '__getitem__'):
+            if callable(arg[idx]):
+                return arg[idx]
+            return _func_linear(self.widths[idx], arg[idx])
+        elif callable(arg):
+            return arg
+        return _func_linear(self.widths[idx], arg)
 
     def line(self, end_point, width=None, offset=None):
         x = numpy.array(end_point)
@@ -2512,8 +2570,8 @@ class UPath:
         df = _func_const(x - self.x, 2)
         self.x = x
         for i in range(self.n):
-            off = self._parse(offset, self.offsets, i, True)
-            wid = self._parse(width, self.widths, i, False)
+            off = self._parse_offset(offset, i)
+            wid = self._parse_width(width, i)
             self.paths[i].append(_SubPath(f, df, off, wid, self.tolerance, self.max_evals))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
@@ -2530,8 +2588,8 @@ class UPath:
             return numpy.array((-r * numpy.sin(angle), r * numpy.cos(angle)))
         self.x = f(1)
         for i in range(self.n):
-            off = self._parse(offset, self.offsets, i, True)
-            wid = self._parse(width, self.widths, i, False)
+            off = self._parse_offset(offset, i)
+            wid = self._parse_width(width, i)
             self.paths[i].append(_SubPath(f, df, off, wid, self.tolerance, self.max_evals))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
@@ -2564,8 +2622,8 @@ class UPath:
                 return curve_derivative(u)
         self.x = f(1)
         for i in range(self.n):
-            off = self._parse(offset, self.offsets, i, True)
-            wid = self._parse(width, self.widths, i, False)
+            off = self._parse_offset(offset, i)
+            wid = self._parse_width(width, i)
             self.paths[i].append(_SubPath(f, df, off, wid, self.tolerance, self.max_evals))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
@@ -2579,8 +2637,8 @@ class UPath:
         f = _func_bezier(ctrl)
         df = _func_bezier(dctrl, 2)
         for i in range(self.n):
-            off = self._parse(offset, self.offsets, i, True)
-            wid = self._parse(width, self.widths, i, False)
+            off = self._parse_offset(offset, i)
+            wid = self._parse_width(width, i)
             self.paths[i].append(_SubPath(f, df, off, wid, self.tolerance, self.max_evals))
             self.widths[i] = wid(1)
             self.offsets[i] = off(1)
