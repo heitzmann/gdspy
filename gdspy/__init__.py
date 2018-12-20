@@ -1626,18 +1626,10 @@ class Path(PolygonSet):
         The GDSII specification supports only a maximum of 199 vertices
         per polygon.
         """
-
-        def bez(ctrl):
-            def _bez(u):
-                p = ctrl
-                for _ in range(ctrl.shape[0] - 1):
-                    p = p[1:] * u + p[:-1] * (1 - u)
-                return p[0]
-            return _bez
         pts = numpy.vstack(([(0, 0)], points))
         dpts = (pts.shape[0] - 1) * (pts[1:] - pts[:-1])
-        self.parametric(bez(pts), bez(dpts), tolerance, number_of_evaluations, max_points,
-                        final_width, final_distance, layer, datatype)
+        self.parametric(_func_bezier(pts), _func_bezier(dpts), tolerance, number_of_evaluations,
+                        max_points, final_width, final_distance, layer, datatype)
         return self
 
     def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
@@ -2139,10 +2131,10 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-def _func_const(n, c):
-    if n == 1:
+def _func_const(c, nargs=1):
+    if nargs == 1:
         return lambda u: c
-    elif n == 2:
+    elif nargs == 2:
         return lambda u, h: c
     return lambda *args: c
 
@@ -2153,6 +2145,22 @@ def _func_linear(c0, c1):
 
 def _func_add(f, c):
     return lambda u: f(u) + c
+
+
+def _func_bezier(ctrl, nargs=1):
+    if nargs == 1:
+        def _f(u):
+            p = ctrl
+            for _ in range(ctrl.shape[0] - 1):
+                p = p[1:] * u + p[:-1] * (1 - u)
+            return p[0]
+    elif nargs == 2:
+        def _f(u, h):
+            p = ctrl
+            for _ in range(ctrl.shape[0] - 1):
+                p = p[1:] * u + p[:-1] * (1 - u)
+            return p[0]
+    return _f
 
 
 def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
@@ -2258,11 +2266,11 @@ class _SubPath:
                 if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > self.err:
                     u.insert(i, test_u)
                     pts.insert(i, test_pt)
-                    break
+                    f = 1
+                    i -=1
                 else:
                     f += 0.3
-            else:
-                i += 1
+            i += 1
         return pts
 
 
@@ -2292,9 +2300,10 @@ class UPath:
     distance : number or array-like[N]
         Distance between the centers of adjacent paths.  If an array is
         given, distance at each endpoint.
-    ends : 'flush', 'round', 'extended', or array-like[2]
+    ends : 'flush', 'extended', 'round', 'smooth', or array-like[2]
         Type of end caps for the paths.  An array represents the start
-        and end extensions to the paths.
+        and end extensions to the paths.  A list can be used to define
+        the end type for each path.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -2336,8 +2345,14 @@ class UPath:
                 self.offsets = [offset]
             self.widths = [width for _ in range(self.n)]
         self.x = numpy.array(initial_point)
-        self.ends = ends
         self.paths = [[] for _ in range(self.n)]
+        if isinstance(ends, list):
+            if len(ends) == 2 and not (isinstance(ends[0], basestring) or hasattr(ends[0], '__iter__')):
+                self.ends = [ends for _ in range(self.n)]
+            else:
+                self.ends = [ends[i % len(ends)] for i in range(self.n)]
+        else:
+            self.ends = [ends for _ in range(self.n)]
         if isinstance(layer, list):
             self.layers = [layer[i % len(layer)] for i in range(self.n)]
         else:
@@ -2390,9 +2405,39 @@ class UPath:
             all_polygons = {}
         else:
             all_polygons = []
-        for path, layer, datatype in zip(self.paths, self.layers, self.datatypes):
+        if len(self.paths[0]) == 0:
+            return all_polygons
+        for path, end, layer, datatype in zip(self.paths, self.ends, self.layers, self.datatypes):
             poly = []
             for arm in [-1, 1]:
+                if not (end == 'flush'):
+                    i = 0 if arm == 1 else -1
+                    u = abs(i)
+                    if end == 'smooth':
+                        v1 = -arm * path[i].grad(u, -arm)
+                        v2 = arm * path[i].grad(u, arm)
+                        angles = [numpy.arctan2(v1[1], v1[0]), numpy.arctan2(v2[1], v2[0])]
+                        points = numpy.array([path[i](u, -arm), path[i](u, arm)])
+                        cta, ctb = _hobby(points, angles)
+                        f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                        bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
+                                       _func_const(0), self.tolerance, self.max_evals)
+                        poly.extend(bez.points(0, 1, 0))
+                    else:
+                        p = path[i](u, 0)
+                        v = -arm * path[i].grad(u, 0)
+                        r = 0.5 * path[i].wid(u)
+                        if end == 'round':
+                            np = int(numpy.pi * r / self.tolerance + 0.5) + 2
+                            ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
+                            endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
+                            poly.extend(endpts)
+                        else:
+                            v /= numpy.sqrt(numpy.sum(v**2))
+                            w = v[::-1] * numpy.array((1, -1))
+                            d = r if end == 'extended' else end[u]
+                            poly.append(p + d * v + r * w)
+                            poly.append(p + d * v - r * w)
                 path_arm = []
                 start = 0
                 for sub0, sub1 in zip(path[:-1], path[1:]):
@@ -2452,7 +2497,7 @@ class UPath:
 
     def _parse(self, arg, cur, idx, delta):
         if arg is None:
-            return _func_const(1, cur[idx])
+            return _func_const(cur[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
                 return arg[idx]
@@ -2464,7 +2509,7 @@ class UPath:
     def line(self, end_point, width=None, offset=None):
         x = numpy.array(end_point)
         f = _func_linear(self.x, x)
-        df = _func_const(2, x - self.x)
+        df = _func_const(x - self.x, 2)
         self.x = x
         for i in range(self.n):
             off = self._parse(offset, self.offsets, i, True)
@@ -2500,7 +2545,7 @@ class UPath:
         for p in self.paths:
             v = p[i].grad(1, 0)
             initial_angle += numpy.arctan2(v[1], v[0])
-        initial_angle = initial_angle / len(self.paths) + ((0.5 * numpy.pi) if angle < 0 else (-0.5 * numpy.pi))
+        initial_angle = initial_angle / len(self.paths) + (_halfpi if angle < 0 else -_halfpi)
         #print(initial_angle, flush=True)
         self.arc(radius, initial_angle, initial_angle + angle, width, offset)
         return self
@@ -2529,18 +2574,10 @@ class UPath:
 
     def bezier(self, points, width=None, offset=None):
         ctrl = numpy.vstack((self.x, points))
-        def f(u):
-            p = ctrl
-            for _ in range(ctrl.shape[0] - 1):
-                p = p[:-1] * (1 - u) + p[1:] * u
-            return p[0]
         dctrl = (ctrl.shape[0] - 1) * (ctrl[1:] - ctrl[:-1])
-        def df(u, h):
-            p = dctrl
-            for _ in range(dctrl.shape[0] - 1):
-                p = p[:-1] * (1 - u) + p[1:] * u
-            return p[0]
         self.x = ctrl[-1]
+        f = _func_bezier(ctrl)
+        df = _func_bezier(dctrl, 2)
         for i in range(self.n):
             off = self._parse(offset, self.offsets, i, True)
             wid = self._parse(width, self.widths, i, False)
