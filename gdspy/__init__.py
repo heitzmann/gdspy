@@ -301,7 +301,7 @@ class PolygonSet(object):
 
     def get_bounding_box(self):
         """
-        Returns the bounding box of the polygons.
+        Calculate the bounding box of the polygons.
 
         Returns
         -------
@@ -1786,11 +1786,6 @@ class L1Path(PolygonSet):
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
 
-    Returns
-    -------
-    out : ``L1Path``
-        This object.
-
     Attributes
     ----------
     x : number
@@ -2000,11 +1995,6 @@ class PolyPath(PolygonSet):
         The GDSII datatype for the elements of each path (between 0 and
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
-
-    Returns
-    -------
-    out : ``PolyPath``
-        This object.
 
     Notes
     -----
@@ -2276,32 +2266,62 @@ class _SubPath:
 
 class LazyPath:
     """
-    Path object according to GDSII specification.
+    Path object with lazy evaluation.
 
-    This class is stored internaly as a sequence of points, instead of
-    polygonal boundaries that compose a path.  It can be used when the
-    width of the path is constant.
+    This class keeps information about the constructive parameters of
+    the path and calculates its boundaries only upon request.  The
+    benefits are that joins path components can be calculated
+    automatically to ensure continuity (except in extreme cases).
 
-    from_svg()
+    It can also be stored as a proper path element in the GDSII format,
+    unlike other classes.  In this case, the width must be constant
+    along the whole path.
+
+    The downside of ``LazyPath`` is that it is more computationally
+    expensive than the other path classes.
 
     tolerance: used for intersections at joins/drawing path/fracturing
     precision: used for fracturing (rounding vertex positions, precision <= tolerance)
 
     Parameters
     ----------
-    points : array-like[N][2]
-        Points along the center of the path.
     width : number, list
-        Width of each parallel path being created.
-    number_of_paths : positive integer
-        Number of parallel paths to create simultaneously.
-    distance : number or array-like[N]
+        Width of each parallel path being created.  The number of
+        parallel paths being created is defined by the length of this
+        list.
+    initial_point : array-like[2]
+        Starting position of the path.
+    offset : number, list
+        Offsets of each parallel path from the center.  If ``width`` is
+        not a list, the length of this list is used to determine the
+        number of parallel paths being created.
         Distance between the centers of adjacent paths.  If an array is
         given, distance at each endpoint.
-    ends : 'flush', 'extended', 'round', 'smooth', or array-like[2]
+    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], list
         Type of end caps for the paths.  An array represents the start
         and end extensions to the paths.  A list can be used to define
-        the end type for each path.
+        the end type for each parallel path.
+    tolerance : number
+        Tolerance used to draw the paths and calculate joins.
+    precision : number
+        Precision for rounding the coordinates of vertices when
+        fracturing the final polygonal boundary.
+    max_points : integer
+        If the number of points in the polygonal path boundary is
+        greater than ``max_points``, it will be fractured in smaller
+        polygons with at most ``max_points`` each.
+        If ``max_points = 0`` no fracture will occur.
+    max_evals : integer
+        Limit to the maximal number of evaluations when calculating each
+        path component.
+    gdsii_path : bool
+        If ``True``, treat this object as a GDSII path element.
+        Otherwise, it will be converted into polygonal boundaries when
+        required.
+    width_transform : bool
+        If ``gdsii_path == True``, this flag indicates whether the width
+        of the path should transform when scaling this object.  It has
+        no effect when ``gdsii_path == False``.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -2311,16 +2331,11 @@ class LazyPath:
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
 
-    Returns
-    -------
-    out : ``SimplePath``
-        This object.
-
     Notes
     -----
-    Acute joins are automatically bevelled when drawing the path.  The
-    amount of beveling is implementation-dependent (the GDSII file does
-    not store this information).
+    The value of ``tolerance`` should not be smaller than ``precision``,
+    otherwise there would be wasted computational effort in calculating
+    the paths.
     """
     __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes',
                  'tolerance', 'precision', 'max_points', 'max_evals', 'gdsii_path',
@@ -2373,9 +2388,30 @@ class LazyPath:
             return "LazyPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
 
     def __len__(self):
+        """
+        Number of path components.
+        """
         return len(self.paths[0])
 
     def __call__(self, u, arm=0):
+        """
+        Calculate the positions of each parallel path.
+
+        Parameters
+        ----------
+        u : number
+            Position along the ``LazyPath`` to compute.  This argument
+            can range from 0 (start of the path) to ``len(self)`` (end
+            of the path).
+        arm : -1, 0, 1
+            Wether to calculate one of the path boundaries (-1 or 1) or
+            its central spine (0).
+
+        Returns
+        -------
+        out : Numpy array[N, 2]
+            Coordinates for each of the N parallel paths in this object.
+        """
         i = int(u)
         u -= i
         if i == len(self.paths[0]):
@@ -2384,6 +2420,28 @@ class LazyPath:
         return numpy.array([p[i](u, arm) for p in self.paths])
 
     def grad(self, u, arm=0, side='-'):
+        """
+        Calculate the direction vector of each parallel path.
+
+        Parameters
+        ----------
+        u : number
+            Position along the ``LazyPath`` to compute.  This argument
+            can range from 0 (start of the path) to ``len(self)`` (end
+            of the path).
+        arm : -1, 0, 1
+            Wether to calculate one of the path boundaries (-1 or 1) or
+            its central spine (0).
+        side : '-' or '+'
+            At path joins, whether to calculate the direction using the
+            component before or after the join.
+
+        Returns
+        -------
+        out : Numpy array[N, 2]
+            Direction vectors for each of the N parallel paths in this
+            object.
+        """
         i = int(u)
         u -= i
         if u == 0 and (side == '-' or i == len(self.paths[0])):
@@ -2392,6 +2450,21 @@ class LazyPath:
         return numpy.array([p[i].grad(u, arm) for p in self.paths])
 
     def width(self, u):
+        """
+        Calculate the width of each parallel path.
+
+        Parameters
+        ----------
+        u : number
+            Position along the ``LazyPath`` to compute.  This argument
+            can range from 0 (start of the path) to ``len(self)`` (end
+            of the path).
+
+        Returns
+        -------
+        out : Numpy array[N]
+            Width for each of the N parallel paths in this object.
+        """
         i = int(u)
         u -= i
         if u == 0 and i == len(self.paths[0]):
@@ -2400,6 +2473,22 @@ class LazyPath:
         return numpy.array([p[i].wid(u) for p in self.paths])
 
     def get_polygons(self, by_spec=False):
+        """
+        Calculate the polygonal boundaries described by this path.
+
+        Parameters
+        ----------
+        by_spec : bool
+            If ``True``, the return value is a dictionary with the
+            polygons of each individual pair (layer, datatype).
+
+        Returns
+        -------
+        out : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary with the list of polygons (if
+            ``by_spec`` is ``True``).
+        """
         if by_spec:
             all_polygons = {}
         else:
@@ -2486,6 +2575,20 @@ class LazyPath:
         return all_polygons
 
     def to_polygonset(self):
+        """
+        Create a ``PolygonSet`` representation of this object.
+
+        The resulting object will be fractured according to the
+        parameter ``max_points`` used when instantiating this object.
+
+        Returns
+        -------
+        out : ``PolygonSet`` or ``None``
+            A ``PolygonSet`` that contains all boundaries for this path.
+            If the path is empty, returns ``None``.
+        """
+        if len(self.paths[0]) == 0:
+            return None
         pol = PolygonSet(self.get_polygons(), 0, 0)
         pol.layers = list(self.layers)
         pol.datatypes = list(self.datatypes)
@@ -3071,7 +3174,7 @@ class Cell(object):
 
     def get_layers(self):
         """
-        Returns a set of layers in this cell.
+        Return the set of layers in this cell.
 
         Returns
         -------
@@ -3090,7 +3193,7 @@ class Cell(object):
 
     def get_datatypes(self):
         """
-        Returns a set of datatypes in this cell.
+        Return the set of datatypes in this cell.
 
         Returns
         -------
@@ -3107,7 +3210,7 @@ class Cell(object):
 
     def get_bounding_box(self):
         """
-        Returns the bounding box for this cell.
+        Calculate the bounding box for this cell.
 
         Returns
         -------
@@ -3142,7 +3245,7 @@ class Cell(object):
 
     def get_polygons(self, by_spec=False, depth=None):
         """
-        Returns a list of polygons in this cell.
+        Return a list of polygons in this cell.
 
         Parameters
         ----------
@@ -3207,7 +3310,7 @@ class Cell(object):
 
     def get_labels(self, depth=None):
         """
-        Returns a list with a copy of the labels in this cell.
+        Return a list with a copy of the labels in this cell.
 
         Parameters
         ----------
@@ -3235,7 +3338,7 @@ class Cell(object):
 
     def get_dependencies(self, recursive=False):
         """
-        Returns a list of the cells included in this cell as references.
+        Return a list of the cells included in this cell as references.
 
         Parameters
         ----------
@@ -3420,7 +3523,7 @@ class CellReference(object):
 
     def get_polygons(self, by_spec=False, depth=None):
         """
-        Returns a list of polygons created by this reference.
+        Return the list of polygons created by this reference.
 
         Parameters
         ----------
@@ -3479,7 +3582,7 @@ class CellReference(object):
 
     def get_labels(self, depth=None):
         """
-        Returns a list of labels created by this reference.
+        Return the list of labels created by this reference.
 
         Parameters
         ----------
@@ -3518,7 +3621,7 @@ class CellReference(object):
 
     def get_bounding_box(self):
         """
-        Returns the bounding box for this reference.
+        Calculate the bounding box for this reference.
 
         Returns
         -------
@@ -3716,7 +3819,7 @@ class CellArray(object):
 
     def get_polygons(self, by_spec=False, depth=None):
         """
-        Returns a list of polygons created by this reference.
+        Return the list of polygons created by this reference.
 
         Parameters
         ----------
@@ -3788,7 +3891,7 @@ class CellArray(object):
 
     def get_labels(self, depth=None):
         """
-        Returns a list of labels created by this reference.
+        Return the list of labels created by this reference.
 
         Parameters
         ----------
@@ -3835,7 +3938,7 @@ class CellArray(object):
 
     def get_bounding_box(self):
         """
-        Returns the bounding box for this reference.
+        Calculate the bounding box for this reference.
 
         Returns
         -------
