@@ -48,6 +48,16 @@ PolygonSet
    :show-inheritance:
 
 
+LazyPath
+========
+
+.. autoclass:: gdspy.UPath
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+
 Path
 ====
 
