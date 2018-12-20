@@ -51,7 +51,7 @@ PolygonSet
 LazyPath
 ========
 
-.. autoclass:: gdspy.UPath
+.. autoclass:: gdspy.LazyPath
    :members:
    :undoc-members:
    :inherited-members:

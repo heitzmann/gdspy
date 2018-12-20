@@ -2274,7 +2274,7 @@ class _SubPath:
         return pts
 
 
-class UPath:
+class LazyPath:
     """
     Path object according to GDSII specification.
 
@@ -2368,9 +2368,9 @@ class UPath:
 
     def __str__(self):
         if self.n > 1:
-            return "UPath (x{}, end at ({}, {}), length {}, layers {}, datatypes {})".format(self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes)
+            return "LazyPath (x{}, end at ({}, {}), length {}, layers {}, datatypes {})".format(self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes)
         else:
-            return "UPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
+            return "LazyPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
 
     def __len__(self):
         return len(self.paths[0])
@@ -2463,12 +2463,12 @@ class UPath:
                             path_arm.extend(sub0.points(start, u0, arm)[:-1])
                         else:
                             path_arm.extend(sub0.points(start, 1, arm))
-                            warnings.warn("[GDSPY] UPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
+                            warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
                         start = u1
                     else:
                         if u0 <= 1:
                             path_arm.extend(sub0.points(start, u0, arm))
-                            warnings.warn("[GDSPY] UPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
+                            warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
                         else:
                             path_arm.extend(sub0.points(start, 1, arm))
                             path_arm.append(px)
@@ -2495,7 +2495,7 @@ class UPath:
         """
         Convert this object to a series of GDSII elements.
 
-        If ``UPath.gdsii_path`` is true, GDSII path elements are created
+        If ``LazyPath.gdsii_path`` is true, GDSII path elements are created
         instead of boundaries.  Such paths do not support variable
         widths, but their memeory footprint is smaller than full
         polygonal boundaries.
@@ -2554,7 +2554,7 @@ class UPath:
     def _parse_width(self, arg, idx):
         if arg is None or self.gdsii_path:
             if arg is not None:
-                warnings.warn("[GDSPY] Argument `width` ignored in UPath with `gdsii_path == True`.", stacklevel=3)
+                warnings.warn("[GDSPY] Argument `width` ignored in LazyPath with `gdsii_path == True`.", stacklevel=3)
             return _func_const(self.widths[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
@@ -2598,7 +2598,7 @@ class UPath:
     def turn(self, radius, angle, width=None, offset=None):
         i = len(self.paths[0]) - 1
         if i < 0:
-            raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty UPath.")
+            raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty LazyPath.")
         initial_angle = 0
         for p in self.paths:
             v = p[i].grad(1, 0)
