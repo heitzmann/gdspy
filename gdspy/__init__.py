@@ -1707,7 +1707,7 @@ class Path(PolygonSet):
             If ``True``, all coordinates in the ``points`` array are
             used as offsets from the current path position, i.e., if the
             path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed Bezier will end at
+            (10, 25), the constructed curve will end at
             (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
             used as absolute coordinates.
         layer : integer, list
@@ -2384,7 +2384,7 @@ class LazyPath:
         self.max_points = max_points
         self.max_evals = max_evals
         self.gdsii_path = gdsii_path
-        if self.gdsi_path and any(end == 'smooth' for end in self.ends):
+        if self.gdsii_path and any(end == 'smooth' for end in self.ends):
             warnings.warn("[GDSPY] Smooth end caps not supported in `LazyPath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
@@ -2646,7 +2646,7 @@ class LazyPath:
                     data.append(xy[i0:i1].tostring())
                     i0 = i1
             else:
-                data.append(struct.pack('>2H', 4 + 8 * points.shape[0], 0x1003)
+                data.append(struct.pack('>2H', 4 + 8 * points.shape[0], 0x1003))
                 data.append(points.tostring())
             data.append(struct.pack('>2H', 4, 0x1100))
         return b''.join(data)
@@ -2675,7 +2675,7 @@ class LazyPath:
             return arg
         return _func_linear(self.widths[idx], arg)
 
-    def line(self, end_point, width=None, offset=None):
+    def line(self, end_point, width=None, offset=None, relative=False):
         """
         Add a straight section to the path.
 
@@ -2698,13 +2698,19 @@ class LazyPath:
             list can be used where each element (number or callable)
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
+        relative : bool
+            If ``True``, ``end_point`` is used as an offset from the
+            current path position, i.e., if the path is at (1, -2) and
+            the ``end_point`` is (10, 25), the line will be constructed
+            from (1, -2) to (1 + 10, -2 + 25) = (11, 23).  Otherwise,
+            ``end_point`` is used as an absolute coordinate.
 
         Returns
         -------
         out : ``LazyPath``
             This object.
         """
-        x = numpy.array(end_point)
+        x = numpy.array(end_point) if not relative else (numpy.array(end_point) + self.x)
         f = _func_linear(self.x, x)
         df = _func_const(x - self.x, 2)
         self.x = x
@@ -2812,12 +2818,9 @@ class LazyPath:
         self.arc(radius, initial_angle, initial_angle + angle, width, offset)
         return self
 
-    def parametric(self, curve_function, curve_derivative=None, width=None, offset=None):
+    def parametric(self, curve_function, curve_derivative=None, width=None, offset=None, relative=True):
         """
         Add a parametric curve to the path.
-
-        The return values of ``curve_function`` are translated in order
-        for the central path to be continuous.
 
         Parameters
         ----------
@@ -2845,15 +2848,24 @@ class LazyPath:
             list can be used where each element (number or callable)
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
+        relative : bool
+            If ``True``, the return values of ``curve_function`` are
+            used as offsets from the current path position, i.e., to
+            ensure a continuous path, ``curve_function(0)`` must be
+            (0, 0).  Otherwise, they are used as absolute coordinates.
 
         Returns
         -------
         out : ``LazyPath``
             This object.
         """
-        x0 = self.x.copy()
-        def f(u):
-            return x0 + numpy.array(curve_function(u))
+        if relative:
+            x0 = self.x.copy()
+            def f(u):
+                return x0 + numpy.array(curve_function(u))
+        else:
+            def f(u):
+                return numpy.array(curve_function(u))
         if curve_derivative is None:
             def df(u, h):
                 u0 = max(0, u - h)
@@ -2872,18 +2884,13 @@ class LazyPath:
         return self
 
 
-    def bezier(self, points, width=None, offset=None):
+    def bezier(self, points, width=None, offset=None, relative=True):
         """
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
         position and finishing at the last point in the ``points``
         array.
-
-        All coordinates in the ``points`` array are used as offsets from
-        the current path position, i.e., if the path is at (1, -2) and
-        the ``points`` array ends at (10, 25), the constructed Bezier
-        will end at (1 + 10, -2 + 25) = (11, 23).
 
         Parameters
         ----------
@@ -2905,13 +2912,23 @@ class LazyPath:
             list can be used where each element (number or callable)
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed Bezier will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
 
         Returns
         -------
         out : ``LazyPath``
             This object.
         """
-        ctrl = self.x + numpy.vstack(((0, 0), points))
+        if relative:
+            ctrl = self.x + numpy.vstack(([(0, 0)], points))
+        else:
+            ctrl = numpy.vstack(([self.x], points))
         dctrl = (ctrl.shape[0] - 1) * (ctrl[1:] - ctrl[:-1])
         self.x = ctrl[-1]
         f = _func_bezier(ctrl)
@@ -2926,18 +2943,13 @@ class LazyPath:
 
 
     def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
-               width=None, offset=None):
+               width=None, offset=None, relative=True):
         """
         Add a smooth interpolating curve through the given points.
 
         Uses the Hobby algorithm [1]_ to calculate a smooth
         interpolating curve made of cubic Bezier segments between each
         pair of points.
-
-        All coordinates in the ``points`` array are used as offsets from
-        the current path position, i.e., if the path is at (1, -2) and
-        the ``points`` array ends at (10, 25), the constructed curve
-        will end at (1 + 10, -2 + 25) = (11, 23).
 
         Parameters
         ----------
@@ -2981,6 +2993,13 @@ class LazyPath:
             list can be used where each element (number or callable)
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed curve will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
 
         Returns
         -------
@@ -2998,12 +3017,15 @@ class LazyPath:
            `DOI: 10.1007/BF02187690
            <https://doi.org/10.1007/BF02187690>`_
         """
-        points = self.x + numpy.vstack(((0, 0), points))
+        if relative:
+            points = self.x + numpy.vstack(([(0, 0)], points))
+        else:
+            points = numpy.vstack(([self.x], points))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
         for i in range(points.shape[0] - 1):
-            self.bezier(numpy.array((cta[i], ctb[i], points[i + 1])) - self.x, width, offset)
+            self.bezier((cta[i], ctb[i], points[i + 1]), width, offset, False)
         if cycle:
-            self.bezier(numpy.array((cta[-1], ctb[-1], points[0])) - self.x, width, offset)
+            self.bezier((cta[-1], ctb[-1], points[0]), width, offset, False)
         return self
 
 
