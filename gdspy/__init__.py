@@ -391,14 +391,13 @@ class PolygonSet(object):
                     data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
                     data.append(xy[i0:i1].tostring())
                     i0 = i1
-                data.append(struct.pack('>2H', 4, 0x1100))
             else:
                 data.append(struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
                                         self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
                 xy = numpy.round(self.polygons[ii] * multiplier).astype('>i4')
                 data.append(xy.tostring())
                 data.append(xy[0].tostring())
-                data.append(struct.pack('>2H', 4, 0x1100))
+            data.append(struct.pack('>2H', 4, 0x1100))
         return b''.join(data)
 
     def area(self, by_spec=False):
@@ -2372,6 +2371,8 @@ class LazyPath:
         self.max_points = max_points
         self.max_evals = max_evals
         self.gdsii_path = gdsii_path
+        if self.gdsi_path and any(end == 'smooth' for end in self.ends):
+            warnings.warn("[GDSPY] Smooth end caps not supported in `LazyPath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
         if self.n > 1:
@@ -2608,32 +2609,33 @@ class LazyPath:
         """
         if len(self.paths[0]) == 0:
             return b''
-        if not self.gdsii_path:
+        if self.gdsii_path:
+            sign = 1 if self.width_transform else -1
+        else:
             return self.to_polygonset().to_gds(multiplier)
+        pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
         data = []
-        #for ii in range(self.n):
-        #    points = self.paths[ii].points(0, 1, 0)
-        #    if len(points) > 8190:
-        #        warnings.warn("[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This extension might not be compatible with all GDSII readers.", stacklevel=3)
-        #        data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
-        #                                self.datatypes[ii]))
-        #        xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
-        #        xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
-        #        xy[-1, :] = xy[0, :]
-        #        i0 = 0
-        #        while i0 < xy.shape[0]:
-        #            i1 = min(i0 + 8191, xy.shape[0])
-        #            data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
-        #            data.append(xy[i0:i1].tostring())
-        #            i0 = i1
-        #        data.append(struct.pack('>2H', 4, 0x1100))
-        #    else:
-        #        data.append(struct.pack('>4Hh2Hh2H', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
-        #                                self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003))
-        #        xy = numpy.round(self.polygons[ii] * multiplier).astype('>i4')
-        #        data.append(xy.tostring())
-        #        data.append(xy[0].tostring())
-        #        data.append(struct.pack('>2H', 4, 0x1100))
+        for ii in range(self.n):
+            pathtype = pathtype_dict.get(self.ends[ii], 4)
+            data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
+                                    6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
+                                    8, 0x0F03, sign * int(round(self.widths[ii] * multiplier))))
+            if pathtype == 4:
+                data.append(struct.pack('>2Hl2Hl', 8, 0x3003, int(round(self.ends[ii][0] * multiplier)),
+                                        8, 0x3103, int(round(self.ends[ii][1] * multiplier))))
+            points = numpy.round(self.paths[ii].points(0, 1, 0) * multiplier).astype('>i4')
+            if points.shape[0] > 8191:
+                warnings.warn("[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.", stacklevel=4)
+                i0 = 0
+                while i0 < points.shape[0]:
+                    i1 = min(i0 + 8191, xy.shape[0])
+                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.append(xy[i0:i1].tostring())
+                    i0 = i1
+            else:
+                data.append(struct.pack('>2H', 4 + 8 * points.shape[0], 0x1003)
+                data.append(points.tostring())
+            data.append(struct.pack('>2H', 4, 0x1100))
         return b''.join(data)
 
     def _parse_offset(self, arg, idx):
