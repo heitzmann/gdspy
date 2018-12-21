@@ -64,6 +64,72 @@ _directions_list = ['+x', '+y', '-x', '-y']
 _bounding_boxes = {}
 
 
+def _record_reader(stream):
+    """
+    Iterator over complete records from a GDSII stream file.
+
+    Parameters
+    ----------
+    stream : file
+        GDSII stream file to be read.
+
+    Returns
+    -------
+    out : list
+        Record type and data (as a numpy.array, string or None)
+    """
+    while True:
+        header = stream.read(4)
+        if len(header) < 4:
+            return
+        size, rec_type = struct.unpack('>HH', header)
+        data_type = (rec_type & 0x00ff)
+        rec_type = rec_type // 256
+        data = None
+        if size > 4:
+            if data_type == 0x01:
+                data = numpy.array(struct.unpack('>{0}H'.format((size - 4) // 2), stream.read(size - 4)), dtype='uint')
+            elif data_type == 0x02:
+                data = numpy.array(struct.unpack('>{0}h'.format((size - 4) // 2), stream.read(size - 4)), dtype='int')
+            elif data_type == 0x03:
+                data = numpy.array(struct.unpack('>{0}l'.format((size - 4) // 4), stream.read(size - 4)), dtype='int')
+            elif data_type == 0x05:
+                data = numpy.array([_eight_byte_real_to_float(stream.read(8)) for _ in range((size - 4) // 8)])
+            else:
+                data = stream.read(size - 4)
+                if str is not bytes:
+                    if data[-1] == 0:
+                        data = data[:-1].decode('ascii')
+                    else:
+                        data = data.decode('ascii')
+                elif data[-1] == '\0':
+                    data = data[:-1]
+        yield [rec_type, data]
+
+
+def _raw_record_reader(stream):
+    """
+    Iterator over complete records from a GDSII stream file.
+
+    Parameters
+    ----------
+    stream : file
+        GDSII stream file to be read.
+
+    Returns
+    -------
+    out : 2-tuple
+        Record type and binary data (including header)
+    """
+    while True:
+        header = stream.read(4)
+        if len(header) < 4:
+            return
+        size, rec_type = struct.unpack('>HH', header)
+        rec_type = rec_type // 256
+        yield (rec_type, header + stream.read(size - 4))
+
+
 def _eight_byte_real(value):
     """
     Convert a number into the GDSII 8 byte real format.
@@ -254,6 +320,124 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
         cta = cta[:-1]
         ctb = ctb[:-1]
     return (numpy.vstack((cta.real, cta.imag)).transpose(), numpy.vstack((ctb.real, ctb.imag)).transpose())
+
+
+def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
+    """
+    Find intesection between curves f0 and f1 around f0(u0) and f1(u1).
+
+    Returns
+    out : 2-tuple of float
+        The intersection point is f0(out[0]) = f1(out[1]).
+    """
+    tol = tolerance**2
+    delta = f0(u0) - f1(u1)
+    err = numpy.sum(delta**2)
+    iters = 0
+    step = 0.5
+    while err > tol:
+        iters += 1
+        if iters > 100:
+            warnings.warn('[GDSPY] Intersection not found.')
+            break
+        new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * df0(u0))))
+        new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * df1(u1))))
+        new_delta = f0(new_u0) - f1(new_u1)
+        new_err = numpy.sum(new_delta**2)
+        if new_err >= err:
+            step /= 2
+            continue
+        u0 = new_u0
+        u1 = new_u1
+        delta = new_delta
+        err = new_err
+    return u0, u1, 0.5 * (f0(u0) + f1(u1))
+
+
+def _cross(p0, v0, p1, v1):
+    """
+    Crossing between lines
+
+    The first line is defined by point p0 and direction v0, and the
+    second by point p1 and direction d1.
+
+    Returns
+    -------
+    out : 2-tuple of float
+        The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
+    """
+    den = v1[1] * v0[0] - v1[0] * v0[1]
+    lim = 1e-12 * (numpy.sum(v0**2) * numpy.sum(v1**2))
+    if den**2 < lim:
+        return 0, 0, 0.5 * (p0 + p1)
+    u0 = (v1[1] * (p1[0] - p0[0]) - v1[0] * (p1[1] - p0[1])) / den
+    u1 = (v0[1] * (p1[0] - p0[0]) - v0[0] * (p1[1] - p0[1])) / den
+    return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
+
+
+def _func_const(c, nargs=1):
+    if nargs == 1:
+        return lambda u: c
+    elif nargs == 2:
+        return lambda u, h: c
+    return lambda *args: c
+
+
+def _func_linear(c0, c1):
+    return lambda u: c0 * (1 - u) + c1 * u
+
+
+def _func_add(f, c):
+    return lambda u: f(u) + c
+
+
+def _func_bezier(ctrl, nargs=1):
+    if nargs == 1:
+        def _f(u):
+            p = ctrl
+            for _ in range(ctrl.shape[0] - 1):
+                p = p[1:] * u + p[:-1] * (1 - u)
+            return p[0]
+    elif nargs == 2:
+        def _f(u, h):
+            p = ctrl
+            for _ in range(ctrl.shape[0] - 1):
+                p = p[1:] * u + p[:-1] * (1 - u)
+            return p[0]
+    return _f
+
+
+def _gather_polys(args):
+    """
+    Gather polygons from different argument types into a list.
+
+    Parameters
+    ----------
+    args : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        Polygon types.  If this is an iterable, each element must be a
+        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        array-like[N][2] of vertices of a polygon.
+
+    Returns
+    -------
+    out : list of numpy array[N][2]
+        List of polygons.
+    """
+    if args is None:
+        return []
+    if isinstance(args, PolygonSet):
+        return [p for p in args.polygons]
+    if isinstance(args, CellReference) or isinstance(args, CellArray):
+        return args.get_polygons()
+    polys = []
+    for p in args:
+        if isinstance(p, PolygonSet):
+            polys.extend(p.polygons)
+        elif isinstance(p, CellReference) or isinstance(p, CellArray):
+            polys.extend(p.get_polygons())
+        else:
+            polys.append(p)
+    return polys
 
 
 class PolygonSet(object):
@@ -2151,92 +2335,6 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-def _func_const(c, nargs=1):
-    if nargs == 1:
-        return lambda u: c
-    elif nargs == 2:
-        return lambda u, h: c
-    return lambda *args: c
-
-
-def _func_linear(c0, c1):
-    return lambda u: c0 * (1 - u) + c1 * u
-
-
-def _func_add(f, c):
-    return lambda u: f(u) + c
-
-
-def _func_bezier(ctrl, nargs=1):
-    if nargs == 1:
-        def _f(u):
-            p = ctrl
-            for _ in range(ctrl.shape[0] - 1):
-                p = p[1:] * u + p[:-1] * (1 - u)
-            return p[0]
-    elif nargs == 2:
-        def _f(u, h):
-            p = ctrl
-            for _ in range(ctrl.shape[0] - 1):
-                p = p[1:] * u + p[:-1] * (1 - u)
-            return p[0]
-    return _f
-
-
-def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
-    """
-    Find intesection between curves f0 and f1 around f0(u0) and f1(u1).
-
-    Returns
-    out : 2-tuple of float
-        The intersection point is f0(out[0]) = f1(out[1]).
-    """
-    tol = tolerance**2
-    delta = f0(u0) - f1(u1)
-    err = numpy.sum(delta**2)
-    iters = 0
-    step = 0.5
-    while err > tol:
-        iters += 1
-        if iters > 100:
-            warnings.warn('[GDSPY] Intersection not found.')
-            break
-        new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * df0(u0))))
-        new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * df1(u1))))
-        new_delta = f0(new_u0) - f1(new_u1)
-        new_err = numpy.sum(new_delta**2)
-        if new_err >= err:
-            step /= 2
-            continue
-        u0 = new_u0
-        u1 = new_u1
-        delta = new_delta
-        err = new_err
-    #print('    Iterations:', iters)
-    return u0, u1, 0.5 * (f0(u0) + f1(u1))
-
-
-def _cross(p0, v0, p1, v1):
-    """
-    Crossing between lines
-
-    The first line is defined by point p0 and direction v0, and the
-    second by point p1 and direction d1.
-
-    Returns
-    -------
-    out : 2-tuple of float
-        The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
-    """
-    den = v1[1] * v0[0] - v1[0] * v0[1]
-    lim = 1e-12 * (numpy.sum(v0**2) * numpy.sum(v1**2))
-    if den**2 < lim:
-        return 0, 0, 0.5 * (p0 + p1)
-    u0 = (v1[1] * (p1[0] - p0[0]) - v1[0] * (p1[1] - p0[1])) / den
-    u1 = (v0[1] * (p1[0] - p0[0]) - v0[0] * (p1[1] - p0[1])) / den
-    return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
-
-
 class _SubPath:
     """
     Single path component.
@@ -2840,7 +2938,6 @@ class LazyPath:
             v = p[i].grad(1, 0)
             initial_angle += numpy.arctan2(v[1], v[0])
         initial_angle = initial_angle / len(self.paths) + (_halfpi if angle < 0 else -_halfpi)
-        #print(initial_angle, flush=True)
         self.arc(radius, initial_angle, initial_angle + angle, width, offset)
         return self
 
@@ -2853,12 +2950,12 @@ class LazyPath:
         curve_function : callable
             Function that defines the curve.  Must be a function of one
             argument (that varies from 0 to 1) that returns a 2-element
-            array with the coordinates of the curve.
+            Numpy array with the coordinates of the curve.
         curve_derivative : callable
             If set, it should be the derivative of the curve function.
             Must be a function of one argument (that varies from 0 to 1)
-            that returns a 2-element array.  If ``None``, the derivative
-            will be calculated numerically.
+            that returns a 2-element Numpy array.  If ``None``, the
+            derivative will be calculated numerically.
         width : number, callable, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  If this is callable, it must be a
@@ -2885,18 +2982,12 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
-        if relative:
-            x0 = self.x.copy()
-            def f(u):
-                return x0 + numpy.array(curve_function(u))
-        else:
-            def f(u):
-                return numpy.array(curve_function(u))
+        f = _func_add(curve_function, self.x) if relative else curve_function
         if curve_derivative is None:
             def df(u, h):
                 u0 = max(0, u - h)
                 u1 = min(1, u + h)
-                return (numpy.array(curve_function(u1)) - numpy.array(curve_function(u0))) / (u1 - u0)
+                return (curve_function(u1) - curve_function(u0)) / (u1 - u0)
         else:
             def df(u, h):
                 return curve_derivative(u)
@@ -4283,49 +4374,6 @@ class CellArray(object):
         return self
 
 
-def _record_reader(stream):
-    """
-    Iterator over complete records from a GDSII stream file.
-
-    Parameters
-    ----------
-    stream : file
-        GDSII stream file to be read.
-
-    Returns
-    -------
-    out : list
-        Record type and data (as a numpy.array, string or None)
-    """
-    while True:
-        header = stream.read(4)
-        if len(header) < 4:
-            return
-        size, rec_type = struct.unpack('>HH', header)
-        data_type = (rec_type & 0x00ff)
-        rec_type = rec_type // 256
-        data = None
-        if size > 4:
-            if data_type == 0x01:
-                data = numpy.array(struct.unpack('>{0}H'.format((size - 4) // 2), stream.read(size - 4)), dtype='uint')
-            elif data_type == 0x02:
-                data = numpy.array(struct.unpack('>{0}h'.format((size - 4) // 2), stream.read(size - 4)), dtype='int')
-            elif data_type == 0x03:
-                data = numpy.array(struct.unpack('>{0}l'.format((size - 4) // 4), stream.read(size - 4)), dtype='int')
-            elif data_type == 0x05:
-                data = numpy.array([_eight_byte_real_to_float(stream.read(8)) for _ in range((size - 4) // 8)])
-            else:
-                data = stream.read(size - 4)
-                if str is not bytes:
-                    if data[-1] == 0:
-                        data = data[:-1].decode('ascii')
-                    else:
-                        data = data.decode('ascii')
-                elif data[-1] == '\0':
-                    data = data[:-1]
-        yield [rec_type, data]
-
-
 class GdsLibrary(object):
     """
     GDSII library (file).
@@ -4872,29 +4920,6 @@ class GdsWriter(object):
             self._outfile.close()
 
 
-def _raw_record_reader(stream):
-    """
-    Iterator over complete records from a GDSII stream file.
-
-    Parameters
-    ----------
-    stream : file
-        GDSII stream file to be read.
-
-    Returns
-    -------
-    out : 2-tuple
-        Record type and binary data (including header)
-    """
-    while True:
-        header = stream.read(4)
-        if len(header) < 4:
-            return
-        size, rec_type = struct.unpack('>HH', header)
-        rec_type = rec_type // 256
-        yield (rec_type, header + stream.read(size - 4))
-
-
 def get_gds_units(infile):
     """
     Return the unit and precision used in the GDS stream file.
@@ -4984,39 +5009,6 @@ def get_binary_cells(infile):
     if close:
         infile.close()
     return cells
-
-
-def _gather_polys(args):
-    """
-    Gather polygons from different argument types into a list.
-
-    Parameters
-    ----------
-    args : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
-        Polygon types.  If this is an iterable, each element must be a
-        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
-        array-like[N][2] of vertices of a polygon.
-
-    Returns
-    -------
-    out : list of numpy array[N][2]
-        List of polygons.
-    """
-    if args is None:
-        return []
-    if isinstance(args, PolygonSet):
-        return [p for p in args.polygons]
-    if isinstance(args, CellReference) or isinstance(args, CellArray):
-        return args.get_polygons()
-    polys = []
-    for p in args:
-        if isinstance(p, PolygonSet):
-            polys.extend(p.polygons)
-        elif isinstance(p, CellReference) or isinstance(p, CellArray):
-            polys.extend(p.get_polygons())
-        else:
-            polys.append(p)
-    return polys
 
 
 def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
