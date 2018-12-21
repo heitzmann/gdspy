@@ -2021,10 +2021,36 @@ class PolyPath(PolygonSet):
         if not hasattr(distance, '__getitem__'):
             distance = (distance, )
         len_d = len(distance)
+        points = numpy.array(points, dtype=float)
         self.polygons = []
         self.layers = []
         self.datatypes = []
-        points = numpy.array(points, dtype=float)
+        if points.shape[0] == 2 and number_of_paths == 1:
+            v = points[1, :] - points[0, :]
+            v = v / numpy.sqrt(numpy.sum(v**2))
+            w0 = width[0]
+            w1 = width[1 % len_w]
+            if ends == 'round':
+                a = numpy.arctan2(v[1], v[0]) + _halfpi
+                self.polygons.append(Round(points[0, :], w0, initial_angle=a,
+                                           final_angle=a + numpy.pi, number_of_points=33).polygons[0])
+                self.polygons.append(Round(points[1, :], w1, initial_angle=a - numpy.pi,
+                                           final_angle=a, number_of_points=33).polygons[0])
+                self.layers.extend(layer[:1] * 2)
+                self.datatypes.extend(datatype[:1] * 2)
+            if ends == 'extended':
+                points[0, :] = points[0, :] - v * w0
+                points[1, :] = points[1, :] + v * w1
+            u = numpy.array((-v[1], v[0]))
+            if w0 == 0:
+                self.polygons.append(numpy.array((points[0], points[1] - u * w1, points[1] + u * w1)))
+            elif w1 == 0:
+                self.polygons.append(numpy.array((points[0] + u * w0, points[0] - u * w0, points[1])))
+            else:
+                self.polygons.append(numpy.array((points[0] + u * w0, points[0] - u * w0, points[1] - u * w1, points[1] + u * w1)))
+            self.layers.append(layer[0])
+            self.datatypes.append(datatype[0])
+            return
         if corners not in ['miter', 'bevel']:
             if corners in [0, 1]:
                 corners = ['miter', 'bevel'][corners]
@@ -2048,11 +2074,11 @@ class PolyPath(PolygonSet):
         elif ends == 'round':
             v0 = points[1, :] - points[0, :]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
-            v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0 * v0))
+            v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0**2))
             d0 = 0.5 * (number_of_paths - 1) * distance[0]
             v1 = points[-1, :] - points[-2, :]
             angle1 = numpy.arctan2(v1[1], v1[0]) - _halfpi
-            v1 = numpy.array((-v1[1], v1[0])) / numpy.sqrt(numpy.sum(v1 * v1))
+            v1 = numpy.array((-v1[1], v1[0])) / numpy.sqrt(numpy.sum(v1**2))
             j1w = (points.shape[0] - 1) % len_w
             j1d = (points.shape[0] - 1) % len_d
             d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
