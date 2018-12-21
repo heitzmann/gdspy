@@ -1401,14 +1401,11 @@ class Path(PolygonSet):
             self.direction = _directions_list[int(round(self.direction / _halfpi)) % 4]
         return self
 
-    def parametric(self, curve_function, curve_derivative=None, tolerance=0.01, number_of_evaluations=5,
-                   max_points=199, final_width=None, final_distance=None, layer=0, datatype=0):
+    def parametric(self, curve_function, curve_derivative=None, tolerance=0.01,
+                   number_of_evaluations=5, max_points=199, final_width=None, final_distance=None,
+                   relative=True, layer=0, datatype=0):
         """
         Add a parametric curve to the path.
-
-        The return values of ``curve_function`` are understood as
-        offsets from the current path position, i.e., to ensure a
-        continuous path, ``curve_function(0)`` must be (0, 0).
 
         ``curve_function`` will be evaluated uniformly in the interval
         [0, 1] at least ``number_of_points`` times.  More points will be
@@ -1448,6 +1445,11 @@ class Path(PolygonSet):
             change from its current value to this one.  If set to a
             function, it must be a function of one argument (that varies
             from 0 to 1) and returns the width of the path.
+        relative : bool
+            If ``True``, the return values of ``curve_function`` are
+            used as offsets from the current path position, i.e., to
+            ensure a continuous path, ``curve_function(0)`` must be
+            (0, 0).  Otherwise, they are used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1530,7 +1532,10 @@ class Path(PolygonSet):
 
         np = points.shape[0]
         sh = (np, 1)
-        x0 = values + numpy.array((self.x, self.y))
+        if relative:
+            x0 = values + numpy.array((self.x, self.y))
+        else:
+            x0 = values
         dx = derivs[:, ::-1] * numpy.array((-1, 1)) / numpy.sqrt((derivs**2).sum(1)).reshape(sh)
         width = width.reshape(sh)
         dist = dist.reshape(sh)
@@ -1563,18 +1568,13 @@ class Path(PolygonSet):
         return self
 
     def bezier(self, points, tolerance=0.01, number_of_evaluations=5, max_points=199,
-               final_width=None, final_distance=None, layer=0, datatype=0):
+               final_width=None, final_distance=None, relative=True, layer=0, datatype=0):
         """
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
-        position and finishing athe the last point in the ``points``
+        position and finishing at the last point in the ``points``
         array.
-
-        All coordinates in the ``points`` array are used as offsets from
-        the current path position, i.e., if the path is at (1, -2) and
-        the ``points`` array ends at (10, 25), the constructed Bezier
-        will end at (1 + 10, -2 + 25) = (11, 23).
 
         Parameters
         ----------
@@ -1603,6 +1603,13 @@ class Path(PolygonSet):
             change from its current value to this one.  If set to a
             function, it must be a function of one argument (that varies
             from 0 to 1) and returns the width of the path.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed Bezier will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1630,26 +1637,24 @@ class Path(PolygonSet):
                     p = p[1:] * u + p[:-1] * (1 - u)
                 return p[0]
             return _bez
-        pts = numpy.vstack(([(0, 0)], points))
+        if relative:
+            pts = numpy.vstack(([(0, 0)], points))
+        else:
+            pts = numpy.vstack(([(self.x, self.y)], points))
         dpts = (pts.shape[0] - 1) * (pts[1:] - pts[:-1])
         self.parametric(bez(pts), bez(dpts), tolerance, number_of_evaluations, max_points,
-                        final_width, final_distance, layer, datatype)
+                        final_width, final_distance, relative, layer, datatype)
         return self
 
     def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
                tolerance=0.01, number_of_evaluations=5, max_points=199, final_widths=None,
-               final_distances=None, layer=0, datatype=0):
+               final_distances=None, relative=True, layer=0, datatype=0):
         """
         Add a smooth interpolating curve through the given points.
 
         Uses the Hobby algorithm [1]_ to calculate a smooth
         interpolating curve made of cubic Bezier segments between each
         pair of points.
-
-        All coordinates in the ``points`` array are used as offsets from
-        the current path position, i.e., if the path is at (1, -2) and
-        the ``points`` array ends at (10, 25), the constructed curve
-        will end at (1 + 10, -2 + 25) = (11, 23).
 
         Parameters
         ----------
@@ -1707,6 +1712,13 @@ class Path(PolygonSet):
             length of the array must be equal to the number of segments
             in the curve, i.e., M = N - 1 for an open curve and M = N
             for a closed one.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed Bezier will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1732,24 +1744,21 @@ class Path(PolygonSet):
            `DOI: 10.1007/BF02187690
            <https://doi.org/10.1007/BF02187690>`_
         """
-        cur = numpy.array((self.x, self.y))
-        points = numpy.vstack(([(0.0, 0.0)], points)) + numpy.array((self.x, self.y))
+        if relative:
+            points = numpy.vstack(([(0.0, 0.0)], points)) + numpy.array((self.x, self.y))
+        else:
+            points = numpy.vstack(([(self.x, self.y)], points))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
-        print(cur)
-        print(points)
-        print(cta)
-        print(ctb, flush=True)
         if final_widths is None:
             final_widths = [None for _ in range(cta.shape[0])]
         if final_distances is None:
             final_distances = [None for _ in range(cta.shape[0])]
         for i in range(points.shape[0] - 1):
-            self.bezier([cta[i] - cur, ctb[i] - cur, points[i + 1] - cur], tolerance, number_of_evaluations,
-                        max_points, final_widths[i], final_distances[i], layer, datatype)
-            cur = numpy.array((self.x, self.y))
+            self.bezier([cta[i], ctb[i], points[i + 1]], tolerance, number_of_evaluations, max_points,
+                        final_widths[i], final_distances[i], False, layer, datatype)
         if cycle:
-            self.bezier([cta[-1] - cur, ctb[-1] - cur, points[0] - cur], tolerance, number_of_evaluations,
-                        max_points, final_widths[-1], final_distances[-1], layer, datatype)
+            self.bezier([cta[-1], ctb[-1], points[0]], tolerance, number_of_evaluations, max_points,
+                        final_widths[-1], final_distances[-1], False, layer, datatype)
         return self
 
 
