@@ -387,7 +387,7 @@ class PolygonSet(object):
                 xy[-1, :] = xy[0, :]
                 i0 = 0
                 while i0 < xy.shape[0]:
-                    i1 = min(i0 + 8191, xy.shape[0])
+                    i1 = min(i0 + 8190, xy.shape[0])
                     data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
                     data.append(xy[i0:i1].tostring())
                     i0 = i1
