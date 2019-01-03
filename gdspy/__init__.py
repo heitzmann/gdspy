@@ -2464,14 +2464,11 @@ class LazyPath:
     automatically to ensure continuity (except in extreme cases).
 
     It can also be stored as a proper path element in the GDSII format,
-    unlike other classes.  In this case, the width must be constant
-    along the whole path.
+    unlike ``Path``.  In this case, the width must be constant along the
+    whole path.
 
     The downside of ``LazyPath`` is that it is more computationally
     expensive than the other path classes.
-
-    tolerance: used for intersections at joins/drawing path/fracturing
-    precision: used for fracturing (rounding vertex positions, precision <= tolerance)
 
     Parameters
     ----------
@@ -2484,9 +2481,9 @@ class LazyPath:
     offset : number, list
         Offsets of each parallel path from the center.  If ``width`` is
         not a list, the length of this list is used to determine the
-        number of parallel paths being created.
-        Distance between the centers of adjacent paths.  If an array is
-        given, distance at each endpoint.
+        number of parallel paths being created.  Otherwise, offset must
+        be a list with the same length as width, or a number, which is
+        used as distance between adjacent paths.
     ends : 'flush', 'extended', 'round', 'smooth', array-like[2], list
         Type of end caps for the paths.  An array represents the start
         and end extensions to the paths.  A list can be used to define
@@ -2527,9 +2524,8 @@ class LazyPath:
     otherwise there would be wasted computational effort in calculating
     the paths.
     """
-    __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes',
-                 'tolerance', 'precision', 'max_points', 'max_evals', 'gdsii_path',
-                 'width_transform', '_polygon_dict')
+    __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes', 'tolerance',
+                 'precision', 'max_points', 'max_evals', 'gdsii_path', 'width_transform', '_polygon_dict')
 
     def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', tolerance=0.01, precision=1e-3,
                  max_points=199, max_evals=1000, gdsii_path=False, width_transform=True, layer=0, datatype=0):
@@ -2540,7 +2536,7 @@ class LazyPath:
             if isinstance(offset, list):
                 self.offsets = offset
             else:
-                self.offsets = [offset] * self.n
+                self.offsets = [(i - 0.5 * (self.n - 1)) * offset for i in range(self.n)]
         else:
             if isinstance(offset, list):
                 self.n = len(offset)
