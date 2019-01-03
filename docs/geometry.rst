@@ -8,6 +8,15 @@ Geometry Construction
 Classes
 *******
 
+PolygonSet
+==========
+
+.. autoclass:: gdspy.PolygonSet
+   :members:
+   :inherited-members:
+   :show-inheritance:
+
+
 Polygon
 =======
 
@@ -35,21 +44,11 @@ Round
    :show-inheritance:
 
 
-PolygonSet
-==========
+Text
+====
 
-.. autoclass:: gdspy.PolygonSet
+.. autoclass:: gdspy.Text
    :members:
-   :inherited-members:
-   :show-inheritance:
-
-
-LazyPath
-========
-
-.. autoclass:: gdspy.LazyPath
-   :members:
-   :undoc-members:
    :inherited-members:
    :show-inheritance:
 
@@ -81,11 +80,22 @@ L1Path
    :show-inheritance:
 
 
-Text
-====
+SimplePath
+==========
 
-.. autoclass:: gdspy.Text
+.. autoclass:: gdspy.SimplePath
    :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+
+LazyPath
+========
+
+.. autoclass:: gdspy.LazyPath
+   :members:
+   :undoc-members:
    :inherited-members:
    :show-inheritance:
 
@@ -104,7 +114,7 @@ Functions
 *********
 
 boolean
-============
+=======
 
 .. autofunction:: gdspy.boolean
 
@@ -131,10 +141,3 @@ copy
 ====
 
 .. autofunction:: gdspy.copy
-
-
-**********
-Attributes
-**********
-
-.. autodata:: poly_warnings

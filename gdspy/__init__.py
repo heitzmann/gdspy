@@ -2004,6 +2004,11 @@ class L1Path(PolygonSet):
     Series of geometric objects that form a path or a collection of
     parallel paths with Manhattan geometry.
 
+    .. deprecated:: 1.4
+
+       ``L1Path`` is deprecated in favor of SimplePath and will be
+       removed in a future version of Gdspy.
+
     Parameters
     ----------
     initial_point : array-like[2]
@@ -2057,6 +2062,7 @@ class L1Path(PolygonSet):
 
     def __init__(self, initial_point, direction, width, length, turn, number_of_paths=1, distance=0,
                  max_points=199, layer=0, datatype=0):
+        warnings.warn("[GDSPY] L1Path is deprecated favor of SimplePath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
@@ -2217,6 +2223,11 @@ class PolyPath(PolygonSet):
     Series of geometric objects that form a polygonal path or a
     collection of parallel polygonal paths.
 
+    .. deprecated:: 1.4
+
+       ``PolyPath`` is deprecated in favor of SimplePath and will be
+       removed in a future version of Gdspy.
+
     Parameters
     ----------
     points : array-like[N][2]
@@ -2255,6 +2266,7 @@ class PolyPath(PolygonSet):
 
     def __init__(self, points, width, number_of_paths=1, distance=0, corners='miter', ends='flush',
                  max_points=199, layer=0, datatype=0):
+        warnings.warn("[GDSPY] PolyPath is deprecated favor of SimplePath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
@@ -2454,7 +2466,11 @@ class _SubPath:
         return pts
 
 
-class LazyPath:
+class SimplePath(object):
+    pass
+
+
+class LazyPath(object):
     """
     Path object with lazy evaluation.
 
