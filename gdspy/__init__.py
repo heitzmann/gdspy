@@ -2529,10 +2529,11 @@ class LazyPath:
     """
     __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes',
                  'tolerance', 'precision', 'max_points', 'max_evals', 'gdsii_path',
-                 'width_transform')
+                 'width_transform', '_polygon_dict')
 
     def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', tolerance=0.01, precision=1e-3,
                  max_points=199, max_evals=1000, gdsii_path=False, width_transform=True, layer=0, datatype=0):
+        self._polygon_dict = None
         if isinstance(width, list):
             self.n = len(width)
             self.widths = width
@@ -2682,90 +2683,87 @@ class LazyPath:
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
         """
-        if by_spec:
-            all_polygons = {}
-        else:
-            all_polygons = []
-        if len(self.paths[0]) == 0:
-            return all_polygons
-        for path, end, layer, datatype in zip(self.paths, self.ends, self.layers, self.datatypes):
-            poly = []
-            for arm in [-1, 1]:
-                if not (end == 'flush'):
-                    i = 0 if arm == 1 else -1
-                    u = abs(i)
-                    if end == 'smooth':
-                        v1 = -arm * path[i].grad(u, -arm)
-                        v2 = arm * path[i].grad(u, arm)
-                        angles = [numpy.arctan2(v1[1], v1[0]), numpy.arctan2(v2[1], v2[0])]
-                        points = numpy.array([path[i](u, -arm), path[i](u, arm)])
-                        cta, ctb = _hobby(points, angles)
-                        f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
-                        bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
-                                       _func_const(0), self.tolerance, self.max_evals)
-                        poly.extend(bez.points(0, 1, 0))
-                    else:
-                        p = path[i](u, 0)
-                        v = -arm * path[i].grad(u, 0)
-                        r = 0.5 * path[i].wid(u)
-                        if end == 'round':
-                            np = int(numpy.pi * r / self.tolerance + 0.5) + 2
-                            ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
-                            endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
-                            poly.extend(endpts)
+        if self._polygon_dict is None:
+            self._polygon_dict = {}
+            for path, end, layer, datatype in zip(self.paths, self.ends, self.layers, self.datatypes):
+                poly = []
+                for arm in [-1, 1]:
+                    if not (end == 'flush'):
+                        i = 0 if arm == 1 else -1
+                        u = abs(i)
+                        if end == 'smooth':
+                            v1 = -arm * path[i].grad(u, -arm)
+                            v2 = arm * path[i].grad(u, arm)
+                            angles = [numpy.arctan2(v1[1], v1[0]), numpy.arctan2(v2[1], v2[0])]
+                            points = numpy.array([path[i](u, -arm), path[i](u, arm)])
+                            cta, ctb = _hobby(points, angles)
+                            f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
+                                           _func_const(0), self.tolerance, self.max_evals)
+                            poly.extend(bez.points(0, 1, 0))
                         else:
-                            v /= numpy.sqrt(numpy.sum(v**2))
-                            w = v[::-1] * numpy.array((1, -1))
-                            d = r if end == 'extended' else end[u]
-                            poly.append(p + d * v + r * w)
-                            poly.append(p + d * v - r * w)
-                path_arm = []
-                start = 0
-                for sub0, sub1 in zip(path[:-1], path[1:]):
-                    #print(sub0)
-                    #print(sub1)
-                    p0 = sub0(1, arm)
-                    v0 = sub0.grad(1, arm)
-                    p1 = sub1(0, arm)
-                    v1 = sub1.grad(0, arm)
-                    u0, u1, px = _cross(p0, v0, p1, v1)
-                    #print('  X0', 1 + u0, '=', p0 + u0 * v0)
-                    #print('  X1', u1, '=', p1 + u1 * v1, flush=True)
-                    u0 = 1 + u0
-                    if u0 < 1 and u1 > 0:
-                        u0, u1, px = _intersect(lambda u: sub0(u, arm),
-                                            lambda u: sub1(u, arm),
-                                            lambda u: sub0.grad(u, arm),
-                                            lambda u: sub1.grad(u, arm),
-                                            u0, u1, self.tolerance)
-                        #print('  I0', u0, '=', sub0(u0, arm))
-                        #print('  I1', u1, '=', sub1(u1, arm), flush=True)
-                    if u1 >= 0:
-                        if u0 <= 1:
-                            path_arm.extend(sub0.points(start, u0, arm)[:-1])
+                            p = path[i](u, 0)
+                            v = -arm * path[i].grad(u, 0)
+                            r = 0.5 * path[i].wid(u)
+                            if end == 'round':
+                                np = int(numpy.pi * r / self.tolerance + 0.5) + 2
+                                ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
+                                endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
+                                poly.extend(endpts)
+                            else:
+                                v /= numpy.sqrt(numpy.sum(v**2))
+                                w = v[::-1] * numpy.array((1, -1))
+                                d = r if end == 'extended' else end[u]
+                                poly.append(p + d * v + r * w)
+                                poly.append(p + d * v - r * w)
+                    path_arm = []
+                    start = 0
+                    for sub0, sub1 in zip(path[:-1], path[1:]):
+                        #print(sub0)
+                        #print(sub1)
+                        p0 = sub0(1, arm)
+                        v0 = sub0.grad(1, arm)
+                        p1 = sub1(0, arm)
+                        v1 = sub1.grad(0, arm)
+                        u0, u1, px = _cross(p0, v0, p1, v1)
+                        #print('  X0', 1 + u0, '=', p0 + u0 * v0)
+                        #print('  X1', u1, '=', p1 + u1 * v1, flush=True)
+                        u0 = 1 + u0
+                        if u0 < 1 and u1 > 0:
+                            u0, u1, px = _intersect(lambda u: sub0(u, arm),
+                                                lambda u: sub1(u, arm),
+                                                lambda u: sub0.grad(u, arm),
+                                                lambda u: sub1.grad(u, arm),
+                                                u0, u1, self.tolerance)
+                            #print('  I0', u0, '=', sub0(u0, arm))
+                            #print('  I1', u1, '=', sub1(u1, arm), flush=True)
+                        if u1 >= 0:
+                            if u0 <= 1:
+                                path_arm.extend(sub0.points(start, u0, arm)[:-1])
+                            else:
+                                path_arm.extend(sub0.points(start, 1, arm))
+                                warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
+                            start = u1
                         else:
-                            path_arm.extend(sub0.points(start, 1, arm))
-                            warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
-                        start = u1
-                    else:
-                        if u0 <= 1:
-                            path_arm.extend(sub0.points(start, u0, arm))
-                            warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
-                        else:
-                            path_arm.extend(sub0.points(start, 1, arm))
-                            path_arm.append(px)
-                        start = 0
-                path_arm.extend(path[-1].points(start, 1, arm))
-                poly.extend(path_arm[::arm])
-            if by_spec:
+                            if u0 <= 1:
+                                path_arm.extend(sub0.points(start, u0, arm))
+                                warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
+                            else:
+                                path_arm.extend(sub0.points(start, 1, arm))
+                                path_arm.append(px)
+                            start = 0
+                    path_arm.extend(path[-1].points(start, 1, arm))
+                    poly.extend(path_arm[::arm])
+                poly = numpy.array(poly)
                 key = (layer, datatype)
-                if key in all_polygons:
-                    all_polygons[key].append(poly)
+                if key in self._polygon_dict:
+                    self._polygon_dict[key].append(poly)
                 else:
-                    all_polygons[key] = [poly]
-            else:
-                all_polygons.append(poly)
-        return all_polygons
+                    self._polygon_dict[key] = [poly]
+        if by_spec:
+            return libcopy.deepcopy(self._polygon_dict)
+        else:
+            return list(itertools.chain.from_iterable(self._polygon_dict.values()))
 
     def to_polygonset(self):
         """
@@ -2882,6 +2880,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         offset = numpy.array((dx, dy))
         self.x = self.x + offset
         for path in self.paths:
@@ -2904,6 +2903,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
@@ -2933,6 +2933,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         c0 = numpy.array(center) * (1 - scale)
         self.x = self.x * scale + c0
         self.widths = [wid * scale for wid in self.widths]
@@ -2973,6 +2974,7 @@ class LazyPath:
         ``CellReference`` or a ``CellArray``.
         If ``width_transform == False``, the widths are not scaled.
         """
+        self._polygon_dict = None
         for ii in range(self.n):
             for sub in self.paths[ii]:
                 sub.x = _func_trafo(sub.x, translation, rotation, scale, x_reflection, array_trans)
@@ -3044,6 +3046,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         x = numpy.array(end_point) if not relative else (numpy.array(end_point) + self.x)
         f = _func_linear(self.x, x)
         df = _func_const(x - self.x, 2)
@@ -3089,6 +3092,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         x0 = self.x - numpy.array((radius * numpy.cos(initial_angle), radius * numpy.sin(initial_angle)))
         def f(u):
             angle = initial_angle * (1 - u) + final_angle * u
@@ -3140,6 +3144,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         i = len(self.paths[0]) - 1
         if i < 0:
             raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty LazyPath.")
@@ -3192,6 +3197,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         f = _func_multadd(curve_function, None, self.x) if relative else curve_function
         if curve_derivative is None:
             def df(u, h):
@@ -3252,6 +3258,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
+        self._polygon_dict = None
         if relative:
             ctrl = self.x + numpy.vstack(([(0, 0)], points))
         else:
