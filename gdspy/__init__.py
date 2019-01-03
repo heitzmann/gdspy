@@ -46,7 +46,7 @@ import datetime
 import warnings
 import itertools
 import numpy
-import copy as libCopy
+import copy as libcopy
 import hashlib
 
 from gdspy import clipper
@@ -237,7 +237,7 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
     if not hasattr(t_out, '__getitem__'):
         t_out = t_out * numpy.ones(len(z))
     if angles is None:
-        angles = [None for _ in range(len(z))]
+        angles = [None] * len(z)
     v = numpy.roll(z, -1) - z
     d = numpy.abs(v)
     delta = numpy.angle(v)
@@ -387,9 +387,67 @@ def _func_linear(c0, c1):
     return lambda u: c0 * (1 - u) + c1 * u
 
 
-def _func_add(f, c):
-    return lambda u: f(u) + c
+def _func_multadd(f, m=None, a=None, nargs=1):
+    if nargs == 1:
+        if m is None:
+            return lambda u: f(u) + a
+        if a is None:
+            return lambda u: f(u) * m
+        return lambda u: f(u) * m + a
+    elif nargs == 2:
+        if m is None:
+            return lambda u, h: f(u, h) + a
+        if a is None:
+            return lambda u, h: f(u, h) * m
+        return lambda u, h: f(u, h) * m + a
+    if m is None:
+        return lambda *args: f(*args) + a
+    if a is None:
+        return lambda *args: f(*args) * m
+    return lambda *args: f(*args) * m + a
 
+
+def _func_rotate(f, cos, sin, center=0, nargs=1):
+    if nargs == 1:
+        def _f(u):
+            x = f(u) - center
+            return x * cos + x[::-1] * sin + center
+    elif nargs == 2:
+        def _f(u, h):
+            x = f(u, h) - center
+            return x * cos + x[::-1] * sin + center
+    return _f
+
+
+def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, nargs=1):
+    if translation is None:
+        translation = numpy.array((0, 0))
+    if array_trans is None:
+        array_trans = numpy.array((0, 0))
+    if rotation is None:
+        cos = 1
+        sin = 0
+    else:
+        cos = numpy.cos(rotation)
+        sin = numpy.sin(rotation)
+    cos = numpy.array((cos, cos))
+    sin = numpy.array((-sin, sin))
+    if scale is not None:
+        cos = cos * scale
+        sin = sin * scale
+        array_trans = array_trans / scale
+    if x_reflection:
+        cos[1] = -cos[1]
+        sin[0] = -sin[0]
+    if nargs == 1:
+        def _f(u):
+            x = f(u) + array_trans
+            return x * cos + x[::-1] * sin + translation
+    elif nargs == 2:
+        def _f(u, h):
+            x = f(u, h) + array_trans
+            return x * cos + x[::-1] * sin + translation
+    return _f
 
 def _func_bezier(ctrl, nargs=1):
     if nargs == 1:
@@ -427,13 +485,13 @@ def _gather_polys(args):
         return []
     if isinstance(args, PolygonSet):
         return [p for p in args.polygons]
-    if isinstance(args, CellReference) or isinstance(args, CellArray):
+    if isinstance(args, LazyPath) or isinstance(args, CellReference) or isinstance(args, CellArray):
         return args.get_polygons()
     polys = []
     for p in args:
         if isinstance(p, PolygonSet):
             polys.extend(p.polygons)
-        elif isinstance(p, CellReference) or isinstance(p, CellArray):
+        elif isinstance(p, LazyPath) or isinstance(p, CellReference) or isinstance(p, CellArray):
             polys.extend(p.get_polygons())
         else:
             polys.append(p)
@@ -518,7 +576,11 @@ class PolygonSet(object):
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
-        self.polygons = [(points - c0) * ca + (points - c0)[:, ::-1] * sa + c0 for points in self.polygons]
+        new_polys = []
+        for points in self.polygons:
+            pts = points - c0
+            new_polys.append(pts * ca + pts[:, ::-1] * sa + c0)
+        self.polygons = new_polys
         return self
 
     def scale(self, scalex, scaley=None, center=(0, 0)):
@@ -586,7 +648,7 @@ class PolygonSet(object):
 
     def area(self, by_spec=False):
         """
-        Calculate the total area of the path(s).
+        Calculate the total area of this polygon set.
 
         Parameters
         ----------
@@ -774,14 +836,14 @@ class PolygonSet(object):
 
     def translate(self, dx, dy):
         """
-        Move the polygons from one place to another
+        Translate this polygon.
 
         Parameters
         ----------
         dx : number
-            distance to move in the x-direction
+            Distance to move in the x-direction.
         dy : number
-            distance to move in the y-direction
+            Distance to move in the y-direction.
 
         Returns
         -------
@@ -1925,9 +1987,9 @@ class Path(PolygonSet):
             points = numpy.vstack(([(self.x, self.y)], points))
         cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
         if final_widths is None:
-            final_widths = [None for _ in range(cta.shape[0])]
+            final_widths = [None] * cta.shape[0]
         if final_distances is None:
-            final_distances = [None for _ in range(cta.shape[0])]
+            final_distances = [None] * cta.shape[0]
         for i in range(points.shape[0] - 1):
             self.bezier([cta[i], ctb[i], points[i + 1]], tolerance, number_of_evaluations, max_points,
                         final_widths[i], final_distances[i], False, layer, datatype)
@@ -2477,7 +2539,7 @@ class LazyPath:
             if isinstance(offset, list):
                 self.offsets = offset
             else:
-                self.offsets = [offset for _ in range(self.n)]
+                self.offsets = [offset] * self.n
         else:
             if isinstance(offset, list):
                 self.n = len(offset)
@@ -2485,7 +2547,7 @@ class LazyPath:
             else:
                 self.n = 1
                 self.offsets = [offset]
-            self.widths = [width for _ in range(self.n)]
+            self.widths = [width] * self.n
         self.x = numpy.array(initial_point)
         self.paths = [[] for _ in range(self.n)]
         if isinstance(ends, list):
@@ -2498,16 +2560,17 @@ class LazyPath:
         if isinstance(layer, list):
             self.layers = [layer[i % len(layer)] for i in range(self.n)]
         else:
-            self.layers = [layer for _ in range(self.n)]
+            self.layers = [layer] * self.n
         if isinstance(datatype, list):
             self.datatypes = [datatype[i % len(datatype)] for i in range(self.n)]
         else:
-            self.datatypes = [datatype for _ in range(self.n)]
+            self.datatypes = [datatype] * self.n
         self.tolerance = tolerance
         self.precision = precision
         self.max_points = max_points
         self.max_evals = max_evals
         self.gdsii_path = gdsii_path
+        self.width_transform = width_transform
         if self.gdsii_path and any(end == 'smooth' for end in self.ends):
             warnings.warn("[GDSPY] Smooth end caps not supported in `LazyPath` with `gdsii_path == True`.", stacklevel=3)
 
@@ -2760,7 +2823,14 @@ class LazyPath:
             if pathtype == 4:
                 data.append(struct.pack('>2Hl2Hl', 8, 0x3003, int(round(self.ends[ii][0] * multiplier)),
                                         8, 0x3103, int(round(self.ends[ii][1] * multiplier))))
-            points = numpy.round(self.paths[ii].points(0, 1, 0) * multiplier).astype('>i4')
+            points = []
+            for path in self.paths[ii]:
+                new_points = numpy.round(numpy.array(path.points(0, 1, 0)) * multiplier)
+                if len(points) > 0 and new_points[0, 0] == points[-1][-1, 0] and new_points[0, 1] == points[-1][-1, 1]:
+                    points.append(new_points[1:])
+                else:
+                    points.append(new_points)
+            points = numpy.vstack(points).astype('>i4')
             if points.shape[0] > 8191:
                 warnings.warn("[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.", stacklevel=4)
                 i0 = 0
@@ -2775,6 +2845,146 @@ class LazyPath:
             data.append(struct.pack('>2H', 4, 0x1100))
         return b''.join(data)
 
+    def area(self, by_spec=False):
+        """
+        Calculate the total area of this object.
+
+        This functions creates a ``PolgonSet`` from this object and
+        calculates its area, which means it is computationally
+        expensive.
+
+        Parameters
+        ----------
+        by_spec : bool
+            If ``True``, the return value is a dictionary with
+            ``{(layer, datatype): area}``.
+
+        Returns
+        -------
+        out : number, dictionary
+            Area of this object.
+        """
+        return self.to_polygonset().area(by_spec)
+
+    def translate(self, dx, dy):
+        """
+        Translate this path.
+
+        Parameters
+        ----------
+        dx : number
+            Distance to move in the x-direction
+        dy : number
+            Distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
+        offset = numpy.array((dx, dy))
+        self.x = self.x + offset
+        for path in self.paths:
+            for sub in path:
+                sub.x = _func_multadd(sub.x, None, offset)
+
+    def rotate(self, angle, center=(0, 0)):
+        """
+        Rotate this path.
+
+        Parameters
+        ----------
+        angle : number
+            The angle of rotation (in *radians*).
+        center : array-like[2]
+            Center point for the rotation.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
+        ca = numpy.cos(angle)
+        sa = numpy.sin(angle)
+        sa = numpy.array((-sa, sa))
+        c0 = numpy.array(center)
+        x = self.x - c0
+        self.x = x * ca + x[::-1] * sa + c0
+        for path in self.paths:
+            for sub in path:
+                sub.x = _func_rotate(sub.x, ca, sa, c0)
+                sub.dx = _func_rotate(sub.dx, ca, sa, nargs=2)
+        return self
+
+    def scale(self, scale, center=(0, 0)):
+        """
+        Scale this path.
+
+        Parameters
+        ----------
+        scale : number
+            Scaling factor.
+            ``scalex``.
+        center : array-like[2]
+            Center point for the scaling operation.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+        """
+        c0 = numpy.array(center) * (1 - scale)
+        self.x = self.x * scale + c0
+        self.widths = [wid * scale for wid in self.widths]
+        self.offsets = [off * scale for off in self.offsets]
+        for path in self.paths:
+            for sub in path:
+                sub.x = _func_multadd(sub.x, scale, c0)
+                sub.dx = _func_multadd(sub.dx, scale, None, nargs=2)
+                sub.wid = _func_multadd(sub.wid, abs(scale), None)
+                sub.off = _func_multadd(sub.off, scale, None)
+        return self
+
+    def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
+        """
+        Apply a transform to this path.
+
+        Parameters
+        ----------
+        translation : Numpy array[2]
+            Translation vector.
+        rotation : number
+            Rotation angle.
+        scale : number
+            Scaling factor.
+        x_reflection : bool
+            Reflection around the first axis.
+        array_trans : Numpy aray[2]
+            Translation vector before rotation and reflection.
+
+        Returns
+        -------
+        out : ``LazyPath``
+            This object.
+
+        Notes
+        -----
+        Applies the transformations in the same order as a
+        ``CellReference`` or a ``CellArray``.
+        If ``width_transform == False``, the widths are not scaled.
+        """
+        for ii in range(self.n):
+            for sub in self.paths[ii]:
+                sub.x = _func_trafo(sub.x, translation, rotation, scale, x_reflection, array_trans)
+                sub.dx = _func_trafo(sub.dx, None, rotation, scale, x_reflection, None, nargs=2)
+                if self.width_transform:
+                    sub.wid = _func_multadd(sub.wid, scale, None)
+                sub.off = _func_multadd(sub.off, scale, None)
+            self.x[ii] = self.paths[-1].x(1)
+            self.widths[ii] = self.paths[-1].wid(1)
+            self.offsets[ii] = self.offsets[-1].off(1)
+        return self
+
     def _parse_offset(self, arg, idx):
         if arg is None:
             return _func_const(self.offsets[idx])
@@ -2783,7 +2993,7 @@ class LazyPath:
                 return arg[idx]
             return _func_linear(self.offsets[idx], arg[idx])
         elif callable(arg):
-            return _func_add(arg, self.offsets[idx])
+            return _func_multadd(arg, None, self.offsets[idx])
         return _func_linear(self.offsets[idx], self.offsets[idx] + arg)
 
     def _parse_width(self, arg, idx):
@@ -2982,7 +3192,7 @@ class LazyPath:
         out : ``LazyPath``
             This object.
         """
-        f = _func_add(curve_function, self.x) if relative else curve_function
+        f = _func_multadd(curve_function, None, self.x) if relative else curve_function
         if curve_derivative is None:
             def df(u, h):
                 u0 = max(0, u - h)
@@ -3288,14 +3498,14 @@ class Label(object):
 
     def translate(self, dx, dy):
         """
-        Move the text from one place to another
+        Translate this label.
 
         Parameters
         ----------
-        dx : float
-            distance to move in the x-direction
-        dy : float
-            distance to move in the y-direction
+        dx : number
+            Distance to move in the x-direction
+        dy : number
+            Distance to move in the y-direction
 
         Returns
         -------
@@ -3315,8 +3525,7 @@ class Label(object):
 
 class Cell(object):
     """
-    Collection of elements, both geometric objects and references to
-    other cells.
+    Collection of polygons, paths, labels and raferences to other cells.
 
     Parameters
     ----------
@@ -3330,24 +3539,29 @@ class Cell(object):
     ----------
     name : string
         The name of this cell.
-    elements : list
-        List of cell elements (``PolygonSet``, ``CellReference``,
-        ``CellArray``).
-    labels : list
-        List of ``Label``.
+    polygons : list of ``PolygonSet``
+        List of cell polygons.
+    paths : list of ``LazyPath``
+        List of cell paths.
+    labels : list of ``Label``
+        List of cell labels.
+    references : list of ``CellReference`` or ``CellArray``
+        List of cell references.
     """
-    __slots__ = 'name', 'elements', 'labels', '_bb_valid'
+    __slots__ = 'name', 'polygons', 'paths', 'labels', 'references', '_bb_valid'
 
     def __init__(self, name, exclude_from_current=False):
         self.name = name
-        self.elements = []
+        self.polygons = []
+        self.paths = []
         self.labels = []
+        self.references = []
         self._bb_valid = False
         if not exclude_from_current:
             current_library.add(self)
 
     def __str__(self):
-        return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
+        return "Cell (\"{}\", {} polygons, {} paths, {} labels, {} references)".format(self.name, len(self.polygons), len(self.paths), len(self.labels), len(self.references))
 
     def to_gds(self, multiplier, timestamp=None):
         """
@@ -3371,13 +3585,15 @@ class Cell(object):
         name = self.name
         if len(name) % 2 != 0:
             name = name + '\0'
-        return (struct.pack('>2H12h2H', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute,
+        data = [struct.pack('>2H12h2H', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute,
                             now.second, now.year, now.month, now.day, now.hour, now.minute, now.second,
-                            4 + len(name), 0x0606)
-                + name.encode('ascii')
-                + b''.join(element.to_gds(multiplier) for element in self.elements)
-                + b''.join(label.to_gds(multiplier) for label in self.labels)
-                + struct.pack('>2H', 4, 0x0700))
+                            4 + len(name), 0x0606), name.encode('ascii')]
+        data.extend(polygon.to_gds(multiplier) for polygon in self.polygons)
+        data.extend(path.to_gds(multiplier) for path in self.paths)
+        data.extend(label.to_gds(multiplier) for label in self.labels)
+        data.extend(reference.to_gds(multiplier) for reference in self.references)
+        data.append(struct.pack('>2H', 4, 0x0700))
+        return b''.join(data)
 
     def copy(self, name, exclude_from_current=False, deep_copy=False):
         """
@@ -3402,14 +3618,18 @@ class Cell(object):
         """
         new_cell = Cell(name, exclude_from_current)
         if deep_copy:
-            new_cell.elements = libCopy.deepcopy(self.elements)
-            new_cell.labels = libCopy.deepcopy(self.labels)
+            new_cell.polygons = libcopy.deepcopy(self.polygons)
+            new_cell.paths = libcopy.deepcopy(self.paths)
+            new_cell.labels = libcopy.deepcopy(self.labels)
+            new_cell.references = libcopy.deepcopy(self.references)
             for ref in new_cell.get_dependencies(True):
                 if ref._bb_valid:
                     ref._bb_valid = False
         else:
-            new_cell.elements = list(self.elements)
+            new_cell.polygons = list(self.polygons)
+            new_cell.paths = list(self.paths)
             new_cell.labels = list(self.labels)
+            new_cell.references = list(self.references)
         return new_cell
 
     def add(self, element):
@@ -3427,16 +3647,26 @@ class Cell(object):
         out : ``Cell``
             This cell.
         """
-        if isinstance(element, PolygonSet) or isinstance(element, CellReference) or isinstance(element, CellArray):
-            self.elements.append(element)
+        if isinstance(element, PolygonSet):
+            self.polygons.append(element)
+        elif isinstance(element, LazyPath):
+            self.paths.append(element)
         elif isinstance(element, Label):
             self.labels.append(element)
+        elif isinstance(element, CellReference) or isinstance(element, CellArray):
+            self.references.append(element)
         else:
             for e in element:
-                if isinstance(e, Label):
+                if isinstance(e, PolygonSet):
+                    self.polygons.append(e)
+                elif isinstance(e, LazyPath):
+                    self.paths.append(e)
+                elif isinstance(e, Label):
                     self.labels.append(e)
+                elif isinstance(e, CellReference) or isinstance(e, CellArray):
+                    self.references.append(e)
                 else:
-                    self.elements.append(e)
+                    raise ValueError("[GDSPY] Only instances of `PolygonSet`, `LazyPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`.")
         self._bb_valid = False
         return self
 
@@ -3473,20 +3703,46 @@ class Cell(object):
         ...                      any(pts[:, 0] < 0))
         """
         empty = []
-        for element in self.elements:
-            if isinstance(element, PolygonSet):
-                ii = 0
-                while ii < len(element.polygons):
-                    if test(element.polygons[ii], element.layers[ii], element.datatypes[ii]):
-                        element.polygons.pop(ii)
-                        element.layers.pop(ii)
-                        element.datatypes.pop(ii)
-                    else:
-                        ii += 1
-                if len(element.polygons) == 0:
-                    empty.append(element)
+        for element in self.polygons:
+            ii = 0
+            while ii < len(element.polygons):
+                if test(element.polygons[ii], element.layers[ii], element.datatypes[ii]):
+                    element.polygons.pop(ii)
+                    element.layers.pop(ii)
+                    element.datatypes.pop(ii)
+                else:
+                    ii += 1
+            if len(element.polygons) == 0:
+                empty.append(element)
         for element in empty:
-            self.elements.remove(element)
+            self.polygons.remove(element)
+        return self
+
+    def remove_paths(self, test):
+        """
+        Remove paths from this cell.
+
+        The function or callable ``test`` is called for each LazyPath in
+        the cell.  If its return value evaluates to ``True``, the
+        corresponding label is removed from the cell.
+
+        Parameters
+        ----------
+        test : callable
+            Test function to query whether a path should be removed.
+            The function is called with the path as the only argument.
+
+        Returns
+        -------
+        out : ``Cell``
+            This cell.
+        """
+        ii = 0
+        while ii < len(self.paths):
+            if test(self.paths[ii]):
+                self.paths.pop(ii)
+            else:
+                ii += 1
         return self
 
     def remove_labels(self, test):
@@ -3540,7 +3796,7 @@ class Cell(object):
         """
         if by_spec:
             cell_area = {}
-            for element in self.elements:
+            for element in itertools.chain(self.polygons, self.paths, self.references):
                 element_area = element.area(True)
                 for ll in element_area.keys():
                     if ll in cell_area:
@@ -3549,7 +3805,7 @@ class Cell(object):
                         cell_area[ll] = element_area[ll]
         else:
             cell_area = 0
-            for element in self.elements:
+            for element in itertools.chain(self.polygons, self.paths, self.references):
                 cell_area += element.area()
         return cell_area
 
@@ -3563,11 +3819,10 @@ class Cell(object):
             Set of the layers used in this cell.
         """
         layers = set()
-        for element in self.elements:
-            if isinstance(element, PolygonSet):
-                layers.update(element.layers)
-            elif isinstance(element, CellReference) or isinstance(element, CellArray):
-                layers.update(element.ref_cell.get_layers())
+        for element in itertools.chain(self.polygons, self.paths):
+            layers.update(element.layers)
+        for reference in self.references:
+            layers.update(reference.ref_cell.get_layers())
         for label in self.labels:
             layers.add(label.layer)
         return layers
@@ -3582,11 +3837,10 @@ class Cell(object):
             Set of the datatypes used in this cell.
         """
         datatypes = set()
-        for element in self.elements:
-            if isinstance(element, PolygonSet):
-                datatypes.update(element.datatypes)
-            elif isinstance(element, CellReference) or isinstance(element, CellArray):
-                datatypes.update(element.ref_cell.get_datatypes())
+        for element in itertools.chain(self.polygons, self.paths):
+            datatypes.update(element.datatypes)
+        for reference in self.references:
+            datatypes.update(reference.ref_cell.get_datatypes())
         return datatypes
 
     def get_bounding_box(self):
@@ -3599,21 +3853,22 @@ class Cell(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
             or ``None`` if the cell is empty.
         """
-        if len(self.elements) == 0:
+        if len(self.polygons) == 0 and len(self.paths) == 0 and len(self.references) == 0:
             return None
         if not (self._bb_valid and all(ref._bb_valid for ref in self.get_dependencies(True))):
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
-            for element in self.elements:
-                if isinstance(element, PolygonSet):
-                    all_polygons.extend(element.polygons)
-                elif isinstance(element, CellReference) or isinstance(element, CellArray):
-                    element_bb = element.get_bounding_box()
-                    if element_bb is not None:
-                        bb[0, 0] = min(bb[0, 0], element_bb[0, 0])
-                        bb[0, 1] = min(bb[0, 1], element_bb[0, 1])
-                        bb[1, 0] = max(bb[1, 0], element_bb[1, 0])
-                        bb[1, 1] = max(bb[1, 1], element_bb[1, 1])
+            for polygon in self.polygons:
+                all_polygons.extend(polygon.polygons)
+            for path in self.paths:
+                all_polygons.extend(path.to_polygonset().polygons)
+            for reference in self.references:
+                reference_bb = reference.get_bounding_box()
+                if reference_bb is not None:
+                    bb[0, 0] = min(bb[0, 0], reference_bb[0, 0])
+                    bb[0, 1] = min(bb[0, 1], reference_bb[0, 1])
+                    bb[1, 0] = max(bb[1, 0], reference_bb[1, 0])
+                    bb[1, 1] = max(bb[1, 1], reference_bb[1, 1])
             if len(all_polygons) > 0:
                 all_points = numpy.concatenate(all_polygons).transpose()
                 bb[0, 0] = min(bb[0, 0], all_points[0].min())
@@ -3645,6 +3900,11 @@ class Cell(object):
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
+
+        Note
+        ----
+        Instances of ``LazyPath`` are also included in the result by
+        computing their polygonal boundary.
         """
         if depth is not None and depth < 0:
             bb = self.get_bounding_box()
@@ -3656,38 +3916,96 @@ class Cell(object):
         else:
             if by_spec:
                 polygons = {}
-                for element in self.elements:
-                    if isinstance(element, PolygonSet):
-                        for ii in range(len(element.polygons)):
-                            key = (element.layers[ii], element.datatypes[ii])
-                            if key in polygons:
-                                polygons[key].append(numpy.array(element.polygons[ii]))
-                            else:
-                                polygons[key] = [numpy.array(element.polygons[ii])]
-                    else:
-                        if depth is None:
-                            next_depth = None
+                for polyset in self.polygons:
+                    for ii in range(len(polyset.polygons)):
+                        key = (polyset.layers[ii], polyset.datatypes[ii])
+                        if key in polygons:
+                            polygons[key].append(numpy.array(polyset.polygons[ii]))
                         else:
-                            next_depth = depth - 1
-                        cell_polygons = element.get_polygons(True, next_depth)
-                        for kk in cell_polygons.keys():
-                            if kk in polygons:
-                                polygons[kk].extend(cell_polygons[kk])
-                            else:
-                                polygons[kk] = cell_polygons[kk]
+                            polygons[key] = [numpy.array(polyset.polygons[ii])]
+                for path in self.paths:
+                    path_polygons = path.get_polygons(True)
+                    for kk in path_polygons.keys():
+                        if kk in polygons:
+                            polygons[kk].extend(path_polygons[kk])
+                        else:
+                            polygons[kk] = path_polygons[kk]
+                for reference in self.references:
+                    if depth is None:
+                        next_depth = None
+                    else:
+                        next_depth = depth - 1
+                    cell_polygons = reference.get_polygons(True, next_depth)
+                    for kk in cell_polygons.keys():
+                        if kk in polygons:
+                            polygons[kk].extend(cell_polygons[kk])
+                        else:
+                            polygons[kk] = cell_polygons[kk]
             else:
                 polygons = []
-                for element in self.elements:
-                    if isinstance(element, PolygonSet):
-                        for points in element.polygons:
-                            polygons.append(numpy.array(points))
+                for polyset in self.polygons:
+                    for points in polyset.polygons:
+                        polygons.append(numpy.array(points))
+                for path in self.paths:
+                    polygons.extend(path.get_polygons())
+                for reference in self.references:
+                    if depth is None:
+                        next_depth = None
                     else:
-                        if depth is None:
-                            next_depth = None
-                        else:
-                            next_depth = depth - 1
-                        polygons.extend(element.get_polygons(depth=next_depth))
+                        next_depth = depth - 1
+                    polygons.extend(reference.get_polygons(depth=next_depth))
         return polygons
+
+    def get_polygonsets(self, depth=None):
+        """
+        Return a list with a copy of the polygons in this cell.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve polygons from.
+
+        Returns
+        -------
+        out : list of ``PolygonSet``
+            List containing the polygons in this cell and its
+            references.
+        """
+        polys = libcopy.deepcopy(self.polygons)
+        if depth is None or depth > 0:
+            for reference in self.references:
+                if depth is None:
+                    next_depth = None
+                else:
+                    next_depth = depth - 1
+                polys.extend(reference.get_polygonsets(next_depth))
+        return polys
+
+    def get_paths(self, depth=None):
+        """
+        Return a list with a copy of the ``LazyPath`` in this cell.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve paths from.
+
+        Returns
+        -------
+        out : list of ``LazyPath``
+            List containing the paths in this cell and its references.
+        """
+        paths = libcopy.deepcopy(self.paths)
+        if depth is None or depth > 0:
+            for reference in self.references:
+                if depth is None:
+                    next_depth = None
+                else:
+                    next_depth = depth - 1
+                paths.extend(reference.get_paths(next_depth))
+        return paths
 
     def get_labels(self, depth=None):
         """
@@ -3704,17 +4022,14 @@ class Cell(object):
         out : list of ``Label``
             List containing the labels in this cell and its references.
         """
-        labels = libCopy.deepcopy(self.labels)
+        labels = libcopy.deepcopy(self.labels)
         if depth is None or depth > 0:
-            for element in self.elements:
+            for reference in self.references:
                 if depth is None:
                     next_depth = None
                 else:
                     next_depth = depth - 1
-                if isinstance(element, CellReference):
-                    labels.extend(element.get_labels(next_depth))
-                elif isinstance(element, CellArray):
-                    labels.extend(element.get_labels(next_depth))
+                labels.extend(reference.get_labels(next_depth))
         return labels
 
     def get_dependencies(self, recursive=False):
@@ -3732,17 +4047,15 @@ class Cell(object):
             List of the cells referenced by this cell.
         """
         dependencies = set()
-        for element in self.elements:
-            if isinstance(element, CellReference) or isinstance(element, CellArray):
-                if recursive:
-                    dependencies.update(element.ref_cell.get_dependencies(True))
-                dependencies.add(element.ref_cell)
+        for reference in self.references:
+            if recursive:
+                dependencies.update(reference.ref_cell.get_dependencies(True))
+            dependencies.add(reference.ref_cell)
         return dependencies
 
     def flatten(self, single_layer=None, single_datatype=None, single_texttype=None):
         """
-        Flatten all ``CellReference`` and ``CellArray`` elements in this
-        cell into real polygons and labels, instead of references.
+        Convert all references into polygons, paths and labels.
 
         Parameters
         ----------
@@ -3762,28 +4075,36 @@ class Cell(object):
             This cell.
         """
         self.labels = self.get_labels()
-        if single_layer is not None:
+        if single_layer is not None and single_datatype is not None:
             for lbl in self.labels:
                 lbl.layer = single_layer
-        if single_texttype is not None:
+                lbl.texttype = single_texttype
+        elif single_layer is not None:
+            for lbl in self.labels:
+                lbl.layer = single_layer
+        elif single_datatype is not None:
             for lbl in self.labels:
                 lbl.texttype = single_texttype
-        if single_layer is None or single_datatype is None:
-            poly_dic = self.get_polygons(True)
-            self.elements = []
-            if single_layer is None and single_datatype is None:
-                for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], *ld))
-            elif single_layer is None:
-                for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], ld[0], single_datatype))
-            else:
-                for ld in poly_dic.keys():
-                    self.add(PolygonSet(poly_dic[ld], single_layer, ld[1]))
-        else:
-            polygons = self.get_polygons()
-            self.elements = []
-            self.add(PolygonSet(polygons, single_layer, single_datatype))
+        self.polygons = self.get_polygonsets()
+        self.paths = self.get_paths()
+        if single_layer is not None and single_datatype is not None:
+            for poly in self.polygons:
+                poly.layers = [single_layer] * len(poly.polygons)
+                poly.datatypes = [single_datatype] * len(poly.polygons)
+            for path in self.paths:
+                path.layers = [single_layer] * path.n
+                path.datatypes = [single_datatype] * path.n
+        elif single_layer is not None:
+            for poly in self.polygons:
+                poly.layers = [single_layer] * len(poly.polygons)
+            for path in self.paths:
+                path.layers = [single_layer] * path.n
+        elif single_datatype is not None:
+            for poly in self.polygons:
+                poly.datatypes = [single_datatype] * len(poly.polygons)
+            for path in self.paths:
+                path.datatypes = [single_datatype] * path.n
+        self.references = []
         return self
 
 
@@ -3923,6 +4244,11 @@ class CellReference(object):
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
+
+        Note
+        ----
+        Instances of ``LazyPath`` are also included in the result by
+        computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -3960,6 +4286,75 @@ class CellReference(object):
                 if self.origin is not None:
                     polygons[ii] = polygons[ii] + orgn
         return polygons
+
+    def get_polygonsets(self, depth=None):
+        """
+        Return the list of polygons created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve polygons from.
+
+        Returns
+        -------
+        out : list of ``PolygonSet``
+            List containing the polygons in this cell and its
+            references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.rotation is not None:
+            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
+            st = numpy.sin(self.rotation * numpy.pi / 180.0)
+            st = numpy.array([-st, st])
+        if self.x_reflection:
+            xrefl = numpy.array([1, -1], dtype='int')
+        if self.magnification is not None:
+            mag = numpy.array([self.magnification, self.magnification])
+        if self.origin is not None:
+            orgn = numpy.array(self.origin)
+        polygonsets = self.ref_cell.get_polygonsets(depth=depth)
+        for ps in polygonsets:
+            for ii in range(len(ps.polygons)):
+                if self.x_reflection:
+                    ps.polygons[ii] = ps.polygons[ii] * xrefl
+                if self.magnification is not None:
+                    ps.polygons[ii] = ps.polygons[ii] * mag
+                if self.rotation is not None:
+                    ps.polygons[ii] = (ps.polygons[ii] * ct + ps.polygons[ii][:, ::-1] * st)
+                if self.origin is not None:
+                    ps.polygons[ii] = ps.polygons[ii] + orgn
+        return polygonsets
+
+    def get_paths(self, depth=None):
+        """
+        Return the list of ``LazyPath`` created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve paths from.
+
+        Returns
+        -------
+        out : list of ``LazyPath``
+            List containing the paths in this cell and its references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.origin is not None:
+            trans = numpy.array(self.origin)
+        else:
+            trans = None
+        if self.rotation is not None:
+            rot = self.rotation * numpy.pi / 180.0
+        else:
+            rot = None
+        return [p.transform(trans, rot, self.magnification, self.x_reflection)
+                for p in self.ref_cell.get_paths(depth=depth)]
 
     def get_labels(self, depth=None):
         """
@@ -4041,14 +4436,14 @@ class CellReference(object):
 
     def translate(self, dx, dy):
         """
-        Move the reference from one place to another
+        Translate this reference.
 
         Parameters
         ----------
-        dx : float
-            distance to move in the x-direction
-        dy : float
-            distance to move in the y-direction
+        dx : number
+            Distance to move in the x-direction.
+        dy : number
+            Distance to move in the y-direction.
 
         Returns
         -------
@@ -4219,6 +4614,11 @@ class CellArray(object):
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
+
+        Note
+        ----
+        Instances of ``LazyPath`` are also included in the result by
+        computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -4258,7 +4658,7 @@ class CellArray(object):
                 for jj in range(self.rows):
                     spc = numpy.array([self.spacing[0] * ii, self.spacing[1] * jj])
                     for points in cell_polygons:
-                        if self.magnification:
+                        if self.magnification is not None:
                             polygons.append(points * mag + spc)
                         else:
                             polygons.append(points + spc)
@@ -4269,6 +4669,90 @@ class CellArray(object):
                         if self.origin is not None:
                             polygons[-1] = polygons[-1] + orgn
         return polygons
+
+    def get_polygonsets(self, depth=None):
+        """
+        Return the list of polygons created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve polygons from.
+
+        Returns
+        -------
+        out : list of ``PolygonSet``
+            List containing the polygons in this cell and its
+            references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.rotation is not None:
+            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
+            st = numpy.sin(self.rotation * numpy.pi / 180.0)
+            st = numpy.array([-st, st])
+        if self.x_reflection:
+            xrefl = numpy.array([1, -1], dtype='int')
+        if self.magnification is not None:
+            mag = numpy.array([self.magnification, self.magnification])
+        if self.origin is not None:
+            orgn = numpy.array(self.origin)
+        polygonsets = self.ref_cell.get_polygonsets(depth=depth)
+        array = []
+        for i in range(self.columns):
+            for j in range(self.rows):
+                spc = numpy.array([self.spacing[0] * i, self.spacing[1] * j])
+                for polygonset in polygonsets:
+                    ps = libcopy.deepcopy(polygonset)
+                    for ii in range(len(ps.polygons)):
+                        if self.magnification is not None:
+                            ps.polygons[ii] = ps.polygons[ii] * mag + spc
+                        else:
+                            ps.polygons[ii] = ps.polygons[ii] + spc
+                        if self.x_reflection:
+                            ps.polygons[ii] = ps.polygons[ii] * xrefl
+                        if self.rotation is not None:
+                            ps.polygons[ii] = (ps.polygons[ii] * ct + ps.polygons[ii][:, ::-1] * st)
+                        if self.origin is not None:
+                            ps.polygons[ii] = ps.polygons[ii] + orgn
+                    array.append(ps)
+        return array
+
+    def get_paths(self, depth=None):
+        """
+        Return the list of ``LazyPath`` created by this reference.
+
+        Parameters
+        ----------
+        depth : integer or ``None``
+            If not ``None``, defines from how many reference levels to
+            retrieve paths from.
+
+        Returns
+        -------
+        out : list of ``LazyPath``
+            List containing the paths in this cell and its references.
+        """
+        if not isinstance(self.ref_cell, Cell):
+            return []
+        if self.origin is not None:
+            trans = numpy.array(self.origin)
+        else:
+            trans = None
+        if self.rotation is not None:
+            rot = self.rotation * numpy.pi / 180.0
+        else:
+            rot = None
+        paths = self.ref_cell.get_paths(depth=depth)
+        array = []
+        for i in range(self.columns):
+            for j in range(self.rows):
+                spc = numpy.array([self.spacing[0] * i, self.spacing[1] * j])
+                for path in paths:
+                    array.append(libcopy.deepcopy(path).transform(trans, rot, self.magnification,
+                                                                  self.x_reflection, spc))
+        return array
 
     def get_labels(self, depth=None):
         """
@@ -4303,7 +4787,7 @@ class CellArray(object):
             for jj in range(self.rows):
                 spc = numpy.array([self.spacing[0] * ii, self.spacing[1] * jj])
                 for clbl in cell_labels:
-                    lbl = libCopy.deepcopy(clbl)
+                    lbl = libcopy.deepcopy(clbl)
                     if self.magnification:
                         lbl.position = lbl.position * mag + spc
                     else:
@@ -4356,14 +4840,14 @@ class CellArray(object):
 
     def translate(self, dx, dy):
         """
-        Move the reference from one place to another
+        Translate this reference.
 
         Parameters
         ----------
-        dx : float
-            distance to move in the x-direction
-        dy : float
-            distance to move in the y-direction
+        dx : number
+            Distance to move in the x-direction.
+        dy : number
+            Distance to move in the y-direction.
 
         Returns
         -------
@@ -4452,12 +4936,12 @@ class GdsLibrary(object):
         """
         if isinstance(cell, Cell):
             if not overwrite_duplicate and cell.name in self.cell_dict and self.cell_dict[cell.name] is not cell:
-                raise ValueError("[GDSPY] cell named {0} already present in library.".format(cell.name))
+                raise ValueError("[GDSPY] Cell named {0} already present in library.".format(cell.name))
             self.cell_dict[cell.name] = cell
         else:
             for c in cell:
                 if not overwrite_duplicate and c.name in self.cell_dict and self.cell_dict[c.name] is not c:
-                    raise ValueError("[GDSPY] cell named {0} already present in library.".format(c.name))
+                    raise ValueError("[GDSPY] Cell named {0} already present in library.".format(c.name))
                 self.cell_dict[c.name] = c
         return self
 
@@ -5212,24 +5696,23 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
     return clipper.inside(pts, polys, sc, 1 / precision)
 
 
-def copy(obj, dx, dy):
+def copy(obj, dx=0, dy=0):
     """
-    Creates a copy of ``obj`` and translates the new object to a new
-    location.
+    Create a copy of ``obj`` and translate it by (dx, dy).
 
     Parameters
     ----------
-    obj : ``obj``
-        any translatable geometery object.
-    dx  : float
-        distance to move in the x-direction
-    dy  : float
-        distance to move in the y-direction
+    obj : translatable object
+        Object to be copied.
+    dx : number
+        Distance to move in the x-direction.
+    dy : number
+        Distance to move in the y-direction.
 
 
     Returns
     -------
-    out : ``obj``
+    out : translatable object
         Translated copy of original ``obj``
 
     Examples
@@ -5240,8 +5723,9 @@ def copy(obj, dx, dy):
     >>> myCell.add(rectangle2)
     """
 
-    newObj = libCopy.deepcopy(obj)
-    newObj.translate(dx, dy)
+    newObj = libcopy.deepcopy(obj)
+    if dx != 0 or dy != 0:
+        newObj.translate(dx, dy)
     return newObj
 
 

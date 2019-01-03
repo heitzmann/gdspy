@@ -137,10 +137,10 @@ def test_rw_gds(tmpdir):
     assert len(lib1.cell_dict) == 4
     assert set(lib1.cell_dict.keys()) == {'1', 'gl_rw_gds_2', 'gl_rw_gds_3', 'gl_rw_gds_4'}
     c = lib1.cell_dict['1']
-    assert len(c.elements) == len(c.labels) == 1
-    assert c.elements[0].area() == 12.0
-    assert c.elements[0].layers == [4]
-    assert c.elements[0].datatypes == [2]
+    assert len(c.polygons) == len(c.labels) == 1
+    assert c.polygons[0].area() == 12.0
+    assert c.polygons[0].layers == [4]
+    assert c.polygons[0].datatypes == [2]
     assert c.labels[0].text == 'label'
     assert c.labels[0].position[0] == 2 and c.labels[0].position[1] == -2
     assert c.labels[0].anchor == 4
@@ -151,29 +151,29 @@ def test_rw_gds(tmpdir):
     assert c.labels[0].texttype == 7
 
     c = lib1.cell_dict['gl_rw_gds_2']
-    assert len(c.elements) == 2
-    assert isinstance(c.elements[0], gdspy.Polygon) and isinstance(c.elements[1], gdspy.Polygon)
+    assert len(c.polygons) == 2
+    assert isinstance(c.polygons[0], gdspy.Polygon) and isinstance(c.polygons[1], gdspy.Polygon)
 
     c = lib1.cell_dict['gl_rw_gds_3']
-    assert len(c.elements) == 1
-    assert isinstance(c.elements[0], gdspy.CellReference)
-    assert c.elements[0].ref_cell == lib1.cell_dict['1']
-    assert c.elements[0].origin[0] == 0 and c.elements[0].origin[1] == 2
-    assert c.elements[0].rotation == -90
-    assert c.elements[0].magnification == 2
-    assert c.elements[0].x_reflection == True
+    assert len(c.references) == 1
+    assert isinstance(c.references[0], gdspy.CellReference)
+    assert c.references[0].ref_cell == lib1.cell_dict['1']
+    assert c.references[0].origin[0] == 0 and c.references[0].origin[1] == 2
+    assert c.references[0].rotation == -90
+    assert c.references[0].magnification == 2
+    assert c.references[0].x_reflection == True
 
     c = lib1.cell_dict['gl_rw_gds_4']
-    assert len(c.elements) == 1
-    assert isinstance(c.elements[0], gdspy.CellArray)
-    assert c.elements[0].ref_cell == lib1.cell_dict['gl_rw_gds_2']
-    assert c.elements[0].origin[0] == -2 and c.elements[0].origin[1] == -4
-    assert c.elements[0].rotation == 180
-    assert c.elements[0].magnification == 0.5
-    assert c.elements[0].x_reflection == True
-    assert c.elements[0].spacing[0] == 2 and c.elements[0].spacing[1] == 8
-    assert c.elements[0].columns == 2
-    assert c.elements[0].rows == 3
+    assert len(c.references) == 1
+    assert isinstance(c.references[0], gdspy.CellArray)
+    assert c.references[0].ref_cell == lib1.cell_dict['gl_rw_gds_2']
+    assert c.references[0].origin[0] == -2 and c.references[0].origin[1] == -4
+    assert c.references[0].rotation == 180
+    assert c.references[0].magnification == 0.5
+    assert c.references[0].x_reflection == True
+    assert c.references[0].spacing[0] == 2 and c.references[0].spacing[1] == 8
+    assert c.references[0].columns == 2
+    assert c.references[0].rows == 3
 
     fname2 = str(tmpdir.join('test2.gds'))
     lib.name = 'lib2'

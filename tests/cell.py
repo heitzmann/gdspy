@@ -53,7 +53,7 @@ def test_ignore_duplicate():
 def test_str():
     gdspy.current_library = gdspy.GdsLibrary()
     c = gdspy.Cell('c_str')
-    assert str(c) == 'Cell ("c_str", 0 elements, 0 labels)'
+    assert str(c) == 'Cell ("c_str", 0 polygons, 0 paths, 0 labels, 0 references)'
 
 
 def test_add_element():
@@ -62,7 +62,7 @@ def test_add_element():
     c = gdspy.Cell('c_add_element')
     assert c.add(p) is c
     assert c.add([p, p]) is c
-    assert c.elements == [p, p, p]
+    assert c.polygons == [p, p, p]
 
 
 def test_add_label():
@@ -86,13 +86,13 @@ def test_copy():
         c1.copy(name)
     assert name in str(e.value)
     c3 = c1.copy(name, True)
-    assert c3.elements == c1.elements and c3.elements is not c1.elements
+    assert c3.polygons == c1.polygons and c3.polygons is not c1.polygons
     assert c3.labels == c1.labels and c3.labels is not c1.labels
     cref = gdspy.Cell('c_ref').add(gdspy.Rectangle((-1, -1), (-2, -2)))
     c1.add(gdspy.CellReference(cref))
     c1.get_bounding_box()
     c4 = c1.copy('c_copy_1', False, True)
-    assert c4.elements != c1.elements
+    assert c4.polygons != c1.polygons
     assert c4.labels != c1.labels
     assert c1._bb_valid
     assert cref._bb_valid
@@ -102,9 +102,9 @@ def test_copy():
 def test_remove(tree):
     c3, c2, c1 = tree
     c1.remove_polygons(lambda p, layer, d: layer == 1)
-    assert len(c1.elements) == 1
+    assert len(c1.polygons) == 1
     c1.remove_polygons(lambda p, layer, d: layer == 0)
-    assert len(c1.elements) == 0
+    assert len(c1.polygons) == 0
     c1.remove_labels(lambda lbl: lbl.layer == 12)
     assert len(c1.labels) == 1
     c1.remove_labels(lambda lbl: lbl.layer == 11)
@@ -125,20 +125,20 @@ def test_area():
 def test_flatten_00(tree):
     c3, c2, c1 = tree
     c3.flatten()
-    assert len(c3.elements) == 2
-    for i in range(2):
-        assert c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6
-        assert c3.elements[i].layers == c3.elements[i].datatypes
+    assert len(c3.polygons) == 12
+    for i in range(12):
+        assert c3.polygons[i].layers == [0] or c3.polygons[i].layers == [1]
+        assert c3.polygons[i].layers == c3.polygons[i].datatypes
     assert len(c3.labels) == 12
 
 
 def test_flatten_01(tree):
     c3, c2, c1 = tree
     c3.flatten(None, 2, 3)
-    assert len(c3.elements) == 2
-    for i in range(2):
-        assert c3.elements[i].layers == [0] * 6 or c3.elements[i].layers == [1] * 6
-        assert c3.elements[i].datatypes == [2] * 6
+    assert len(c3.polygons) == 12
+    for i in range(12):
+        assert c3.polygons[i].layers == [0] or c3.polygons[i].layers == [1]
+        assert c3.polygons[i].datatypes == [2]
     assert len(c3.labels) == 12
     assert all(lbl.texttype == 3 for lbl in c3.labels)
 
@@ -146,10 +146,10 @@ def test_flatten_01(tree):
 def test_flatten_10(tree):
     c3, c2, c1 = tree
     c3.flatten(2)
-    assert len(c3.elements) == 2
-    for i in range(2):
-        assert c3.elements[i].datatypes == [0] * 6 or c3.elements[i].datatypes == [1] * 6
-        assert c3.elements[i].layers == [2] * 6
+    assert len(c3.polygons) == 12
+    for i in range(12):
+        assert c3.polygons[i].datatypes == [0] or c3.polygons[i].datatypes == [1]
+        assert c3.polygons[i].layers == [2]
     assert len(c3.labels) == 12
     assert all(lbl.layer == 2 for lbl in c3.labels)
 
@@ -157,9 +157,9 @@ def test_flatten_10(tree):
 def test_flatten_11(tree):
     c3, c2, c1 = tree
     c3.flatten(2, 3, 4)
-    assert len(c3.elements) == 1
-    assert c3.elements[0].layers == [2] * 12
-    assert c3.elements[0].datatypes == [3] * 12
+    assert len(c3.polygons) == 12
+    assert all(p.layers == [2] for p in c3.polygons)
+    assert all(p.datatypes == [3] for p in c3.polygons)
     assert len(c3.labels) == 12
     assert all(lbl.layer == 2 for lbl in c3.labels)
     assert all(lbl.texttype == 4 for lbl in c3.labels)
