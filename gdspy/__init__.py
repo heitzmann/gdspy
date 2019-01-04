@@ -375,6 +375,26 @@ def _cross(p0, v0, p1, v1):
     return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
 
 
+def _miter(p0, v0, p1, v1, w):
+    _, _, p = _cross(p0, v0, p1, v1)
+    return [p]
+
+def _bevel(p0, v0, p1, v1, w):
+    u0, u1, p = _cross(p0, v0, p1, v1)
+    if u0 <= 0 and u1 >= 0:
+        return [p]
+    return [p0, p1]
+
+def _natural(p0, v0, p1, v1, w):
+    v0 = v0 * (0.5 * w / numpy.sqrt(numpy.sum(v0**2)))
+    v1 = v1 * (0.5 * w / numpy.sqrt(numpy.sum(v1**2)))
+    u0, u1, p = _cross(p0, v0, p1, v1)
+    if u0 < 0 and u1 > 0:
+        return [p]
+    if u0 <= 1 and u1 >= -1:
+        return [0.5 * (p0 + min(1, u0) * v0 +  p1 + max(-1, u1) * v1)]
+    return [p0 + min(1, u0) * v0, p1 + max(-1, u1) * v1]
+
 def _func_const(c, nargs=1):
     if nargs == 1:
         return lambda u: c
@@ -485,13 +505,13 @@ def _gather_polys(args):
         return []
     if isinstance(args, PolygonSet):
         return [p for p in args.polygons]
-    if isinstance(args, LazyPath) or isinstance(args, CellReference) or isinstance(args, CellArray):
+    if isinstance(args, LazyPath) or isinstance(args, SimplePath) or isinstance(args, CellReference) or isinstance(args, CellArray):
         return args.get_polygons()
     polys = []
     for p in args:
         if isinstance(p, PolygonSet):
             polys.extend(p.polygons)
-        elif isinstance(p, LazyPath) or isinstance(p, CellReference) or isinstance(p, CellArray):
+        elif isinstance(p, LazyPath) or isinstance(args, SimplePath) or isinstance(p, CellReference) or isinstance(p, CellArray):
             polys.extend(p.get_polygons())
         else:
             polys.append(p)
@@ -2467,7 +2487,426 @@ class _SubPath:
 
 
 class SimplePath(object):
-    pass
+    """
+    Path object.
+
+    This class keeps information about the constructive parameters of
+    the path and calculates its boundaries only upon request.
+
+    It can be stored as a proper path element in the GDSII format,
+    unlike ``Path``.  In this case, the width must be constant along the
+    whole path.
+
+    Parameters
+    ----------
+    points : array-like[N][2]
+        Points along the center of the path.
+    width : number, list
+        Width of each parallel path being created.  The number of
+        parallel paths being created is defined by the length of this
+        list.
+    offset : number, list
+        Offsets of each parallel path from the center.  If ``width`` is
+        not a list, the length of this list is used to determine the
+        number of parallel paths being created.  Otherwise, offset must
+        be a list with the same length as width, or a number, which is
+        used as distance between adjacent paths.
+    corners : 'natural', 'miter', 'bevel', callable, list
+        Type of joins.  A callable must receive 5 arguments (vertex and
+        direction vector from both segments being joined and path width)
+        and return a list of vertices that make the join.  A list can be
+        used to define the join for each parallel path.
+    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], list
+        Type of end caps for the paths.  An array represents the start
+        and end extensions to the paths.  A list can be used to define
+        the end type for each parallel path.
+    max_points : integer
+        If the number of points in the polygonal path boundary is
+        greater than ``max_points``, it will be fractured in smaller
+        polygons with at most ``max_points`` each.
+        If ``max_points = 0`` no fracture will occur.
+    gdsii_path : bool
+        If ``True``, treat this object as a GDSII path element.
+        Otherwise, it will be converted into polygonal boundaries when
+        required.
+    width_transform : bool
+        If ``gdsii_path == True``, this flag indicates whether the width
+        of the path should transform when scaling this object.  It has
+        no effect when ``gdsii_path == False``.
+    layer : integer, list
+        The GDSII layer numbers for the elements of each path.  If the
+        number of layers in the list is less than the number of paths,
+        the list is repeated.
+    datatype : integer, list
+        The GDSII datatype for the elements of each path (between 0 and
+        255).  If the number of datatypes in the list is less than the
+        number of paths, the list is repeated.
+    """
+    __slots__ = ('n', 'ends', 'corners', 'points', 'offsets', 'widths', 'layers', 'datatypes',
+                 'max_points', 'gdsii_path', 'width_transform', '_polygon_dict')
+
+    _corners = {'bevel': _bevel, 'miter': _miter, 'natural': _natural}
+
+    def __init__(self, points, width, offset=0, corners='natural', ends='flush',
+                 max_points=199, gdsii_path=False, width_transform=True, layer=0, datatype=0):
+        self._polygon_dict = None
+        if isinstance(width, list):
+            self.n = len(width)
+            self.widths = width
+            if isinstance(offset, list):
+                self.offsets = offset
+            else:
+                self.offsets = [(i - 0.5 * (self.n - 1)) * offset for i in range(self.n)]
+        else:
+            if isinstance(offset, list):
+                self.n = len(offset)
+                self.offsets = offset
+            else:
+                self.n = 1
+                self.offsets = [offset]
+            self.widths = [width] * self.n
+        self.widths = numpy.tile(self.widths, (len(points), 1))
+        self.offsets = numpy.tile(self.offsets, (len(points), 1))
+        self.points = numpy.array(points)
+        if isinstance(ends, list):
+            if len(ends) == 2 and not (isinstance(ends[0], basestring) or hasattr(ends[0], '__iter__')):
+                self.ends = [ends for _ in range(self.n)]
+            else:
+                self.ends = [ends[i % len(ends)] for i in range(self.n)]
+        else:
+            self.ends = [ends for _ in range(self.n)]
+        if isinstance(corners, list):
+            self.corners = [SimplePath._corners.get(corners[i % len(corners)], corners[i % len(corners)])
+                            for i in range(self.n)]
+        else:
+            self.corners = [SimplePath._corners.get(corners, corners) for _ in range(self.n)]
+        if isinstance(layer, list):
+            self.layers = [layer[i % len(layer)] for i in range(self.n)]
+        else:
+            self.layers = [layer] * self.n
+        if isinstance(datatype, list):
+            self.datatypes = [datatype[i % len(datatype)] for i in range(self.n)]
+        else:
+            self.datatypes = [datatype] * self.n
+        self.max_points = max_points
+        self.gdsii_path = gdsii_path
+        self.width_transform = width_transform
+        if self.gdsii_path:
+            if any(end == 'smooth' for end in self.ends):
+                warnings.warn("[GDSPY] Smooth end caps not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
+            if any(corner != _natural for corner in self.corners):
+                warnings.warn("[GDSPY] Corner specification not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
+
+    def __str__(self):
+        if self.n > 1:
+            return "SimplePath (x{}, {} segments, layers {}, datatypes {})".format(self.n, self.points.shape[0], self.layers, self.datatypes)
+        else:
+            return "SimplePath ({} segments, layer {}, datatype {})".format(self.points.shape[0], self.layers[0], self.datatypes[0])
+
+    def get_polygons(self, by_spec=False):
+        """
+        Calculate the polygonal boundaries described by this path.
+
+        Parameters
+        ----------
+        by_spec : bool
+            If ``True``, the return value is a dictionary with the
+            polygons of each individual pair (layer, datatype).
+
+        Returns
+        -------
+        out : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary with the list of polygons (if
+            ``by_spec`` is ``True``).
+        """
+        if self._polygon_dict is None:
+            self._polygon_dict = {}
+            inv = numpy.array((-1, 1))
+            un = numpy.roll(self.points, -1, 0) - self.points
+            un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
+            for ii in range(self.n):
+                corner = self.corners[ii]
+                off = self.offsets[:, ii]
+                wid = self.widths[:, ii]
+                poly = []
+                for arm in [-1, 1]:
+                    i = 0 if arm == -1 else self.points.shape[0] - 1
+                    j = 1 if arm == -1 else self.points.shape[0] - 2
+                    p0 = self.points[i] + un[i] * off[i]
+                    p1 = self.points[j] + un[i] * off[i]
+                    vn = p1 - p0
+                    vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
+                    if self.ends[ii] == 'flush':
+                        poly.extend([p0 - vn * 0.5 * wid[i], p0 + vn * 0.5 * wid[i]])
+                    else:
+                        FAIL
+                        i = 0 if arm == 1 else -1
+                        u = abs(i)
+                        if self.ends[ii] == 'smooth':
+                            v1 = -arm * path[i].grad(u, -arm)
+                            v2 = arm * path[i].grad(u, arm)
+                            angles = [numpy.arctan2(v1[1], v1[0]), numpy.arctan2(v2[1], v2[0])]
+                            points = numpy.array([path[i](u, -arm), path[i](u, arm)])
+                            cta, ctb = _hobby(points, angles)
+                            f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
+                                           _func_const(0), self.tolerance, self.max_evals)
+                            poly.extend(bez.points(0, 1, 0))
+                        else:
+                            p = path[i](u, 0)
+                            v = -arm * path[i].grad(u, 0)
+                            r = 0.5 * path[i].wid(u)
+                            if self.ends[ii] == 'round':
+                                np = int(numpy.pi * r / self.tolerance + 0.5) + 2
+                                ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
+                                endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
+                                poly.extend(endpts)
+                            else:
+                                v /= numpy.sqrt(numpy.sum(v**2))
+                                w = v[::-1] * numpy.array((1, -1))
+                                d = r if self.ends[ii] == 'extended' else self.ends[ii][u]
+                                poly.append(p + d * v + r * w)
+                                poly.append(p + d * v - r * w)
+
+                    sa = self.points[j + arm] + un[j + arm] * off[j + arm]
+                    sb = self.points[j] + un[j + arm] * off[j]
+                    vn = sb - sa
+                    vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
+                    pa = sa + vn * 0.5 * wid[j + arm]
+                    p0 = sb + vn * 0.5 * wid[j]
+                    for jj in range(1, self.points.shape[0] - 1):
+                        j = jj if arm == -1 else self.points.shape[0] - 1 - jj
+                        sa = self.points[j] + un[j] * off[j]
+                        sb = self.points[j - arm] + un[j] * off[j + 1]
+                        vn = sb - sa
+                        vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
+                        p1 = sa + vn * 0.5 * wid[j]
+                        pb = sb + vn * 0.5 * wid[j + 1]
+                        poly.extend(corner(p0, p0 - pa, p1, pb - p1, wid[j]))
+                        pa = p1
+                        p0 = pb
+                poly = numpy.array(poly)
+                key = (self.layers[ii], self.datatypes[ii])
+                if key in self._polygon_dict:
+                    self._polygon_dict[key].append(poly)
+                else:
+                    self._polygon_dict[key] = [poly]
+        if by_spec:
+            return libcopy.deepcopy(self._polygon_dict)
+        else:
+            return list(itertools.chain.from_iterable(self._polygon_dict.values()))
+
+    def to_polygonset(self):
+        """
+        Create a ``PolygonSet`` representation of this object.
+
+        The resulting object will be fractured according to the
+        parameter ``max_points`` used when instantiating this object.
+
+        Returns
+        -------
+        out : ``PolygonSet`` or ``None``
+            A ``PolygonSet`` that contains all boundaries for this path.
+            If the path is empty, returns ``None``.
+        """
+        if self.points.shape[0] < 2:
+            return None
+        pol = PolygonSet(self.get_polygons(), 0, 0)
+        pol.layers = list(self.layers)
+        pol.datatypes = list(self.datatypes)
+        return pol.fracture(self.max_points, self.precision)
+
+    def to_gds(self, multiplier):
+        """
+        Convert this object to a series of GDSII elements.
+
+        If ``SimplePath.gdsii_path`` is true, GDSII path elements are
+        created instead of boundaries.  Such paths do not support
+        variable widths, but their memeory footprint is smaller than
+        full polygonal boundaries.
+
+        Parameters
+        ----------
+        multiplier : number
+            A number that multiplies all dimensions written in the GDSII
+            elements.
+
+        Returns
+        -------
+        out : string
+            The GDSII binary string that represents this object.
+        """
+        FAIL
+        if len(self.paths[0]) == 0:
+            return b''
+        if self.gdsii_path:
+            sign = 1 if self.width_transform else -1
+        else:
+            return self.to_polygonset().to_gds(multiplier)
+        pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
+        data = []
+        for ii in range(self.n):
+            pathtype = pathtype_dict.get(self.ends[ii], 4)
+            data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
+                                    6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
+                                    8, 0x0F03, sign * int(round(self.widths[ii] * multiplier))))
+            if pathtype == 4:
+                data.append(struct.pack('>2Hl2Hl', 8, 0x3003, int(round(self.ends[ii][0] * multiplier)),
+                                        8, 0x3103, int(round(self.ends[ii][1] * multiplier))))
+            points = []
+            for path in self.paths[ii]:
+                new_points = numpy.round(numpy.array(path.points(0, 1, 0)) * multiplier)
+                if len(points) > 0 and new_points[0, 0] == points[-1][-1, 0] and new_points[0, 1] == points[-1][-1, 1]:
+                    points.append(new_points[1:])
+                else:
+                    points.append(new_points)
+            points = numpy.vstack(points).astype('>i4')
+            if points.shape[0] > 8191:
+                warnings.warn("[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.", stacklevel=4)
+                i0 = 0
+                while i0 < points.shape[0]:
+                    i1 = min(i0 + 8191, xy.shape[0])
+                    data.append(struct.pack('>2H', 4 + 8 * (i1 - i0), 0x1003))
+                    data.append(xy[i0:i1].tostring())
+                    i0 = i1
+            else:
+                data.append(struct.pack('>2H', 4 + 8 * points.shape[0], 0x1003))
+                data.append(points.tostring())
+            data.append(struct.pack('>2H', 4, 0x1100))
+        return b''.join(data)
+
+    def area(self, by_spec=False):
+        """
+        Calculate the total area of this object.
+
+        This functions creates a ``PolgonSet`` from this object and
+        calculates its area, which means it is computationally
+        expensive.
+
+        Parameters
+        ----------
+        by_spec : bool
+            If ``True``, the return value is a dictionary with
+            ``{(layer, datatype): area}``.
+
+        Returns
+        -------
+        out : number, dictionary
+            Area of this object.
+        """
+        return self.to_polygonset().area(by_spec)
+
+    def translate(self, dx, dy):
+        """
+        Translate this path.
+
+        Parameters
+        ----------
+        dx : number
+            Distance to move in the x-direction
+        dy : number
+            Distance to move in the y-direction
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        self.points = self.points + numpy.array((dx, dy))
+
+    def rotate(self, angle, center=(0, 0)):
+        """
+        Rotate this path.
+
+        Parameters
+        ----------
+        angle : number
+            The angle of rotation (in *radians*).
+        center : array-like[2]
+            Center point for the rotation.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        ca = numpy.cos(angle)
+        sa = numpy.sin(angle)
+        sa = numpy.array((-sa, sa))
+        c0 = numpy.array(center)
+        x = self.points - c0
+        self.points = x * ca + x[:, ::-1] * sa + c0
+        return self
+
+    def scale(self, scale, center=(0, 0)):
+        """
+        Scale this path.
+
+        Parameters
+        ----------
+        scale : number
+            Scaling factor.
+            ``scalex``.
+        center : array-like[2]
+            Center point for the scaling operation.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        c0 = numpy.array(center) * (1 - scale)
+        self.points = self.points * scale + c0
+        self.widths = self.widths * scale
+        self.offsets = self.offsets * scale
+        return self
+
+    def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
+        """
+        Apply a transform to this path.
+
+        Parameters
+        ----------
+        translation : Numpy array[2]
+            Translation vector.
+        rotation : number
+            Rotation angle.
+        scale : number
+            Scaling factor.
+        x_reflection : bool
+            Reflection around the first axis.
+        array_trans : Numpy aray[2]
+            Translation vector before rotation and reflection.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+
+        Notes
+        -----
+        Applies the transformations in the same order as a
+        ``CellReference`` or a ``CellArray``.
+        If ``width_transform == False``, the widths are not scaled.
+        """
+        self._polygon_dict = None
+        FAIL
+        for ii in range(self.n):
+            for sub in self.paths[ii]:
+                sub.x = _func_trafo(sub.x, translation, rotation, scale, x_reflection, array_trans)
+                sub.dx = _func_trafo(sub.dx, None, rotation, scale, x_reflection, None, nargs=2)
+                if self.width_transform:
+                    sub.wid = _func_multadd(sub.wid, scale, None)
+                sub.off = _func_multadd(sub.off, scale, None)
+            self.x[ii] = self.paths[-1].x(1)
+            self.widths[ii] = self.paths[-1].wid(1)
+            self.offsets[ii] = self.offsets[-1].off(1)
+        return self
+
 
 
 class LazyPath(object):
@@ -2476,10 +2915,10 @@ class LazyPath(object):
 
     This class keeps information about the constructive parameters of
     the path and calculates its boundaries only upon request.  The
-    benefits are that joins path components can be calculated
+    benefits are that joins and path components can be calculated
     automatically to ensure continuity (except in extreme cases).
 
-    It can also be stored as a proper path element in the GDSII format,
+    It can be stored as a proper path element in the GDSII format,
     unlike ``Path``.  In this case, the width must be constant along the
     whole path.
 
@@ -2488,12 +2927,12 @@ class LazyPath(object):
 
     Parameters
     ----------
+    initial_point : array-like[2]
+        Starting position of the path.
     width : number, list
         Width of each parallel path being created.  The number of
         parallel paths being created is defined by the length of this
         list.
-    initial_point : array-like[2]
-        Starting position of the path.
     offset : number, list
         Offsets of each parallel path from the center.  If ``width`` is
         not a list, the length of this list is used to determine the
@@ -2543,7 +2982,7 @@ class LazyPath(object):
     __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes', 'tolerance',
                  'precision', 'max_points', 'max_evals', 'gdsii_path', 'width_transform', '_polygon_dict')
 
-    def __init__(self, width, initial_point=(0, 0), offset=0, ends='flush', tolerance=0.01, precision=1e-3,
+    def __init__(self, initial_point, width, offset=0, ends='flush', tolerance=0.01, precision=1e-3,
                  max_points=199, max_evals=1000, gdsii_path=False, width_transform=True, layer=0, datatype=0):
         self._polygon_dict = None
         if isinstance(width, list):
@@ -2712,7 +3151,7 @@ class LazyPath(object):
                             f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
                             bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
                                            _func_const(0), self.tolerance, self.max_evals)
-                            poly.extend(bez.points(0, 1, 0))
+                            poly.extend(bez.points(0, 1, 0)[1:-1])
                         else:
                             p = path[i](u, 0)
                             v = -arm * path[i].grad(u, 0)
@@ -3560,7 +3999,7 @@ class Cell(object):
         The name of this cell.
     polygons : list of ``PolygonSet``
         List of cell polygons.
-    paths : list of ``LazyPath``
+    paths : list of ``LazyPath`` or ``SimplePath``
         List of cell paths.
     labels : list of ``Label``
         List of cell labels.
@@ -3668,7 +4107,7 @@ class Cell(object):
         """
         if isinstance(element, PolygonSet):
             self.polygons.append(element)
-        elif isinstance(element, LazyPath):
+        elif isinstance(element, LazyPath) or isinstance(element, SimplePath):
             self.paths.append(element)
         elif isinstance(element, Label):
             self.labels.append(element)
@@ -3678,14 +4117,14 @@ class Cell(object):
             for e in element:
                 if isinstance(e, PolygonSet):
                     self.polygons.append(e)
-                elif isinstance(e, LazyPath):
+                elif isinstance(e, LazyPath) or isinstance(element, SimplePath):
                     self.paths.append(e)
                 elif isinstance(e, Label):
                     self.labels.append(e)
                 elif isinstance(e, CellReference) or isinstance(e, CellArray):
                     self.references.append(e)
                 else:
-                    raise ValueError("[GDSPY] Only instances of `PolygonSet`, `LazyPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`.")
+                    raise ValueError("[GDSPY] Only instances of `PolygonSet`, `SimplePath`, `LazyPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`.")
         self._bb_valid = False
         return self
 
@@ -3741,9 +4180,9 @@ class Cell(object):
         """
         Remove paths from this cell.
 
-        The function or callable ``test`` is called for each LazyPath in
-        the cell.  If its return value evaluates to ``True``, the
-        corresponding label is removed from the cell.
+        The function or callable ``test`` is called for each SimplePath
+        or LazyPath in the cell.  If its return value evaluates to
+        ``True``, the corresponding label is removed from the cell.
 
         Parameters
         ----------
@@ -3922,8 +4361,8 @@ class Cell(object):
 
         Note
         ----
-        Instances of ``LazyPath`` are also included in the result by
-        computing their polygonal boundary.
+        Instances of ``SimplePath`` and ``LazyPath`` are also included
+        in the result by computing their polygonal boundary.
         """
         if depth is not None and depth < 0:
             bb = self.get_bounding_box()
@@ -4003,7 +4442,7 @@ class Cell(object):
 
     def get_paths(self, depth=None):
         """
-        Return a list with a copy of the ``LazyPath`` in this cell.
+        Return a list with a copy of the paths in this cell.
 
         Parameters
         ----------
@@ -4013,7 +4452,7 @@ class Cell(object):
 
         Returns
         -------
-        out : list of ``LazyPath``
+        out : list of ``SimplePath`` or ``LazyPath``
             List containing the paths in this cell and its references.
         """
         paths = libcopy.deepcopy(self.paths)
@@ -4266,8 +4705,8 @@ class CellReference(object):
 
         Note
         ----
-        Instances of ``LazyPath`` are also included in the result by
-        computing their polygonal boundary.
+        Instances of ``SimplePath`` and ``LazyPath`` are also included
+        in the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -4349,7 +4788,7 @@ class CellReference(object):
 
     def get_paths(self, depth=None):
         """
-        Return the list of ``LazyPath`` created by this reference.
+        Return the list of paths created by this reference.
 
         Parameters
         ----------
@@ -4359,7 +4798,7 @@ class CellReference(object):
 
         Returns
         -------
-        out : list of ``LazyPath``
+        out : list of ``SimplePath`` or ``LazyPath``
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -4636,8 +5075,8 @@ class CellArray(object):
 
         Note
         ----
-        Instances of ``LazyPath`` are also included in the result by
-        computing their polygonal boundary.
+        Instances of ``SimplePath`` and ``LazyPath`` are also included
+        in the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -4740,7 +5179,7 @@ class CellArray(object):
 
     def get_paths(self, depth=None):
         """
-        Return the list of ``LazyPath`` created by this reference.
+        Return the list of paths created by this reference.
 
         Parameters
         ----------
@@ -4750,7 +5189,7 @@ class CellArray(object):
 
         Returns
         -------
-        out : list of ``LazyPath``
+        out : list of ``SimplePath`` or ``LazyPath``
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
