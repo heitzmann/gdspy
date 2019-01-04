@@ -375,26 +375,6 @@ def _cross(p0, v0, p1, v1):
     return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
 
 
-def _miter(p0, v0, p1, v1, w):
-    _, _, p = _cross(p0, v0, p1, v1)
-    return [p]
-
-def _bevel(p0, v0, p1, v1, w):
-    u0, u1, p = _cross(p0, v0, p1, v1)
-    if u0 <= 0 and u1 >= 0:
-        return [p]
-    return [p0, p1]
-
-def _natural(p0, v0, p1, v1, w):
-    v0 = v0 * (0.5 * w / numpy.sqrt(numpy.sum(v0**2)))
-    v1 = v1 * (0.5 * w / numpy.sqrt(numpy.sum(v1**2)))
-    u0, u1, p = _cross(p0, v0, p1, v1)
-    if u0 < 0 and u1 > 0:
-        return [p]
-    if u0 <= 1 and u1 >= -1:
-        return [0.5 * (p0 + min(1, u0) * v0 +  p1 + max(-1, u1) * v1)]
-    return [p0 + min(1, u0) * v0, p1 + max(-1, u1) * v1]
-
 def _func_const(c, nargs=1):
     if nargs == 1:
         return lambda u: c
@@ -2545,8 +2525,6 @@ class SimplePath(object):
     __slots__ = ('n', 'ends', 'corners', 'points', 'offsets', 'widths', 'layers', 'datatypes',
                  'max_points', 'gdsii_path', 'width_transform', '_polygon_dict')
 
-    _corners = {'bevel': _bevel, 'miter': _miter, 'natural': _natural}
-
     def __init__(self, points, width, offset=0, corners='natural', ends='flush',
                  max_points=199, gdsii_path=False, width_transform=True, layer=0, datatype=0):
         self._polygon_dict = None
@@ -2576,10 +2554,9 @@ class SimplePath(object):
         else:
             self.ends = [ends for _ in range(self.n)]
         if isinstance(corners, list):
-            self.corners = [SimplePath._corners.get(corners[i % len(corners)], corners[i % len(corners)])
-                            for i in range(self.n)]
+            self.corners = [corners[i % len(corners)] for i in range(self.n)]
         else:
-            self.corners = [SimplePath._corners.get(corners, corners) for _ in range(self.n)]
+            self.corners = [corners for _ in range(self.n)]
         if isinstance(layer, list):
             self.layers = [layer[i % len(layer)] for i in range(self.n)]
         else:
@@ -2594,7 +2571,7 @@ class SimplePath(object):
         if self.gdsii_path:
             if any(end == 'smooth' for end in self.ends):
                 warnings.warn("[GDSPY] Smooth end caps not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
-            if any(corner != _natural for corner in self.corners):
+            if any(corner != 'natural' for corner in self.corners):
                 warnings.warn("[GDSPY] Corner specification not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
@@ -2620,74 +2597,58 @@ class SimplePath(object):
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
         """
+        #TODO: Calculate new spine for each offset instead of offseting individual segments
         if self._polygon_dict is None:
             self._polygon_dict = {}
             inv = numpy.array((-1, 1))
-            un = numpy.roll(self.points, -1, 0) - self.points
+            un = self.points[1:] - self.points[:-1]
             un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
-            for ii in range(self.n):
-                corner = self.corners[ii]
-                off = self.offsets[:, ii]
-                wid = self.widths[:, ii]
-                poly = []
-                for arm in [-1, 1]:
-                    i = 0 if arm == -1 else self.points.shape[0] - 1
-                    j = 1 if arm == -1 else self.points.shape[0] - 2
-                    p0 = self.points[i] + un[i] * off[i]
-                    p1 = self.points[j] + un[i] * off[i]
-                    vn = p1 - p0
-                    vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
-                    if self.ends[ii] == 'flush':
-                        poly.extend([p0 - vn * 0.5 * wid[i], p0 + vn * 0.5 * wid[i]])
+            for kk in range(self.n):
+                corner = self.corners[kk]
+                sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
+                sb = self.points[1:] + un * self.offsets[1:, kk:kk + 1]
+                vn = sb - sa
+                vn = vn[:, ::-1] * inv / numpy.sqrt(numpy.sum(vn**2, 1)).reshape((vn.shape[0], 1))
+                arms = [[], []]
+                for ii in (0, 1):
+                    sign = -1 if ii == 0 else 1
+                    pa = sa + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
+                    pb = sb + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
+                    vec = pb - pa
+                    for jj in range(1, self.points.shape[0] - 1):
+                        p0 = pb[jj - 1]
+                        v0 = vec[jj - 1]
+                        p1 = pa[jj]
+                        v1 = vec[jj]
+                        if corner == 'natural':
+                            v0 = v0 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v0**2)))
+                            v1 = v1 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v1**2)))
+                            u0, u1, p = _cross(p0, v0, p1, v1)
+                            if u0 < 0 and u1 > 0:
+                                arms[ii].append(p)
+                            elif u0 <= 1 and u1 >= -1:
+                                arms[ii].append(0.5 * (p0 + min(1, u0) * v0 + p1 + max(-1, u1) * v1))
+                            else:
+                                arms[ii].append(p0 + min(1, u0) * v0)
+                                arms[ii].append(p1 + max(-1, u1) * v1)
+                        elif corner == 'miter':
+                            arms[ii].append(_cross(p0, v0, p1, v1)[2])
+                        elif corner == 'bevel':
+                            u0, u1, p = _cross(p0, v0, p1, v1)
+                            if u0 <= 0 and u1 >= 0:
+                                arms[ii].append(p)
+                            else:
+                                arms[ii].append(p0)
+                                arms[ii].append(p1)
+                        else:
+                            arms[ii].extend(corner(p0, v0, p1, v1, self.widths[jj, kk]))
+                    if self.ends[kk] == 'flush':
+                        arms[ii].insert(0, pa[0])
+                        arms[ii].append(pb[-1])
                     else:
                         FAIL
-                        i = 0 if arm == 1 else -1
-                        u = abs(i)
-                        if self.ends[ii] == 'smooth':
-                            v1 = -arm * path[i].grad(u, -arm)
-                            v2 = arm * path[i].grad(u, arm)
-                            angles = [numpy.arctan2(v1[1], v1[0]), numpy.arctan2(v2[1], v2[0])]
-                            points = numpy.array([path[i](u, -arm), path[i](u, arm)])
-                            cta, ctb = _hobby(points, angles)
-                            f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
-                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
-                                           _func_const(0), self.tolerance, self.max_evals)
-                            poly.extend(bez.points(0, 1, 0))
-                        else:
-                            p = path[i](u, 0)
-                            v = -arm * path[i].grad(u, 0)
-                            r = 0.5 * path[i].wid(u)
-                            if self.ends[ii] == 'round':
-                                np = int(numpy.pi * r / self.tolerance + 0.5) + 2
-                                ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
-                                endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
-                                poly.extend(endpts)
-                            else:
-                                v /= numpy.sqrt(numpy.sum(v**2))
-                                w = v[::-1] * numpy.array((1, -1))
-                                d = r if self.ends[ii] == 'extended' else self.ends[ii][u]
-                                poly.append(p + d * v + r * w)
-                                poly.append(p + d * v - r * w)
-
-                    sa = self.points[j + arm] + un[j + arm] * off[j + arm]
-                    sb = self.points[j] + un[j + arm] * off[j]
-                    vn = sb - sa
-                    vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
-                    pa = sa + vn * 0.5 * wid[j + arm]
-                    p0 = sb + vn * 0.5 * wid[j]
-                    for jj in range(1, self.points.shape[0] - 1):
-                        j = jj if arm == -1 else self.points.shape[0] - 1 - jj
-                        sa = self.points[j] + un[j] * off[j]
-                        sb = self.points[j - arm] + un[j] * off[j + 1]
-                        vn = sb - sa
-                        vn = vn[::-1] * inv / numpy.sqrt(numpy.sum(vn**2))
-                        p1 = sa + vn * 0.5 * wid[j]
-                        pb = sb + vn * 0.5 * wid[j + 1]
-                        poly.extend(corner(p0, p0 - pa, p1, pb - p1, wid[j]))
-                        pa = p1
-                        p0 = pb
-                poly = numpy.array(poly)
-                key = (self.layers[ii], self.datatypes[ii])
+                poly = numpy.array(arms[0] + arms[1][::-1])
+                key = (self.layers[kk], self.datatypes[kk])
                 if key in self._polygon_dict:
                     self._polygon_dict[key].append(poly)
                 else:
