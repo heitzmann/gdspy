@@ -2597,7 +2597,6 @@ class SimplePath(object):
             polygon, or dictionary with the list of polygons (if
             ``by_spec`` is ``True``).
         """
-        #TODO: Calculate new spine for each offset instead of offseting individual segments
         if self._polygon_dict is None:
             self._polygon_dict = {}
             inv = numpy.array((-1, 1))
@@ -2605,15 +2604,31 @@ class SimplePath(object):
             un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
             for kk in range(self.n):
                 corner = self.corners[kk]
-                sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
-                sb = self.points[1:] + un * self.offsets[1:, kk:kk + 1]
-                vn = sb - sa
+                if any(self.offsets[:, kk] != 0):
+                    pts = numpy.zeros(self.points.shape)
+                    sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
+                    sb = self.points[1:] + un * self.offsets[1:, kk:kk + 1]
+                    vn = sb - sa
+                    den = vn[1:, 0] * vn[:-1, 1] - vn[1:, 1] * vn[:-1, 0]
+                    idx = numpy.nonzero(den**2 < 1e-12 * numpy.sum(vn[1:]**2, 1) * numpy.sum(vn[:-1]**2, 1))[0]
+                    if len(idx) > 0:
+                        den[idx] = 1
+                    u0 = (vn[1:, 1] * (sb[:-1, 0] - sa[1:, 0])
+                          - vn[1:, 0] * (sb[:-1, 1] - sa[1:, 1])) / den
+                    pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
+                    if len(idx) > 0:
+                        pts[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
+                    pts[0] = sa[0]
+                    pts[-1] = sb[-1]
+                else:
+                    pts = self.points
+                vn = pts[1:] - pts[:-1]
                 vn = vn[:, ::-1] * inv / numpy.sqrt(numpy.sum(vn**2, 1)).reshape((vn.shape[0], 1))
                 arms = [[], []]
                 for ii in (0, 1):
                     sign = -1 if ii == 0 else 1
-                    pa = sa + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
-                    pb = sb + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
+                    pa = pts[:-1] + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
+                    pb = pts[1:] + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
                     vec = pb - pa
                     for jj in range(1, self.points.shape[0] - 1):
                         p0 = pb[jj - 1]
