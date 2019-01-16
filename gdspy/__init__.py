@@ -804,7 +804,7 @@ class Round(PolygonSet):
 
         if number_of_points is None:
             full_angle = 2 * numpy.pi if final_angle == initial_angle else abs(final_angle - initial_angle)
-            number_of_points = max(3, int(0.5 * full_angle / numpy.arccos(1 - tolerance / radius) + 0.5))
+            number_of_points = max(3, 1 + int(0.5 * full_angle / numpy.arccos(1 - tolerance / radius) + 0.5))
             if inner_radius > 0:
                 number_of_points *= 2
 
@@ -1264,7 +1264,7 @@ class Path(PolygonSet):
             number_of_points = None
         if number_of_points is None:
             r = radius + max(old_distance, self.distance) * (self.n - 1) * 0.5 + max(old_w, self.w)
-            number_of_points = max(6, 2 * int(0.5 * abs(final_angle - initial_angle) / numpy.arccos(1 - tolerance / r) + 0.5))
+            number_of_points = max(6, 2 + 2 * int(0.5 * abs(final_angle - initial_angle) / numpy.arccos(1 - tolerance / r) + 0.5))
         pieces = 1 if max_points == 0 else int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         widths = numpy.linspace(old_w, self.w, pieces + 1)
