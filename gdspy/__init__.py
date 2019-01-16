@@ -322,41 +322,9 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
     return (numpy.vstack((cta.real, cta.imag)).transpose(), numpy.vstack((ctb.real, ctb.imag)).transpose())
 
 
-def _intersect_curves(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
-    """
-    Find intesection between curves f0 and f1 around f0(u0) and f1(u1).
-
-    Returns
-    out : 2-tuple of float
-        The intersection point is f0(out[0]) = f1(out[1]).
-    """
-    tol = tolerance**2
-    delta = f0(u0) - f1(u1)
-    err = numpy.sum(delta**2)
-    iters = 0
-    step = 0.5
-    while err > tol:
-        iters += 1
-        if iters > 100:
-            warnings.warn('[GDSPY] Intersection not found.')
-            break
-        new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * df0(u0))))
-        new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * df1(u1))))
-        new_delta = f0(new_u0) - f1(new_u1)
-        new_err = numpy.sum(new_delta**2)
-        if new_err >= err:
-            step /= 2
-            continue
-        u0 = new_u0
-        u1 = new_u1
-        delta = new_delta
-        err = new_err
-    return u0, u1, 0.5 * (f0(u0) + f1(u1))
-
-
 def _intersect_lines(p0, v0, p1, v1):
     """
-    Crossing between lines
+    Calculate intersection between lines.
 
     The first line is defined by point p0 and direction v0, and the
     second by point p1 and direction d1.
@@ -2683,9 +2651,19 @@ class SimplePath(object):
                                 bezpts = numpy.vstack((p0, p1))
                                 cta, ctb = _hobby(bezpts, angles)
                                 f = _func_bezier(numpy.array([bezpts[0], cta[0], ctb[0], bezpts[1]]))
-                                bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
-                                               _func_const(0), self.tolerance, 1e300)
-                                arms[ii].extend(bez.points(0, 1, 0))
+                                tol = self.tolerance ** 2
+                                uu = [0, 1]
+                                fu = [f(0), f(1)]
+                                iu = 1
+                                while iu < len(fu):
+                                    test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                    test_pt = f(test_u)
+                                    if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
+                                        uu.insert(iu, test_u)
+                                        fu.insert(iu, test_pt)
+                                    else:
+                                        iu += 1
+                                arms[ii].extend(fu)
                 if end != 'flush':
                     for ii in (0, 1):
                         if callable(end):
@@ -2693,14 +2671,24 @@ class SimplePath(object):
                             caps[ii] = end(caps[ii][0], caps[ii][1], vecs[0], vecs[1])
                         elif end == 'smooth':
                             points = numpy.array(caps[ii])
-                            v = vecs[ii]
-                            angles = [numpy.arctan2(v[0][1], v[0][0]),
-                                      numpy.arctan2(v[1][1], v[1][0])]
+                            vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
+                            angles = [numpy.arctan2(vecs[0][1], vecs[0][0]),
+                                      numpy.arctan2(vecs[1][1], vecs[1][0])]
                             cta, ctb = _hobby(points, angles)
                             f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
-                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
-                                           _func_const(0), self.tolerance, 1e300)
-                            caps[ii] = bez.points(0, 1, 0)
+                            tol = self.tolerance ** 2
+                            uu = [0, 1]
+                            fu = [f(0), f(1)]
+                            iu = 1
+                            while iu < len(fu):
+                                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                test_pt = f(test_u)
+                                if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
+                                    uu.insert(iu, test_u)
+                                    fu.insert(iu, test_pt)
+                                else:
+                                    iu += 1
+                            caps[ii] = fu
                         elif end == 'round':
                             v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
                             r = 0.5 * self.widths[-ii, kk]
@@ -3181,9 +3169,19 @@ class LazyPath(object):
                             points = numpy.array([path[i](u, -arm), path[i](u, arm)])
                             cta, ctb = _hobby(points, angles)
                             f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
-                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
-                                           _func_const(0), self.tolerance, self.max_evals)
-                            poly.extend(bez.points(0, 1, 0)[1:-1])
+                            tol = self.tolerance ** 2
+                            uu = [0, 1]
+                            fu = [f(0), f(1)]
+                            iu = 1
+                            while iu < len(fu) < self.max_evals:
+                                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                test_pt = f(test_u)
+                                if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
+                                    uu.insert(iu, test_u)
+                                    fu.insert(iu, test_pt)
+                                else:
+                                    iu += 1
+                            poly.extend(fu[1:-1])
                         else:
                             p = path[i](u, 0)
                             v = -arm * path[i].grad(u, 0)
@@ -3201,25 +3199,36 @@ class LazyPath(object):
                                 poly.append(p + d * v - r * w)
                     path_arm = []
                     start = 0
+                    tol = self.tolerance**2
                     for sub0, sub1 in zip(path[:-1], path[1:]):
-                        #print(sub0)
-                        #print(sub1)
                         p0 = sub0(1, arm)
                         v0 = sub0.grad(1, arm)
                         p1 = sub1(0, arm)
                         v1 = sub1.grad(0, arm)
                         u0, u1, px = _intersect_lines(p0, v0, p1, v1)
-                        #print('  X0', 1 + u0, '=', p0 + u0 * v0)
-                        #print('  X1', u1, '=', p1 + u1 * v1, flush=True)
                         u0 = 1 + u0
                         if u0 < 1 and u1 > 0:
-                            u0, u1, px = _intersect_curves(lambda u: sub0(u, arm),
-                                                           lambda u: sub1(u, arm),
-                                                           lambda u: sub0.grad(u, arm),
-                                                           lambda u: sub1.grad(u, arm),
-                                                           u0, u1, self.tolerance)
-                            #print('  I0', u0, '=', sub0(u0, arm))
-                            #print('  I1', u1, '=', sub1(u1, arm), flush=True)
+                            delta = sub0(u0, arm) - sub1(u1, arm)
+                            err = numpy.sum(delta**2)
+                            iters = 0
+                            step = 0.5
+                            while err > tol:
+                                iters += 1
+                                if iters > self.max_evals:
+                                    warnings.warn('[GDSPY] Intersection not found.')
+                                    break
+                                new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * sub0.grad(u0, arm))))
+                                new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * sub1.grad(u1, arm))))
+                                new_delta = sub0(new_u0, arm) - sub1(new_u1, arm)
+                                new_err = numpy.sum(new_delta**2)
+                                if new_err >= err:
+                                    step /= 2
+                                    continue
+                                u0 = new_u0
+                                u1 = new_u1
+                                delta = new_delta
+                                err = new_err
+                            px = 0.5 * (sub0(u0, arm) + sub1(u1, arm))
                         if u1 >= 0:
                             if u0 <= 1:
                                 path_arm.extend(sub0.points(start, u0, arm)[:-1])
