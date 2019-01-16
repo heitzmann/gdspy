@@ -803,18 +803,11 @@ class Round(PolygonSet):
             number_of_points = None
 
         if number_of_points is None:
-            if inner_radius <= 0:
-                if final_angle == initial_angle:
-                    number_of_points = int(2 * radius * numpy.pi / tolerance + 0.5)
-                else:
-                    number_of_points = int(abs(final_angle - initial_angle) * radius / tolerance + 0.5) + 2
-            else:
-                if final_angle == initial_angle:
-                    number_of_points = 2 * int(2 * radius * numpy.pi / tolerance + 0.5) + 2
-                else:
-                    number_of_points = 2 * int(abs(final_angle - initial_angle) * radius / tolerance + 0.5) + 2
+            full_angle = 2 * numpy.pi if final_angle == initial_angle else abs(final_angle - initial_angle)
+            number_of_points = max(3, int(0.5 * full_angle / numpy.arccos(1 - tolerance / radius) + 0.5))
+            if inner_radius > 0:
+                number_of_points *= 2
 
-        number_of_points = max(number_of_points, 3)
         pieces = 1 if max_points == 0 else int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         self.layers = [layer] * pieces
@@ -1270,9 +1263,8 @@ class Path(PolygonSet):
             tolerance = number_of_points
             number_of_points = None
         if number_of_points is None:
-            number_of_points = 2 * int(abs((final_angle - initial_angle) * (radius + max(old_distance, self.distance)
-                                           * (self.n - 1) * 0.5 + max(old_w, self.w)) / tolerance) + 0.5) + 2
-        number_of_points = max(number_of_points, 3)
+            r = radius + max(old_distance, self.distance) * (self.n - 1) * 0.5 + max(old_w, self.w)
+            number_of_points = max(6, 2 * int(0.5 * abs(final_angle - initial_angle) / numpy.arccos(1 - tolerance / r) + 0.5))
         pieces = 1 if max_points == 0 else int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
         widths = numpy.linspace(old_w, self.w, pieces + 1)
@@ -4212,14 +4204,14 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
         Type of join used to create the offset polygon.
     tolerance : number
         For miter joints, this number must be at least 2 and it
-        represents the maximun distance in multiples of offset betwen
+        represents the maximal distance in multiples of offset between
         new vertices and their original position before beveling to
         avoid spikes at acute joints.  For round joints, it indicates
         the curvature resolution in number of points per full circle.
     precision : float
-        Desired precision for rounding vertice coordinates.
+        Desired precision for rounding vertex coordinates.
     join_first : bool
-        Join all paths before offseting to avoid unecessary joins in
+        Join all paths before offsetting to avoid unnecessary joins in
         adjacent polygon sides.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure

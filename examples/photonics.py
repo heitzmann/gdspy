@@ -179,7 +179,7 @@ if __name__ == '__main__':
     path = gdspy.Path(wg_clad, (0, 0), number_of_paths=2, distance=gr_width + wg_clad)
     path.segment(gr_per * gr_teeth, '+x', **spec)
     taper(path, tp_len, wg_clad, wg_width + wg_clad, **spec)
-    waveguide(path, [800], (tp_len + gr_per * gr_teeth, 200), 50, 0.1, **spec)
+    waveguide(path, [800], (tp_len + gr_per * gr_teeth, 200), 50, **spec)
     taper(path, tp_len, wg_clad, gr_width + wg_clad, **spec)
     c3.add(grating(gr_per, gr_teeth, 0.5, gr_width, (path.x, path.y), path.direction, lda,
                    numpy.sin(numpy.pi * 8 / 180), **spec))
