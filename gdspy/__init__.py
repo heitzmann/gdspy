@@ -2546,8 +2546,8 @@ class SimplePath(object):
         self.gdsii_path = gdsii_path
         self.width_transform = width_transform
         if self.gdsii_path:
-            if any(end == 'smooth' for end in self.ends):
-                warnings.warn("[GDSPY] Smooth end caps not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
+            if any(end == 'smooth' or callable(end) for end in self.ends):
+                warnings.warn("[GDSPY] Smooth and custom end caps are not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
             if any(corner != 'natural' for corner in self.corners):
                 warnings.warn("[GDSPY] Corner specification not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
 
@@ -2757,8 +2757,7 @@ class SimplePath(object):
         out : string
             The GDSII binary string that represents this object.
         """
-        FAIL
-        if len(self.paths[0]) == 0:
+        if len(self.points) == 0:
             return b''
         if self.gdsii_path:
             sign = 1 if self.width_transform else -1
@@ -2766,22 +2765,36 @@ class SimplePath(object):
             return self.to_polygonset().to_gds(multiplier)
         pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
         data = []
+        inv = numpy.array((-1, 1))
+        un = self.points[1:] - self.points[:-1]
+        un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
         for ii in range(self.n):
-            pathtype = pathtype_dict.get(self.ends[ii], 4)
+            pathtype = 0 if callable(self.ends[ii]) else pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
                                     6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
-                                    8, 0x0F03, sign * int(round(self.widths[ii] * multiplier))))
+                                    8, 0x0F03, sign * int(round(self.widths[0, ii] * multiplier))))
             if pathtype == 4:
                 data.append(struct.pack('>2Hl2Hl', 8, 0x3003, int(round(self.ends[ii][0] * multiplier)),
                                         8, 0x3103, int(round(self.ends[ii][1] * multiplier))))
-            points = []
-            for path in self.paths[ii]:
-                new_points = numpy.round(numpy.array(path.points(0, 1, 0)) * multiplier)
-                if len(points) > 0 and new_points[0, 0] == points[-1][-1, 0] and new_points[0, 1] == points[-1][-1, 1]:
-                    points.append(new_points[1:])
-                else:
-                    points.append(new_points)
-            points = numpy.vstack(points).astype('>i4')
+            if any(self.offsets[:, ii] != 0):
+                points = numpy.zeros(self.points.shape)
+                sa = self.points[:-1] + un * self.offsets[:-1, ii:ii + 1]
+                sb = self.points[1:] + un * self.offsets[1:, ii:ii + 1]
+                vn = sb - sa
+                den = vn[1:, 0] * vn[:-1, 1] - vn[1:, 1] * vn[:-1, 0]
+                idx = numpy.nonzero(den**2 < 1e-12 * numpy.sum(vn[1:]**2, 1) * numpy.sum(vn[:-1]**2, 1))[0]
+                if len(idx) > 0:
+                    den[idx] = 1
+                u0 = (vn[1:, 1] * (sb[:-1, 0] - sa[1:, 0])
+                      - vn[1:, 0] * (sb[:-1, 1] - sa[1:, 1])) / den
+                points[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
+                if len(idx) > 0:
+                    points[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
+                points[0] = sa[0]
+                points[-1] = sb[-1]
+            else:
+                points = self.points
+            points = (points * multiplier).astype('>i4')
             if points.shape[0] > 8191:
                 warnings.warn("[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.", stacklevel=4)
                 i0 = 0
