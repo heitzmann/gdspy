@@ -2927,17 +2927,30 @@ class SimplePath(object):
         If ``width_transform == False``, the widths are not scaled.
         """
         self._polygon_dict = None
-        FAIL
-        for ii in range(self.n):
-            for sub in self.paths[ii]:
-                sub.x = _func_trafo(sub.x, translation, rotation, scale, x_reflection, array_trans)
-                sub.dx = _func_trafo(sub.dx, None, rotation, scale, x_reflection, None, nargs=2)
-                if self.width_transform:
-                    sub.wid = _func_multadd(sub.wid, scale, None)
-                sub.off = _func_multadd(sub.off, scale, None)
-            self.x[ii] = self.paths[-1].x(1)
-            self.widths[ii] = self.paths[-1].wid(1)
-            self.offsets[ii] = self.offsets[-1].off(1)
+        if translation is None:
+            translation = numpy.array((0, 0))
+        if array_trans is None:
+            array_trans = numpy.array((0, 0))
+        if rotation is None:
+            cos = 1
+            sin = 0
+        else:
+            cos = numpy.cos(rotation)
+            sin = numpy.sin(rotation)
+        cos = numpy.array((cos, cos))
+        sin = numpy.array((-sin, sin))
+        if scale is not None:
+            cos = cos * scale
+            sin = sin * scale
+            array_trans = array_trans / scale
+            if self.width_transform or not self.gdsii_path:
+                self.widths = self.widths * scale
+            self.offsets = self.offsets * scale
+        if x_reflection:
+            cos[1] = -cos[1]
+            sin[0] = -sin[0]
+        pts = self.points + array_trans
+        self.points = pts * cos + pts[:,::-1] * sin + translation
         return self
 
 
@@ -3484,7 +3497,7 @@ class LazyPath(object):
             for sub in self.paths[ii]:
                 sub.x = _func_trafo(sub.x, translation, rotation, scale, x_reflection, array_trans)
                 sub.dx = _func_trafo(sub.dx, None, rotation, scale, x_reflection, None, nargs=2)
-                if self.width_transform:
+                if self.width_transform or not self.gdsii_path:
                     sub.wid = _func_multadd(sub.wid, scale, None)
                 sub.off = _func_multadd(sub.off, scale, None)
             self.x[ii] = self.paths[-1].x(1)
