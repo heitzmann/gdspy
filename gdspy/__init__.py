@@ -2491,15 +2491,22 @@ class SimplePath(object):
         number of parallel paths being created.  Otherwise, offset must
         be a list with the same length as width, or a number, which is
         used as distance between adjacent paths.
-    corners : 'natural', 'miter', 'bevel', callable, list
+    corners : 'natural', 'miter', 'bevel', 'round', 'smooth', callable, list
         Type of joins.  A callable must receive 5 arguments (vertex and
-        direction vector from both segments being joined and path width)
-        and return a list of vertices that make the join.  A list can be
-        used to define the join for each parallel path.
-    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], list
+        direction vector from both segments being joined and the center
+        of the path) and return a list of vertices that make the join.
+        A list can be used to define the join for each parallel path.
+    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], callable, list
         Type of end caps for the paths.  An array represents the start
-        and end extensions to the paths.  A list can be used to define
-        the end type for each parallel path.
+        and end extensions to the paths.  A callable must receive 4
+        arguments (vertex and direction vectors from both sides of the
+        path and return a list of vertices that make the end cap.  A
+        list can be used to define the end type for each parallel path.
+    tolerance : number
+        Tolerance used to draw the paths and calculate joins.
+    precision : number
+        Precision for rounding the coordinates of vertices when
+        fracturing the final polygonal boundary.
     max_points : integer
         If the number of points in the polygonal path boundary is
         greater than ``max_points``, it will be fractured in smaller
@@ -2521,12 +2528,20 @@ class SimplePath(object):
         The GDSII datatype for the elements of each path (between 0 and
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
+
+    Notes
+    -----
+    The value of ``tolerance`` should not be smaller than ``precision``,
+    otherwise there would be wasted computational effort in calculating
+    the paths.
     """
     __slots__ = ('n', 'ends', 'corners', 'points', 'offsets', 'widths', 'layers', 'datatypes',
-                 'max_points', 'gdsii_path', 'width_transform', '_polygon_dict')
+                 'tolerance', 'precision', 'max_points', 'gdsii_path', 'width_transform',
+                 '_polygon_dict')
 
-    def __init__(self, points, width, offset=0, corners='natural', ends='flush',
-                 max_points=199, gdsii_path=False, width_transform=True, layer=0, datatype=0):
+    def __init__(self, points, width, offset=0, corners='natural', ends='flush', tolerance=0.01,
+                 precision=1e-3, max_points=199, gdsii_path=False, width_transform=True, layer=0,
+                 datatype=0):
         self._polygon_dict = None
         if isinstance(width, list):
             self.n = len(width)
@@ -2565,6 +2580,8 @@ class SimplePath(object):
             self.datatypes = [datatype[i % len(datatype)] for i in range(self.n)]
         else:
             self.datatypes = [datatype] * self.n
+        self.tolerance = tolerance
+        self.precision = precision
         self.max_points = max_points
         self.gdsii_path = gdsii_path
         self.width_transform = width_transform
@@ -2604,6 +2621,7 @@ class SimplePath(object):
             un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
             for kk in range(self.n):
                 corner = self.corners[kk]
+                end = self.ends[kk]
                 if any(self.offsets[:, kk] != 0):
                     pts = numpy.zeros(self.points.shape)
                     sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
@@ -2625,11 +2643,14 @@ class SimplePath(object):
                 vn = pts[1:] - pts[:-1]
                 vn = vn[:, ::-1] * inv / numpy.sqrt(numpy.sum(vn**2, 1)).reshape((vn.shape[0], 1))
                 arms = [[], []]
+                caps = [[], []]
                 for ii in (0, 1):
                     sign = -1 if ii == 0 else 1
                     pa = pts[:-1] + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
                     pb = pts[1:] + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
                     vec = pb - pa
+                    caps[0].append(pa[0])
+                    caps[1].append(pb[-1])
                     for jj in range(1, self.points.shape[0] - 1):
                         p0 = pb[jj - 1]
                         v0 = vec[jj - 1]
@@ -2646,23 +2667,66 @@ class SimplePath(object):
                             else:
                                 arms[ii].append(p0 + min(1, u0) * v0)
                                 arms[ii].append(p1 + max(-1, u1) * v1)
-                        elif corner == 'miter':
-                            arms[ii].append(_cross(p0, v0, p1, v1)[2])
-                        elif corner == 'bevel':
+                        elif callable(corner):
+                            arms[ii].extend(corner(p0, v0, p1, v1, pts[jj]))
+                        else:
                             u0, u1, p = _cross(p0, v0, p1, v1)
-                            if u0 <= 0 and u1 >= 0:
+                            if corner == 'miter':
                                 arms[ii].append(p)
-                            else:
+                            elif u0 <= 0 and u1 >= 0:
+                                arms[ii].append(p)
+                            elif corner == 'bevel':
                                 arms[ii].append(p0)
                                 arms[ii].append(p1)
-                        else:
-                            arms[ii].extend(corner(p0, v0, p1, v1, self.widths[jj, kk]))
-                    if self.ends[kk] == 'flush':
-                        arms[ii].insert(0, pa[0])
-                        arms[ii].append(pb[-1])
-                    else:
-                        FAIL
-                poly = numpy.array(arms[0] + arms[1][::-1])
+                            elif corner == 'round':
+                                a0 = numpy.arctan2(-v0[0], v0[1])
+                                a1 = numpy.arctan2(-v1[0], v1[1])
+                                r = 0.5 * self.widths[jj, kk]
+                                np = int(abs(a1 - a0) * r / self.tolerance + 0.5) + 2
+                                angles = numpy.linspace(a0, a1, np)
+                                arms[ii].extend(pts[jj] + r * numpy.vstack((numpy.cos(angles),
+                                                                            numpy.sin(angles))).T)
+                            elif corner == 'smooth':
+                                angles = [numpy.arctan2(v0[1], v0[0]), numpy.arctan2(v1[1], v1[0])]
+                                bezpts = numpy.vstack((p0, p1))
+                                cta, ctb = _hobby(bezpts, angles)
+                                f = _func_bezier(numpy.array([bezpts[0], cta[0], ctb[0], bezpts[1]]))
+                                bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
+                                               _func_const(0), self.tolerance, 1e300)
+                                arms[ii].extend(bez.points(0, 1, 0))
+                if end != 'flush':
+                    for ii in (0, 1):
+                        if callable(end):
+                            vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
+                            caps[ii] = end(caps[ii][0], caps[ii][1], vecs[0], vecs[1])
+                        elif end == 'smooth':
+                            points = numpy.array(caps[ii])
+                            v = vecs[ii]
+                            angles = [numpy.arctan2(v[0][1], v[0][0]),
+                                      numpy.arctan2(v[1][1], v[1][0])]
+                            cta, ctb = _hobby(points, angles)
+                            f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                            bez = _SubPath(f, _func_const(numpy.array((1, 0)), 2), _func_const(0),
+                                           _func_const(0), self.tolerance, 1e300)
+                            caps[ii] = bez.points(0, 1, 0)
+                        elif end == 'round':
+                            v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
+                            r = 0.5 * self.widths[-ii, kk]
+                            np = max(2, int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                            ang = (2 * ii - 1) * numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(v[1], v[0])
+                            caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
+                        else: # 'extended'/list
+                            v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
+                            v /= numpy.sqrt(numpy.sum(v**2))
+                            w = (2 * ii - 1) * v[::-1] * numpy.array((1, -1))
+                            r = 0.5 * self.widths[-ii, kk]
+                            d = r if end == 'extended' else end[ii]
+                            caps[ii] = [pts[-ii] + d * v + r * w, pts[-ii] + d * v - r * w]
+                poly = caps[0][::-1]
+                poly.extend(arms[0])
+                poly.extend(caps[1])
+                poly.extend(arms[1][::-1])
+                poly = numpy.array(poly)
                 key = (self.layers[kk], self.datatypes[kk])
                 if key in self._polygon_dict:
                     self._polygon_dict[key].append(poly)
