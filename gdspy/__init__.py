@@ -322,7 +322,7 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
     return (numpy.vstack((cta.real, cta.imag)).transpose(), numpy.vstack((ctb.real, ctb.imag)).transpose())
 
 
-def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
+def _intersect_curves(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
     """
     Find intesection between curves f0 and f1 around f0(u0) and f1(u1).
 
@@ -354,7 +354,7 @@ def _intersect(f0, f1, df0, df1, u0, u1, tolerance=1e-3):
     return u0, u1, 0.5 * (f0(u0) + f1(u1))
 
 
-def _cross(p0, v0, p1, v1):
+def _intersect_lines(p0, v0, p1, v1):
     """
     Crossing between lines
 
@@ -2651,7 +2651,7 @@ class SimplePath(object):
                         if corner == 'natural':
                             v0 = v0 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v0**2)))
                             v1 = v1 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v1**2)))
-                            u0, u1, p = _cross(p0, v0, p1, v1)
+                            u0, u1, p = _intersect_lines(p0, v0, p1, v1)
                             if u0 < 0 and u1 > 0:
                                 arms[ii].append(p)
                             elif u0 <= 1 and u1 >= -1:
@@ -2662,7 +2662,7 @@ class SimplePath(object):
                         elif callable(corner):
                             arms[ii].extend(corner(p0, v0, p1, v1, pts[jj]))
                         else:
-                            u0, u1, p = _cross(p0, v0, p1, v1)
+                            u0, u1, p = _intersect_lines(p0, v0, p1, v1)
                             if corner == 'miter':
                                 arms[ii].append(p)
                             elif u0 <= 0 and u1 >= 0:
@@ -2674,7 +2674,7 @@ class SimplePath(object):
                                 a0 = numpy.arctan2(-v0[0], v0[1])
                                 a1 = numpy.arctan2(-v1[0], v1[1])
                                 r = 0.5 * self.widths[jj, kk]
-                                np = int(abs(a1 - a0) * r / self.tolerance + 0.5) + 2
+                                np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / r) + 0.5))
                                 angles = numpy.linspace(a0, a1, np)
                                 arms[ii].extend(pts[jj] + r * numpy.vstack((numpy.cos(angles),
                                                                             numpy.sin(angles))).T)
@@ -2704,7 +2704,7 @@ class SimplePath(object):
                         elif end == 'round':
                             v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
                             r = 0.5 * self.widths[-ii, kk]
-                            np = max(2, int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                            np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                             ang = (2 * ii - 1) * numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(v[1], v[0])
                             caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
                         else: # 'extended'/list
@@ -3189,7 +3189,7 @@ class LazyPath(object):
                             v = -arm * path[i].grad(u, 0)
                             r = 0.5 * path[i].wid(u)
                             if end == 'round':
-                                np = int(numpy.pi * r / self.tolerance + 0.5) + 2
+                                np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                                 ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
                                 endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
                                 poly.extend(endpts)
@@ -3208,16 +3208,16 @@ class LazyPath(object):
                         v0 = sub0.grad(1, arm)
                         p1 = sub1(0, arm)
                         v1 = sub1.grad(0, arm)
-                        u0, u1, px = _cross(p0, v0, p1, v1)
+                        u0, u1, px = _intersect_lines(p0, v0, p1, v1)
                         #print('  X0', 1 + u0, '=', p0 + u0 * v0)
                         #print('  X1', u1, '=', p1 + u1 * v1, flush=True)
                         u0 = 1 + u0
                         if u0 < 1 and u1 > 0:
-                            u0, u1, px = _intersect(lambda u: sub0(u, arm),
-                                                lambda u: sub1(u, arm),
-                                                lambda u: sub0.grad(u, arm),
-                                                lambda u: sub1.grad(u, arm),
-                                                u0, u1, self.tolerance)
+                            u0, u1, px = _intersect_curves(lambda u: sub0(u, arm),
+                                                           lambda u: sub1(u, arm),
+                                                           lambda u: sub0.grad(u, arm),
+                                                           lambda u: sub1.grad(u, arm),
+                                                           u0, u1, self.tolerance)
                             #print('  I0', u0, '=', sub0(u0, arm))
                             #print('  I1', u1, '=', sub1(u1, arm), flush=True)
                         if u1 >= 0:
