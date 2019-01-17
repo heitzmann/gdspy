@@ -338,8 +338,10 @@ def _intersect_lines(p0, v0, p1, v1):
     lim = 1e-12 * (numpy.sum(v0**2) * numpy.sum(v1**2))
     if den**2 < lim:
         return 0, 0, 0.5 * (p0 + p1)
-    u0 = (v1[1] * (p1[0] - p0[0]) - v1[0] * (p1[1] - p0[1])) / den
-    u1 = (v0[1] * (p1[0] - p0[0]) - v0[0] * (p1[1] - p0[1])) / den
+    dx = p1[0] - p0[0]
+    dy = p1[1] - p0[1]
+    u0 = (v1[1] * dx - v1[0] * dy) / den
+    u1 = (v0[1] * dx - v0[0] * dy) / den
     return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
 
 
@@ -2591,8 +2593,11 @@ class SimplePath(object):
                     idx = numpy.nonzero(den**2 < 1e-12 * numpy.sum(vn[1:]**2, 1) * numpy.sum(vn[:-1]**2, 1))[0]
                     if len(idx) > 0:
                         den[idx] = 1
-                    u0 = (vn[1:, 1] * (sb[:-1, 0] - sa[1:, 0])
-                          - vn[1:, 0] * (sb[:-1, 1] - sa[1:, 1])) / den
+                    ds = sb[:-1] - sa[1:]
+                    u0 = (vn[1:, 1] * ds[:, 0] - vn[1:, 0] * ds[:, 1]) / den
+                    u1 = (vn[:-1, 1] * ds[:, 0] - vn[:-1, 0] * ds[:, 1]) / den
+                    if any(u0 < -1) or any(u1 > 1):
+                        warnings.warn("[GDSPY] Possible inconsistency found in `SimplePath` due to sharp corner.")
                     pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
                     if len(idx) > 0:
                         pts[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
@@ -2639,8 +2644,17 @@ class SimplePath(object):
                                 arms[ii].append(p0)
                                 arms[ii].append(p1)
                             elif corner == 'round':
-                                a0 = numpy.arctan2(-v0[0], v0[1])
-                                a1 = numpy.arctan2(-v1[0], v1[1])
+                                if v0[1] * v1[0] - v0[0] * v1[1] < 0:
+                                    a0 = numpy.arctan2(-v0[0], v0[1])
+                                    a1 = numpy.arctan2(-v1[0], v1[1])
+                                else:
+                                    a0 = numpy.arctan2(v0[0], -v0[1])
+                                    a1 = numpy.arctan2(v1[0], -v1[1])
+                                if abs(a1 - a0) > numpy.pi:
+                                    if a0 < a1:
+                                        a0 += 2 * numpy.pi
+                                    else:
+                                        a1 += 2 * numpy.pi
                                 r = 0.5 * self.widths[jj, kk]
                                 np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / r) + 0.5))
                                 angles = numpy.linspace(a0, a1, np)
@@ -2953,6 +2967,356 @@ class SimplePath(object):
         self.points = pts * cos + pts[:,::-1] * sin + translation
         return self
 
+    def segment(self, end_point, width=None, offset=None, relative=False):
+        """
+        Add a straight section to the path.
+
+        Parameters
+        ----------
+        end_point : array-like[2]
+            End position of the straight segment.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+        relative : bool
+            If ``True``, ``end_point`` is used as an offset from the
+            current path position, i.e., if the path is at (1, -2) and
+            the ``end_point`` is (10, 25), the segment will be
+            constructed from (1, -2) to (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, ``end_point`` is used as an absolute coordinate.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        self.points = numpy.vstack((self.points, (self.points[-1] + numpy.array(end_point))
+                                                 if relative else end_point))
+        if width is None:
+            self.widths = numpy.vstack((self.widths, self.widths[-1]))
+        elif hasattr(width, '__iter__'):
+            self.widths = numpy.vstack((self.widths, width))
+        else:
+            self.widths = numpy.vstack((self.widths, numpy.repeat(width, self.n)))
+        if offset is None:
+            self.offsets = numpy.vstack((self.offsets, self.offsets[-1]))
+        elif hasattr(offset, '__iter__'):
+            self.offsets = numpy.vstack((self.offsets, offset))
+        else:
+            self.offsets = numpy.vstack((self.offsets, self.offsets[-1] + offset))
+        return self
+
+    def arc(self, radius, initial_angle, final_angle, width=None, offset=None):
+        """
+        Add a circular arc section to the path.
+
+        Parameters
+        ----------
+        radius : number
+            Radius of the circular arc.
+        initial_angle : number
+            Initial angle of the arc.
+        final_angle : number
+            Final angle of the arc.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        if width is None:
+            wid = self.widths[-1]
+        elif hasattr(width, '__iter__'):
+            wid = numpy.array(width)
+        else:
+            wid = numpy.full(self.n, width)
+        if offset is None:
+            off = self.offsets[-1]
+        elif hasattr(offset, '__iter__'):
+            off = numpy.array(offset)
+        else:
+            off = self.offsets[-1] + offset
+        rmax = radius + max((self.offsets[-1] + self.widths[-1]).max(), (off + wid).max())
+        np = max(3, 1 + int(0.5 * abs(final_angle - initial_angle) / numpy.arccos(1 - self.tolerance / rmax) + 0.5))
+        ang = numpy.linspace(initial_angle, final_angle, np)
+        pts = radius * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
+        self.points = numpy.vstack((self.points, pts[1:] + (self.points[-1] - pts[0])))
+        if width is None:
+            self.widths = numpy.vstack((self.widths, numpy.tile(self.widths[-1], (np - 1, 1))))
+        else:
+            u = numpy.linspace(0, 1, np)[1:]
+            self.widths = numpy.vstack((self.widths, numpy.outer(1 - u, self.widths[-1]) + numpy.outer(u, wid)))
+        if offset is None:
+            self.offsets = numpy.vstack((self.offsets, numpy.tile(self.offsets[-1], (np - 1, 1))))
+        else:
+            u = numpy.linspace(0, 1, np)[1:]
+            self.offsets = numpy.vstack((self.offsets, numpy.outer(1 - u, self.offsets[-1]) + numpy.outer(u, off)))
+        return self
+
+    def turn(self, radius, angle, width=None, offset=None):
+        """
+        Add a circular turn to the path.
+
+        The initial angle of the arc is calculated from the last path
+        segment.
+
+        Parameters
+        ----------
+        radius : number
+            Radius of the circular arc.
+        angle : number
+            Turning angle of the arc.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        if self.points.shape[0] < 2:
+            raise ValueError("[GDSPY] Cannot define initial angle for turn on a SimplePath withouth previous segments.")
+        v = self.points[-1] - self.points[-2]
+        initial_angle = numpy.arctan2(v[1], v[0]) + (_halfpi if angle < 0 else -_halfpi)
+        self.arc(radius, initial_angle, initial_angle + angle, width, offset)
+        return self
+
+    def parametric(self, curve_function, width=None, offset=None, relative=True):
+        """
+        Add a parametric curve to the path.
+
+        Parameters
+        ----------
+        curve_function : callable
+            Function that defines the curve.  Must be a function of one
+            argument (that varies from 0 to 1) that returns a 2-element
+            Numpy array with the coordinates of the curve.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+        relative : bool
+            If ``True``, the return values of ``curve_function`` are
+            used as offsets from the current path position, i.e., to
+            ensure a continuous path, ``curve_function(0)`` must be
+            (0, 0).  Otherwise, they are used as absolute coordinates.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        if width is None:
+            wid = self.widths[-1]
+        elif hasattr(width, '__iter__'):
+            wid = numpy.array(width)
+        else:
+            wid = numpy.full(self.n, width)
+        if offset is None:
+            off = self.offsets[-1]
+        elif hasattr(offset, '__iter__'):
+            off = numpy.array(offset)
+        else:
+            off = self.offsets[-1] + offset
+        tol = self.tolerance**2
+        u = [0, 1]
+        pts = [numpy.array(curve_function(0)), numpy.array(curve_function(1))]
+        i = 1
+        while i < len(pts):
+            f = 0.2
+            while f < 1:
+                test_u = u[i - 1] * (1 - f) +  u[i] * f
+                test_pt = numpy.array(curve_function(test_u))
+                if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > tol:
+                    u.insert(i, test_u)
+                    pts.insert(i, test_pt)
+                    f = 1
+                    i -=1
+                else:
+                    f += 0.3
+            i += 1
+        pts = numpy.array(pts[1:])
+        np = pts.shape[0] + 1
+        self.points = numpy.vstack((self.points, (pts + self.points[-1]) if relative else pts))
+        if width is None:
+            self.widths = numpy.vstack((self.widths, numpy.tile(self.widths[-1], (np - 1, 1))))
+        else:
+            u = numpy.linspace(0, 1, np)[1:]
+            self.widths = numpy.vstack((self.widths, numpy.outer(1 - u, self.widths[-1]) + numpy.outer(u, wid)))
+        if offset is None:
+            self.offsets = numpy.vstack((self.offsets, numpy.tile(self.offsets[-1], (np - 1, 1))))
+        else:
+            u = numpy.linspace(0, 1, np)[1:]
+            self.offsets = numpy.vstack((self.offsets, numpy.outer(1 - u, self.offsets[-1]) + numpy.outer(u, off)))
+        return self
+
+
+    def bezier(self, points, width=None, offset=None, relative=True):
+        """
+        Add a Bezier curve to the path.
+
+        A Bezier curve is added to the path starting from its current
+        position and finishing at the last point in the ``points``
+        array.
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Control points defining the Bezier curve as offsets from the
+            current path position.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed Bezier will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+        """
+        self._polygon_dict = None
+        if relative:
+            ctrl = self.points[-1] + numpy.vstack(([(0, 0)], points))
+        else:
+            ctrl = numpy.vstack((self.points[-1:], points))
+        self.parametric(_func_bezier(ctrl), width, offset, False)
+        return self
+
+
+    def smooth(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False,
+               width=None, offset=None, relative=True):
+        """
+        Add a smooth interpolating curve through the given points.
+
+        Uses the Hobby algorithm [1]_ to calculate a smooth
+        interpolating curve made of cubic Bezier segments between each
+        pair of points.
+
+        Parameters
+        ----------
+        points : array-like[N][2]
+            Vertices in the interpolating curve.
+        angles : array-like[N] or ``None``
+            Tangent angles at each point (in *radians*).  Any angles
+            defined as ``None`` are automatically calculated.
+        curl_start : number
+            Ratio between the mock curvatures at the first point and at
+            its neighbor.  A value of 1 renders the first segment a good
+            approximation for a circular arc.  A value of 0 will better
+            approximate a straight segment.  It has no effect for closed
+            curves or when an angle is defined for the first point.
+        curl_end : number
+            Ratio between the mock curvatures at the last point and at
+            its neighbor.  It has no effect for closed curves or when an
+            angle is defined for the first point.
+        t_in : number or array-like[N]
+            Tension parameter when arriving at each point.  One value
+            per point or a single value used for all points.
+        t_out : number or array-like[N]
+            Tension parameter when leaving each point.  One value per
+            point or a single value used for all points.
+        cycle : bool
+            If ``True``, calculates control points for a closed curve,
+            with an additional segment connecting the first and last
+            points.
+        width : number, list
+            If a number, all parallel paths are linearly tapered to this
+            width along the segment.  A list can be used where each
+            element (number or callable) defines the width for one of
+            the parallel paths in this object.
+        offset : number, list
+            If a number, all parallel paths offsets are linearly
+            *increased* by this amount (which can be negative).  A list
+            can be used where each element defines the *absolute* offset
+            (not offset increase) for one of the parallel paths in this
+            object.
+        relative : bool
+            If ``True``, all coordinates in the ``points`` array are
+            used as offsets from the current path position, i.e., if the
+            path is at (1, -2) and the last point in the array is
+            (10, 25), the constructed curve will end at
+            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
+            used as absolute coordinates.
+
+        Returns
+        -------
+        out : ``SimplePath``
+            This object.
+
+        Notes
+        -----
+        Arguments ``width`` and ``offset`` are repeated for *each* cubic
+        Bezier that composes this path element.
+
+        References
+        ----------
+        .. [1] Hobby, J.D.  *Discrete Comput. Geom.* (1986) 1: 123.
+           `DOI: 10.1007/BF02187690
+           <https://doi.org/10.1007/BF02187690>`_
+        """
+        if relative:
+            points = self.points[-1] + numpy.vstack(([(0, 0)], points))
+        else:
+            points = numpy.vstack((self.points[-1:], points))
+        cta, ctb = _hobby(points, angles, curl_start, curl_end, t_in, t_out, cycle)
+        for i in range(points.shape[0] - 1):
+            self.bezier((cta[i], ctb[i], points[i + 1]), width, offset, False)
+        if cycle:
+            self.bezier((cta[-1], ctb[-1], points[0]), width, offset, False)
+        return self
 
 
 class LazyPath(object):
@@ -3529,14 +3893,14 @@ class LazyPath(object):
             return arg
         return _func_linear(self.widths[idx], arg)
 
-    def line(self, end_point, width=None, offset=None, relative=False):
+    def segment(self, end_point, width=None, offset=None, relative=False):
         """
         Add a straight section to the path.
 
         Parameters
         ----------
         end_point : array-like[2]
-            End position of the straight line.
+            End position of the straight segment.
         width : number, callable, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  If this is callable, it must be a
@@ -3555,9 +3919,9 @@ class LazyPath(object):
         relative : bool
             If ``True``, ``end_point`` is used as an offset from the
             current path position, i.e., if the path is at (1, -2) and
-            the ``end_point`` is (10, 25), the line will be constructed
-            from (1, -2) to (1 + 10, -2 + 25) = (11, 23).  Otherwise,
-            ``end_point`` is used as an absolute coordinate.
+            the ``end_point`` is (10, 25), the segment will be
+            constructed from (1, -2) to (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, ``end_point`` is used as an absolute coordinate.
 
         Returns
         -------
@@ -3565,7 +3929,7 @@ class LazyPath(object):
             This object.
         """
         self._polygon_dict = None
-        x = numpy.array(end_point) if not relative else (numpy.array(end_point) + self.x)
+        x = (numpy.array(end_point) + self.x) if relative else numpy.array(end_point)
         f = _func_linear(self.x, x)
         df = _func_const(x - self.x, 2)
         self.x = x
