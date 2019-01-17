@@ -2502,6 +2502,8 @@ class SimplePath(object):
                  'tolerance', 'precision', 'max_points', 'gdsii_path', 'width_transform',
                  '_polygon_dict')
 
+    _pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
+
     def __init__(self, points, width, offset=0, corners='natural', ends='flush', tolerance=0.01,
                  precision=1e-3, max_points=199, gdsii_path=False, width_transform=True, layer=0,
                  datatype=0):
@@ -2775,13 +2777,12 @@ class SimplePath(object):
             sign = 1 if self.width_transform else -1
         else:
             return self.to_polygonset().to_gds(multiplier)
-        pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
         data = []
         inv = numpy.array((-1, 1))
         un = self.points[1:] - self.points[:-1]
         un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
         for ii in range(self.n):
-            pathtype = 0 if callable(self.ends[ii]) else pathtype_dict.get(self.ends[ii], 4)
+            pathtype = 0 if callable(self.ends[ii]) else SimplePath._pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
                                     6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
                                     8, 0x0F03, sign * int(round(self.widths[0, ii] * multiplier))))
@@ -3390,6 +3391,8 @@ class LazyPath(object):
     __slots__ = ('n', 'ends', 'x', 'offsets', 'widths', 'paths', 'layers', 'datatypes', 'tolerance',
                  'precision', 'max_points', 'max_evals', 'gdsii_path', 'width_transform', '_polygon_dict')
 
+    _pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
+
     def __init__(self, initial_point, width, offset=0, ends='flush', tolerance=0.01, precision=1e-3,
                  max_points=199, max_evals=1000, gdsii_path=False, width_transform=True, layer=0, datatype=0):
         self._polygon_dict = None
@@ -3688,10 +3691,9 @@ class LazyPath(object):
             sign = 1 if self.width_transform else -1
         else:
             return self.to_polygonset().to_gds(multiplier)
-        pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
         data = []
         for ii in range(self.n):
-            pathtype = pathtype_dict.get(self.ends[ii], 4)
+            pathtype = LazyPath._pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
                                     6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
                                     8, 0x0F03, sign * int(round(self.widths[ii] * multiplier))))
@@ -5782,6 +5784,7 @@ class GdsLibrary(object):
                     'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS', 'LIBDIRSIZE', 'SRFNAME', 'LIBSECUR')
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
     _import_anchors = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se']
+    _pathtype_dict = {0: 'flush', 1: 'round', 2: 'extended'}
 
     __slots__ = 'name', 'cell_dict', 'unit', 'precision', '_references'
 
@@ -5961,9 +5964,8 @@ class GdsLibrary(object):
             # WIDTH
             elif record[0] == 0x0f:
                 kwargs['width'] = factor * abs(record[1][0])
-                if record[1][0] < 0 and record[0] not in emitted_warnings:
-                    warnings.warn("[GDSPY] Paths with absolute width value are not supported.  Scaling these paths will also scale their width.", stacklevel=2)
-                    emitted_warnings.append(record[0])
+                if record[1][0] < 0:
+                    kwargs['width_transform'] = False
             # ENDEL
             elif record[0] == 0x11:
                 if create_element is not None:
@@ -6042,12 +6044,7 @@ class GdsLibrary(object):
                 kwargs['anchor'] = GdsLibrary._import_anchors[int(record[1][0]) & 0x000f]
             # PATHTYPE
             elif record[0] == 0x21:
-                if record[1][0] > 2:
-                    # Custom path extension is manually added to the
-                    # first and last path segments.
-                    kwargs['ends'] = 0
-                else:
-                    kwargs['ends'] = record[1][0]
+                kwargs['ends'] = GdsLibrary._pathtype_dict.get(record[1][0], 'extended')
             # BGNEXTN
             elif record[0] == 0x30:
                 kwargs['bgnextn'] = factor * record[1][0]
@@ -6075,14 +6072,10 @@ class GdsLibrary(object):
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
         if 'bgnextn' in kwargs or 'endextn' in kwargs:
-            d = kwargs.pop('bgnextn', 0)
-            v = xy[0:2] - xy[2:4]
-            xy[0:2] = xy[0:2] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
-            d = kwargs.pop('endextn', 0)
-            v = xy[-2:] - xy[-4:-2]
-            xy[-2:] = xy[-2:] + d * v / numpy.sqrt(v[0]**2 + v[1]**2)
+            kwargs['ends'] = (kwargs.pop('bgnextn', 0), kwargs.pop('endextn', 0))
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
-        return PolyPath(**kwargs)
+        kwargs['gdsii_path'] = True
+        return SimplePath(**kwargs)
 
     def _create_label(self, xy, width=None, ends=None, **kwargs):
         kwargs['position'] = xy
