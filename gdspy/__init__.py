@@ -2458,12 +2458,13 @@ class SimplePath(object):
         direction vector from both segments being joined and the center
         of the path) and return a list of vertices that make the join.
         A list can be used to define the join for each parallel path.
-    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], callable, list
-        Type of end caps for the paths.  An array represents the start
-        and end extensions to the paths.  A callable must receive 4
-        arguments (vertex and direction vectors from both sides of the
-        path and return a list of vertices that make the end cap.  A
-        list can be used to define the end type for each parallel path.
+    ends : 'flush', 'extended', 'round', 'smooth', 2-tuple, callable, list
+        Type of end caps for the paths.  A 2-element tuple represents
+        the start and end extensions to the paths.  A callable must
+        receive 4 arguments (vertex and direction vectors from both
+        sides of the path and return a list of vertices that make the
+        end cap.  A list can be used to define the end type for each
+        parallel path.
     tolerance : number
         Tolerance used to draw the paths and calculate joins.
     precision : number
@@ -2524,10 +2525,7 @@ class SimplePath(object):
         self.offsets = numpy.tile(self.offsets, (len(points), 1))
         self.points = numpy.array(points)
         if isinstance(ends, list):
-            if len(ends) == 2 and not (isinstance(ends[0], basestring) or hasattr(ends[0], '__iter__')):
-                self.ends = [ends for _ in range(self.n)]
-            else:
-                self.ends = [ends[i % len(ends)] for i in range(self.n)]
+            self.ends = [ends[i % len(ends)] for i in range(self.n)]
         else:
             self.ends = [ends for _ in range(self.n)]
         if isinstance(corners, list):
@@ -3349,10 +3347,10 @@ class LazyPath(object):
         number of parallel paths being created.  Otherwise, offset must
         be a list with the same length as width, or a number, which is
         used as distance between adjacent paths.
-    ends : 'flush', 'extended', 'round', 'smooth', array-like[2], list
-        Type of end caps for the paths.  An array represents the start
-        and end extensions to the paths.  A list can be used to define
-        the end type for each parallel path.
+    ends : 'flush', 'extended', 'round', 'smooth', 2-tuple, list
+        Type of end caps for the paths.  A 2-element tuple represents
+        the start and end extensions to the paths.  A list can be used
+        to define the end type for each parallel path.
     tolerance : number
         Tolerance used to draw the paths and calculate joins.
     precision : number
@@ -3413,10 +3411,7 @@ class LazyPath(object):
         self.x = numpy.array(initial_point)
         self.paths = [[] for _ in range(self.n)]
         if isinstance(ends, list):
-            if len(ends) == 2 and not (isinstance(ends[0], basestring) or hasattr(ends[0], '__iter__')):
-                self.ends = [ends for _ in range(self.n)]
-            else:
-                self.ends = [ends[i % len(ends)] for i in range(self.n)]
+            self.ends = [ends[i % len(ends)] for i in range(self.n)]
         else:
             self.ends = [ends for _ in range(self.n)]
         if isinstance(layer, list):
