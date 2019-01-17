@@ -982,7 +982,7 @@ class Round(PolygonSet):
 
     def __init__(self, center, radius, inner_radius=0, initial_angle=0, final_angle=0,
                  tolerance=0.01, number_of_points=None, max_points=199, layer=0, datatype=0):
-        if hasattr(radius, '__getitem__'):
+        if hasattr(radius, '__iter__'):
             orx, ory = radius
             radius = max(radius)
 
@@ -997,7 +997,7 @@ class Round(PolygonSet):
             def outer_transform(a):
                 return a
 
-        if hasattr(inner_radius, '__getitem__'):
+        if hasattr(inner_radius, '__iter__'):
             irx, iry = inner_radius
             inner_radius = max(inner_radius)
 
