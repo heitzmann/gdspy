@@ -2607,8 +2607,8 @@ class SimplePath(object):
                         v0 = poly[3] - poly[0]
                         v1 = poly[2] - poly[1]
                         if callable(end):
-                            cap0 = end(poly[0], poly[1], -v0, v1)
-                            cap1 = end(poly[3], poly[2], v0, -v1)
+                            cap0 = end(poly[0], -v0, poly[1], v1)
+                            cap1 = end(poly[3], v0, poly[2], -v1)
                             poly = numpy.array(cap0[::-1] + cap1)
                         elif end == 'smooth':
                             angles = [numpy.arctan2(-v0[1], -v0[0]), numpy.arctan2(v1[1], v1[0])]
@@ -2672,11 +2672,32 @@ class SimplePath(object):
                             else:
                                 poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
                                                     poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
+                    if self.max_points > 4 and poly.shape[0] > sef.max_points:
+                        ii = 0
+                        while ii < len(polygons):
+                            if len(polygons[ii]) > self.max_points:
+                                pts0 = sorted(polygons[ii][:, 0])
+                                pts1 = sorted(polygons[ii][:, 1])
+                                ncuts = len(pts0) // self.max_points
+                                if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
+                                    # Vertical cuts
+                                    cuts = [pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                    chopped = clipper._chop(polygons[ii], cuts, 0, 1 / self.precision)
+                                else:
+                                    # Horizontal cuts
+                                    cuts = [pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                    chopped = clipper._chop(polygons[ii], cuts, 1, 1 / self.precision)
+                                polygons.pop(ii)
+                                polygons.extend(numpy.array(x) for x in itertools.chain.from_iterable(chopped))
+                            else:
+                                ii += 1
+                    else:
+                        polygons = [poly]
                     key = (self.layers[kk], self.datatypes[kk])
                     if key in self._polygon_dict:
-                        self._polygon_dict[key].append(poly)
+                        self._polygon_dict[key].extend(polygons)
                     else:
-                        self._polygon_dict[key] = [poly]
+                        self._polygon_dict[key] = polygons
             else:
                 un = self.points[1:] - self.points[:-1]
                 un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
@@ -2792,7 +2813,7 @@ class SimplePath(object):
                         for ii in (0, 1):
                             if callable(end):
                                 vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
-                                caps[ii] = end(caps[ii][0], caps[ii][1], vecs[0], vecs[1])
+                                caps[ii] = end(caps[ii][0], vecs[0], caps[ii][1], vecs[1])
                             elif end == 'smooth':
                                 points = numpy.array(caps[ii])
                                 vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
@@ -2831,12 +2852,31 @@ class SimplePath(object):
                     poly.extend(arms[0])
                     poly.extend(caps[1])
                     poly.extend(arms[1][::-1])
-                    poly = numpy.array(poly)
+                    polygons = [numpy.array(poly)]
+                    if self.max_points > 4 and polygons[0].shape[0] > self.max_points:
+                        ii = 0
+                        while ii < len(polygons):
+                            if len(polygons[ii]) > self.max_points:
+                                pts0 = sorted(polygons[ii][:, 0])
+                                pts1 = sorted(polygons[ii][:, 1])
+                                ncuts = len(pts0) // self.max_points
+                                if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
+                                    # Vertical cuts
+                                    cuts = [pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                    chopped = clipper._chop(polygons[ii], cuts, 0, 1 / self.precision)
+                                else:
+                                    # Horizontal cuts
+                                    cuts = [pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                    chopped = clipper._chop(polygons[ii], cuts, 1, 1 / self.precision)
+                                polygons.pop(ii)
+                                polygons.extend(numpy.array(x) for x in itertools.chain.from_iterable(chopped))
+                            else:
+                                ii += 1
                     key = (self.layers[kk], self.datatypes[kk])
                     if key in self._polygon_dict:
-                        self._polygon_dict[key].append(poly)
+                        self._polygon_dict[key].extend(polygons)
                     else:
-                        self._polygon_dict[key] = [poly]
+                        self._polygon_dict[key] = polygons
         if by_spec:
             return libcopy.deepcopy(self._polygon_dict)
         else:
@@ -2857,9 +2897,12 @@ class SimplePath(object):
         """
         if self.points.shape[0] < 2:
             return None
-        pol = PolygonSet(self.get_polygons(), 0, 0)
-        pol.layers = list(self.layers)
-        pol.datatypes = list(self.datatypes)
+        polygons = self.get_polygons(True)
+        pol = PolygonSet([])
+        for k, v in polygons.items():
+            pol.layers.extend([k[0]] * len(v))
+            pol.datatypes.extend([k[1]] * len(v))
+            pol.polygons.extend(v)
         return pol.fracture(self.max_points, self.precision)
 
     def to_gds(self, multiplier):
@@ -3759,12 +3802,31 @@ class LazyPath(object):
                             start = 0
                     path_arm.extend(path[-1].points(start, 1, arm))
                     poly.extend(path_arm[::arm])
-                poly = numpy.array(poly)
-                key = (layer, datatype)
+                polygons = [numpy.array(poly)]
+                if self.max_points > 4 and polygons[0].shape[0] > self.max_points:
+                    ii = 0
+                    while ii < len(polygons):
+                        if len(polygons[ii]) > self.max_points:
+                            pts0 = sorted(polygons[ii][:, 0])
+                            pts1 = sorted(polygons[ii][:, 1])
+                            ncuts = len(pts0) // self.max_points
+                            if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
+                                # Vertical cuts
+                                cuts = [pts0[int(i * len(pts0) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                chopped = clipper._chop(polygons[ii], cuts, 0, 1 / self.precision)
+                            else:
+                                # Horizontal cuts
+                                cuts = [pts1[int(i * len(pts1) / (ncuts + 1.0) + 0.5)] for i in range(1, ncuts + 1)]
+                                chopped = clipper._chop(polygons[ii], cuts, 1, 1 / self.precision)
+                            polygons.pop(ii)
+                            polygons.extend(numpy.array(x) for x in itertools.chain.from_iterable(chopped))
+                        else:
+                            ii += 1
+                key = (self.layers[kk], self.datatypes[kk])
                 if key in self._polygon_dict:
-                    self._polygon_dict[key].append(poly)
+                    self._polygon_dict[key].extend(polygons)
                 else:
-                    self._polygon_dict[key] = [poly]
+                    self._polygon_dict[key] = polygons
         if by_spec:
             return libcopy.deepcopy(self._polygon_dict)
         else:
@@ -3785,9 +3847,12 @@ class LazyPath(object):
         """
         if len(self.paths[0]) == 0:
             return None
-        pol = PolygonSet(self.get_polygons(), 0, 0)
-        pol.layers = list(self.layers)
-        pol.datatypes = list(self.datatypes)
+        polygons = self.get_polygons(True)
+        pol = PolygonSet([])
+        for k, v in polygons.items():
+            pol.layers.extend([k[0]] * len(v))
+            pol.datatypes.extend([k[1]] * len(v))
+            pol.polygons.extend(v)
         return pol.fracture(self.max_points, self.precision)
 
     def to_gds(self, multiplier):
