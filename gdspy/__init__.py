@@ -58,8 +58,15 @@ except ImportError as e:
 __version__ = '1.3.1'
 
 _halfpi = 0.5 * numpy.pi
+_zero = numpy.array((0.0, 0.0))
+_one = numpy.array((1.0, 1.0))
+_mpone = numpy.array((-1.0, 1.0))
+_pmone = numpy.array((1.0, -1.0))
+_pmone_int = numpy.array((1, -1))
+
 _directions_dict = {'+x': 0, '+y': 0.5, '-x': 1, '-y': -0.5}
 _directions_list = ['+x', '+y', '-x', '-y']
+_angle_dic = {'l': _halfpi, 'r': -_halfpi, 'll': numpy.pi, 'rr': -numpy.pi}
 
 _bounding_boxes = {}
 
@@ -305,9 +312,9 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
             phi[i:j] = sol[1::2]
             i = j
     w = numpy.exp(1j * (theta + delta))
-    a = numpy.sqrt(2)
+    a = 2**0.5
     b = 1.0 / 16
-    c = (3 - numpy.sqrt(5)) / 2
+    c = (3 - 5**0.5) / 2
     sintheta = numpy.sin(theta)
     costheta = numpy.cos(theta)
     sinphi = numpy.sin(numpy.roll(phi, -1))
@@ -335,7 +342,7 @@ def _intersect_lines(p0, v0, p1, v1):
         The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
     """
     den = v1[1] * v0[0] - v1[0] * v0[1]
-    lim = 1e-12 * (numpy.sum(v0**2) * numpy.sum(v1**2))
+    lim = 1e-12 * (v0[0]**2 + v0[1]**2) * (v1[0]**2 + v1[1]**2)
     if den**2 < lim:
         return 0, 0, 0.5 * (p0 + p1)
     dx = p1[0] - p0[0]
@@ -391,17 +398,15 @@ def _func_rotate(f, cos, sin, center=0, nargs=1):
 
 def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, nargs=1):
     if translation is None:
-        translation = numpy.array((0, 0))
+        translation = _zero
     if array_trans is None:
-        array_trans = numpy.array((0, 0))
+        array_trans = _zero
     if rotation is None:
-        cos = 1
-        sin = 0
+        cos = _one
+        sin = _zero
     else:
-        cos = numpy.cos(rotation)
-        sin = numpy.sin(rotation)
-    cos = numpy.array((cos, cos))
-    sin = numpy.array((-sin, sin))
+        cos = numpy.cos(rotation) * _one
+        sin = numpy.sin(rotation) * _mpone
     if scale is not None:
         cos = cos * scale
         sin = sin * scale
@@ -543,8 +548,7 @@ class PolygonSet(object):
             This object.
         """
         ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
+        sa = numpy.sin(angle) * _mpone
         c0 = numpy.array(center)
         new_polys = []
         for points in self.polygons:
@@ -599,8 +603,8 @@ class PolygonSet(object):
                 data.append(struct.pack('>4Hh2Hh', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02,
                                         self.datatypes[ii]))
                 xy = numpy.empty((self.polygons[ii].shape[0] + 1, 2), dtype='>i4')
-                xy[:-1, :] = numpy.round(self.polygons[ii] * multiplier)
-                xy[-1, :] = xy[0, :]
+                xy[:-1] = numpy.round(self.polygons[ii] * multiplier)
+                xy[-1] = xy[0]
                 i0 = 0
                 while i0 < xy.shape[0]:
                     i1 = min(i0 + 8190, xy.shape[0])
@@ -754,20 +758,21 @@ class PolygonSet(object):
 
         for jj in range(len(self.polygons)):
             vec = self.polygons[jj].astype(float) - numpy.roll(self.polygons[jj], 1, 0)
-            length = numpy.sqrt(numpy.sum(vec**2, 1))
+            length = (vec[:, 0]**2 + vec[:, 1]**2)**0.5
             ii = numpy.flatnonzero(length)
             if len(ii) < len(length):
                 self.polygons[jj] = self.polygons[jj][ii]
                 vec = self.polygons[jj] - numpy.roll(self.polygons[jj], 1, 0)
-                length = numpy.sqrt(numpy.sum(vec**2, 1))
+                length = (vec[:, 0]**2 + vec[:, 1]**2)**0.5
             vec[:, 0] = vec[:, 0] / length
             vec[:, 1] = vec[:, 1] / length
             dvec = numpy.roll(vec, -1, 0) - vec
-            norm = numpy.sqrt(numpy.sum(dvec**2, 1))
+            norm = (dvec[:, 0]**2 + dvec[:, 1]**2)**0.5
             ii = numpy.flatnonzero(norm)
             dvec[ii, 0] = dvec[ii, 0] / norm[ii]
             dvec[ii, 1] = dvec[ii, 1] / norm[ii]
-            theta = numpy.arccos(numpy.sum(numpy.roll(vec, -1, 0) * vec, 1))
+            dot = numpy.roll(vec, -1, 0) * vec
+            theta = numpy.arccos(dot[:, 0] + dot[:, 1])
             ct = numpy.cos(theta * 0.5)
             tt = numpy.tan(theta * 0.5)
 
@@ -1053,7 +1058,7 @@ class Round(PolygonSet):
                     t = numpy.linspace(oang[ii], oang[ii + 1], number_of_points - 1)
                     self.polygons[ii][1:, 0] = numpy.cos(t) * orx + center[0]
                     self.polygons[ii][1:, 1] = numpy.sin(t) * ory + center[1]
-                    self.polygons[ii][0, :] += center
+                    self.polygons[ii][0] += center
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
@@ -1311,8 +1316,7 @@ class Path(PolygonSet):
             This object.
         """
         ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
+        sa = numpy.sin(angle) * _mpone
         c0 = numpy.array(center)
         if isinstance(self.direction, basestring):
             self.direction = _directions_dict[self.direction] * numpy.pi
@@ -1396,10 +1400,10 @@ class Path(PolygonSet):
                                  (self.x + (d0 + self.w) * sa, self.y - (d0 + self.w) * ca),
                                  (self.x + (d0 - self.w) * sa, self.y - (d0 - self.w) * ca)]))
                 if self.w == 0:
-                    self.polygons[-1] = self.polygons[-1][:-1, :]
+                    self.polygons[-1] = self.polygons[-1][:-1]
                 if old_w == 0:
-                    self.polygons[-1] = self.polygons[-1][1:, :]
-            self.length += numpy.sqrt(length**2 + axis_offset**2)
+                    self.polygons[-1] = self.polygons[-1][1:]
+            self.length += (length**2 + axis_offset**2)**0.5
             if isinstance(layer, list):
                 self.layers.extend((layer * (self.n // len(layer) + 1))[:self.n])
             else:
@@ -1501,7 +1505,7 @@ class Path(PolygonSet):
                         pts1 -= 1
                         pts2 += 1
                     if widths[jj] == 0:
-                        self.polygons[-1][:pts1 - 1, :] = numpy.array(self.polygons[-1][1:pts1, :])
+                        self.polygons[-1][:pts1 - 1] = numpy.array(self.polygons[-1][1:pts1])
                         pts1 -= 1
                         pts2 += 1
                     ang = numpy.linspace(angles[jj + 1], angles[jj], pts2)
@@ -1530,7 +1534,7 @@ class Path(PolygonSet):
         ----------
         radius : number
             Central radius of the section.
-        angle : {'r', 'l', 'rr', 'll'} or number
+        angle : 'r', 'l', 'rr', 'll' or number
             Angle (in *radians*) of rotation of the path.  The values
             'r' and 'l' represent 90-degree turns cw and ccw,
             respectively; the values 'rr' and 'll' represent analogous
@@ -1696,7 +1700,8 @@ class Path(PolygonSet):
         while i < len(points):
             midpoint = 0.5 * (points[i] + points[i - 1])
             midvalue = numpy.array(curve_function(midpoint))
-            if (((values[i] + values[i - 1]) / 2 - midvalue)**2).sum() > err:
+            test_err = (values[i] + values[i - 1]) / 2 - midvalue
+            if test_err[0]**2 + test_err[1]**2 > err:
                 delta = min(delta, points[i] - midpoint)
                 points.insert(i, midpoint)
                 values.insert(i, midvalue)
@@ -1704,7 +1709,8 @@ class Path(PolygonSet):
                 i += 1
         points = numpy.array(points)
         values = numpy.array(values)
-        self.length += numpy.sqrt(((values[1:, :] - values[:-1, :])**2).sum(1)).sum()
+        dvs = values[1:] - values[:-1]
+        self.length += ((dvs[:, 0]**2 + dvs[:, 1]**2)**0.5).sum()
 
         delta *= 0.5
         if curve_derivative is None:
@@ -1743,7 +1749,7 @@ class Path(PolygonSet):
             x0 = values + numpy.array((self.x, self.y))
         else:
             x0 = values
-        dx = derivs[:, ::-1] * numpy.array((-1, 1)) / numpy.sqrt((derivs**2).sum(1)).reshape(sh)
+        dx = derivs[:, ::-1] * _mpone / ((derivs[:, 0]**2 + derivs[:, 1]**2)**0.5).reshape(sh)
         width = width.reshape(sh)
         dist = dist.reshape(sh)
 
@@ -1757,7 +1763,7 @@ class Path(PolygonSet):
             i1 = min(i0 + max_points, np)
             for ii in range(self.n):
                 p1 = x0[i0:i1] + dx[i0:i1] * (dist[i0:i1] * (ii - (self.n - 1) * 0.5) + width[i0:i1])
-                p2 = (x0[i0:i1] + dx[i0:i1] * (dist[i0:i1] * (ii - (self.n - 1) * 0.5) - width[i0:i1]))[::-1, :]
+                p2 = (x0[i0:i1] + dx[i0:i1] * (dist[i0:i1] * (ii - (self.n - 1) * 0.5) - width[i0:i1]))[::-1]
                 if width[i1 - 1, 0] == 0:
                     p2 = p2[1:]
                 if width[i0, 0] == 0:
@@ -2168,8 +2174,7 @@ class L1Path(PolygonSet):
             This object.
         """
         ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
+        sa = numpy.sin(angle) * _mpone
         c0 = numpy.array(center)
         if isinstance(self.direction, basestring):
             self.direction = _directions_dict[self.direction] * numpy.pi
@@ -2246,21 +2251,21 @@ class PolyPath(PolygonSet):
         self.layers = []
         self.datatypes = []
         if points.shape[0] == 2 and number_of_paths == 1:
-            v = points[1, :] - points[0, :]
-            v = v / numpy.sqrt(numpy.sum(v**2))
+            v = points[1] - points[0]
+            v = v / (v[0]**2 + v[1]**2)**0.5
             w0 = width[0]
             w1 = width[1 % len_w]
             if ends == 'round':
                 a = numpy.arctan2(v[1], v[0]) + _halfpi
-                self.polygons.append(Round(points[0, :], w0, initial_angle=a,
+                self.polygons.append(Round(points[0], w0, initial_angle=a,
                                            final_angle=a + numpy.pi, number_of_points=33).polygons[0])
-                self.polygons.append(Round(points[1, :], w1, initial_angle=a - numpy.pi,
+                self.polygons.append(Round(points[1], w1, initial_angle=a - numpy.pi,
                                            final_angle=a, number_of_points=33).polygons[0])
                 self.layers.extend(layer[:1] * 2)
                 self.datatypes.extend(datatype[:1] * 2)
             if ends == 'extended':
-                points[0, :] = points[0, :] - v * w0
-                points[1, :] = points[1, :] + v * w1
+                points[0] = points[0] - v * w0
+                points[1] = points[1] + v * w1
             u = numpy.array((-v[1], v[0]))
             if w0 == 0:
                 self.polygons.append(numpy.array((points[0], points[1] - u * w1, points[1] + u * w1)))
@@ -2285,71 +2290,75 @@ class PolyPath(PolygonSet):
             else:
                 raise ValueError("[GDSPY] Argument ends must be one of 'flush', 'round', or 'extended'.")
         if ends == 'extended':
-            v = points[0, :] - points[1, :]
-            v = v / numpy.sqrt(numpy.sum(v * v))
-            points[0, :] = points[0, :] + v * width[0]
-            v = points[-1, :] - points[-2, :]
-            v = v / numpy.sqrt(numpy.sum(v * v))
-            points[-1, :] = points[-1, :] + v * width[(points.shape[0] - 1) % len_w]
+            v = points[0] - points[1]
+            v = v / (v[0]**2 + v[1]**2)**0.5
+            points[0] = points[0] + v * width[0]
+            v = points[-1] - points[-2]
+            v = v / (v[0]**2 + v[1]**2)**0.5
+            points[-1] = points[-1] + v * width[(points.shape[0] - 1) % len_w]
         elif ends == 'round':
-            v0 = points[1, :] - points[0, :]
+            v0 = points[1] - points[0]
             angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
-            v0 = numpy.array((-v0[1], v0[0])) / numpy.sqrt(numpy.sum(v0**2))
+            v0 = numpy.array((-v0[1], v0[0])) / (v0[0]**2 + v0[1]**2)**0.5
             d0 = 0.5 * (number_of_paths - 1) * distance[0]
-            v1 = points[-1, :] - points[-2, :]
+            v1 = points[-1] - points[-2]
             angle1 = numpy.arctan2(v1[1], v1[0]) - _halfpi
-            v1 = numpy.array((-v1[1], v1[0])) / numpy.sqrt(numpy.sum(v1**2))
+            v1 = numpy.array((-v1[1], v1[0])) / (v1[0]**2 + v1[1]**2)**0.5
             j1w = (points.shape[0] - 1) % len_w
             j1d = (points.shape[0] - 1) % len_d
             d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
-            self.polygons.extend((Round(points[0, :] + v0 * (ii * distance[0] - d0), width[0],
+            self.polygons.extend((Round(points[0] + v0 * (ii * distance[0] - d0), width[0],
                                         initial_angle=angle0, final_angle=angle0 + numpy.pi,
                                         number_of_points=33).polygons[0] for ii in range(number_of_paths)))
-            self.polygons.extend((Round(points[-1, :] + v1 * (ii * distance[j1d] - d1), width[j1w],
+            self.polygons.extend((Round(points[-1] + v1 * (ii * distance[j1d] - d1), width[j1w],
                                         initial_angle=angle1, final_angle=angle1 + numpy.pi,
                                         number_of_points=33).polygons[0]) for ii in range(number_of_paths))
             self.layers.extend(((layer * (number_of_paths // len(layer) + 1))[:number_of_paths]) * 2)
             self.datatypes.extend(((datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]) * 2)
-        v = points[1, :] - points[0, :]
-        v = numpy.array((-v[1], v[0])) / numpy.sqrt(numpy.sum(v * v))
+        v = points[1] - points[0]
+        v = numpy.array((-v[1], v[0])) / (v[0]**2 + v[1]**2)**0.5
         d0 = 0.5 * (number_of_paths - 1) * distance[0]
         d1 = 0.5 * (number_of_paths - 1) * distance[1 % len_d]
-        paths = [[[points[0, :] + (ii * distance[0] - d0 - width[0]) * v],
-                  [points[0, :] + (ii * distance[0] - d0 + width[0]) * v]] for ii in range(number_of_paths)]
-        p1 = [(points[1, :] + (ii * distance[1 % len_d] - d1 - width[1 % len_w]) * v,
-               points[1, :] + (ii * distance[1 % len_d] - d1 + width[1 % len_w]) * v) for ii in range(number_of_paths)]
+        paths = [[[points[0] + (ii * distance[0] - d0 - width[0]) * v],
+                  [points[0] + (ii * distance[0] - d0 + width[0]) * v]] for ii in range(number_of_paths)]
+        p1 = [(points[1] + (ii * distance[1 % len_d] - d1 - width[1 % len_w]) * v,
+               points[1] + (ii * distance[1 % len_d] - d1 + width[1 % len_w]) * v) for ii in range(number_of_paths)]
         for jj in range(1, points.shape[0] - 1):
             j0d = jj % len_d
             j0w = jj % len_w
             j1d = (jj + 1) % len_d
             j1w = (jj + 1) % len_w
-            v = points[jj + 1, :] - points[jj, :]
-            v = numpy.array((-v[1], v[0])) / numpy.sqrt(numpy.sum(v * v))
+            v = points[jj + 1] - points[jj]
+            v = numpy.array((-v[1], v[0])) / (v[0]**2 + v[1]**2)**0.5
             d0 = d1
             d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
             p0 = p1
             p1 = []
             pp = []
             for ii in range(number_of_paths):
-                pp.append((points[jj, :] + (ii * distance[j0d] - d0 - width[j0w]) * v,
-                           points[jj, :] + (ii * distance[j0d] - d0 + width[j0w]) * v))
-                p1.append((points[jj + 1, :] + (ii * distance[j1d] - d1 - width[j1w]) * v,
-                           points[jj + 1, :] + (ii * distance[j1d] - d1 + width[j1w]) * v))
+                pp.append((points[jj] + (ii * distance[j0d] - d0 - width[j0w]) * v,
+                           points[jj] + (ii * distance[j0d] - d0 + width[j0w]) * v))
+                p1.append((points[jj + 1] + (ii * distance[j1d] - d1 - width[j1w]) * v,
+                           points[jj + 1] + (ii * distance[j1d] - d1 + width[j1w]) * v))
                 for kk in (0, 1):
                     p0m = paths[ii][kk][-1] - p0[ii][kk]
                     p1p = pp[ii][kk] - p1[ii][kk]
                     vec = p0m[0] * p1p[1] - p1p[0] * p0m[1]
                     if abs(vec) > 1e-30:
-                        p = numpy.array((1, -1)) * (p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1] * p0[ii][kk] + p0m * p1p * (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
-                        if bevel and numpy.sum((p - pp[ii][kk]) * p1p) > 0 and numpy.sum((p - p0[ii][kk]) * p0m) < 0:
+                        p = _pmone * (p0m * p1p[::-1] * p1[ii][kk] - p1p * p0m[::-1] * p0[ii][kk] + p0m * p1p * (p0[ii][kk][::-1] - p1[ii][kk][::-1])) / vec
+                        l0 = (p - pp[ii][kk]) * p1p
+                        l1 = (p - p0[ii][kk]) * p0m
+                        if bevel and l0[0] + l0[1] > 0 and l1[0] + l1[1] < 0:
                             paths[ii][kk].append(p0[ii][kk])
                             paths[ii][kk].append(pp[ii][kk])
                         else:
                             paths[ii][kk].append(p)
                 if max_points > 0 and len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points:
-                    if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
+                    diff = paths[ii][0][0] - paths[ii][1][0]
+                    if diff[0]**2 + diff[1]**2 == 0:
                         paths[ii][1] = paths[ii][1][1:]
-                    if numpy.sum((paths[ii][0][-1] - paths[ii][1][-1])**2) == 0:
+                    diff = paths[ii][0][-1] - paths[ii][1][-1]
+                    if diff[0]**2 + diff[1]**2 == 0:
                         self.polygons.append(numpy.array(paths[ii][0] + paths[ii][1][-2::-1]))
                     else:
                         self.polygons.append(numpy.array(paths[ii][0] + paths[ii][1][::-1]))
@@ -2358,9 +2367,11 @@ class PolyPath(PolygonSet):
                     self.layers.append(layer[ii % len(layer)])
                     self.datatypes.append(datatype[ii % len(datatype)])
         for ii in range(number_of_paths):
-            if numpy.sum((paths[ii][0][0] - paths[ii][1][0])**2) == 0:
+            diff = paths[ii][0][0] - paths[ii][1][0]
+            if diff[0]**2 + diff[1]**2 == 0:
                 paths[ii][1] = paths[ii][1][1:]
-            if numpy.sum((p1[ii][0] - p1[ii][1])**2) != 0:
+            diff = p1[ii][0] - p1[ii][1]
+            if diff[0]**2 + diff[1]**2 != 0:
                 paths[ii][0].append(p1[ii][0])
             paths[ii][1].append(p1[ii][1])
         self.polygons.extend(numpy.array(pol[0] + pol[1][::-1]) for pol in paths)
@@ -2390,15 +2401,15 @@ class _SubPath:
         return 'SubPath ({} - {})'.format(self(0, 1e-6, 0), self(1, 1e-6, 0))
 
     def __call__(self, u, arm):
-        v = self.dx(u, self.h)[::-1] * numpy.array((1.0, -1.0))
-        v /= numpy.sqrt(numpy.sum(v**2))
+        v = self.dx(u, self.h)[::-1] * _pmone
+        v /= (v[0]**2 + v[1]**2)**0.5
         x = self.x(u) + self.off(u) * v
         if arm == 0:
             return x
         u0 = max(0, u - self.h)
         u1 = min(1, u + self.h)
-        w = (self(u1, 0) - self(u0, 0))[::-1] * numpy.array((1.0, -1.0))
-        w /= numpy.sqrt(numpy.sum(w**2))
+        w = (self(u1, 0) - self(u0, 0))[::-1] * _pmone
+        w /= (w[0]**2 + w[1]**2)**0.5
         if arm < 0:
             return x - 0.5 * self.wid(u) * w
         return x + 0.5 * self.wid(u) * w
@@ -2417,7 +2428,8 @@ class _SubPath:
             while f < 1:
                 test_u = u[i - 1] * (1 - f) +  u[i] * f
                 test_pt = numpy.array(self(test_u, arm))
-                if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > self.err:
+                test_err = pts[i - 1] * (1 - f) +  pts[i] * f - test_pt
+                if test_err[0]**2 + test_err[1]**2 > self.err:
                     u.insert(i, test_u)
                     pts.insert(i, test_pt)
                     f = 1
@@ -2578,118 +2590,30 @@ class SimplePath(object):
         """
         if self._polygon_dict is None:
             self._polygon_dict = {}
-            inv = numpy.array((-1, 1))
-            un = self.points[1:] - self.points[:-1]
-            un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
-            for kk in range(self.n):
-                corner = self.corners[kk]
-                end = self.ends[kk]
-                if any(self.offsets[:, kk] != 0):
-                    pts = numpy.zeros(self.points.shape)
-                    sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
-                    sb = self.points[1:] + un * self.offsets[1:, kk:kk + 1]
-                    vn = sb - sa
-                    den = vn[1:, 0] * vn[:-1, 1] - vn[1:, 1] * vn[:-1, 0]
-                    idx = numpy.nonzero(den**2 < 1e-12 * numpy.sum(vn[1:]**2, 1) * numpy.sum(vn[:-1]**2, 1))[0]
-                    if len(idx) > 0:
-                        den[idx] = 1
-                    ds = sb[:-1] - sa[1:]
-                    u0 = (vn[1:, 1] * ds[:, 0] - vn[1:, 0] * ds[:, 1]) / den
-                    u1 = (vn[:-1, 1] * ds[:, 0] - vn[:-1, 0] * ds[:, 1]) / den
-                    if any(u0 < -1) or any(u1 > 1):
-                        warnings.warn("[GDSPY] Possible inconsistency found in `SimplePath` due to sharp corner.")
-                    pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
-                    if len(idx) > 0:
-                        pts[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
-                    pts[0] = sa[0]
-                    pts[-1] = sb[-1]
-                else:
-                    pts = self.points
-                vn = pts[1:] - pts[:-1]
-                vn = vn[:, ::-1] * inv / numpy.sqrt(numpy.sum(vn**2, 1)).reshape((vn.shape[0], 1))
-                arms = [[], []]
-                caps = [[], []]
-                for ii in (0, 1):
-                    sign = -1 if ii == 0 else 1
-                    pa = pts[:-1] + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
-                    pb = pts[1:] + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
-                    vec = pb - pa
-                    caps[0].append(pa[0])
-                    caps[1].append(pb[-1])
-                    for jj in range(1, self.points.shape[0] - 1):
-                        p0 = pb[jj - 1]
-                        v0 = vec[jj - 1]
-                        p1 = pa[jj]
-                        v1 = vec[jj]
-                        if corner == 'natural':
-                            v0 = v0 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v0**2)))
-                            v1 = v1 * (0.5 * self.widths[jj, kk] / numpy.sqrt(numpy.sum(v1**2)))
-                            u0, u1, p = _intersect_lines(p0, v0, p1, v1)
-                            if u0 < 0 and u1 > 0:
-                                arms[ii].append(p)
-                            elif u0 <= 1 and u1 >= -1:
-                                arms[ii].append(0.5 * (p0 + min(1, u0) * v0 + p1 + max(-1, u1) * v1))
-                            else:
-                                arms[ii].append(p0 + min(1, u0) * v0)
-                                arms[ii].append(p1 + max(-1, u1) * v1)
-                        elif callable(corner):
-                            arms[ii].extend(corner(p0, v0, p1, v1, pts[jj]))
-                        else:
-                            u0, u1, p = _intersect_lines(p0, v0, p1, v1)
-                            if corner == 'miter':
-                                arms[ii].append(p)
-                            elif u0 <= 0 and u1 >= 0:
-                                arms[ii].append(p)
-                            elif corner == 'bevel':
-                                arms[ii].append(p0)
-                                arms[ii].append(p1)
-                            elif corner == 'round':
-                                if v0[1] * v1[0] - v0[0] * v1[1] < 0:
-                                    a0 = numpy.arctan2(-v0[0], v0[1])
-                                    a1 = numpy.arctan2(-v1[0], v1[1])
-                                else:
-                                    a0 = numpy.arctan2(v0[0], -v0[1])
-                                    a1 = numpy.arctan2(v1[0], -v1[1])
-                                if abs(a1 - a0) > numpy.pi:
-                                    if a0 < a1:
-                                        a0 += 2 * numpy.pi
-                                    else:
-                                        a1 += 2 * numpy.pi
-                                r = 0.5 * self.widths[jj, kk]
-                                np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / r) + 0.5))
-                                angles = numpy.linspace(a0, a1, np)
-                                arms[ii].extend(pts[jj] + r * numpy.vstack((numpy.cos(angles),
-                                                                            numpy.sin(angles))).T)
-                            elif corner == 'smooth':
-                                angles = [numpy.arctan2(v0[1], v0[0]), numpy.arctan2(v1[1], v1[0])]
-                                bezpts = numpy.vstack((p0, p1))
-                                cta, ctb = _hobby(bezpts, angles)
-                                f = _func_bezier(numpy.array([bezpts[0], cta[0], ctb[0], bezpts[1]]))
-                                tol = self.tolerance ** 2
-                                uu = [0, 1]
-                                fu = [f(0), f(1)]
-                                iu = 1
-                                while iu < len(fu):
-                                    test_u = 0.5 * (uu[iu - 1] +  uu[iu])
-                                    test_pt = f(test_u)
-                                    if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
-                                        uu.insert(iu, test_u)
-                                        fu.insert(iu, test_pt)
-                                    else:
-                                        iu += 1
-                                arms[ii].extend(fu)
-                if end != 'flush':
-                    for ii in (0, 1):
+            if self.points.shape[0] == 2:
+                # Common case: single path with 2 points
+                un = self.points[1] - self.points[0]
+                un = un[::-1] * _mpone / (un[0]**2 + un[1]**2)**0.5
+                for kk in range(self.n):
+                    end = self.ends[kk]
+                    pts = numpy.array((self.points[0] + un * self.offsets[0, kk],
+                                       self.points[1] + un * self.offsets[1, kk]))
+                    vn = pts[1] - pts[0]
+                    vn = vn[::-1] * _mpone / (vn[0]**2 + vn[1]**2)**0.5
+                    v = (vn * (0.5 * self.widths[0, kk]), vn * (0.5 * self.widths[1, kk]))
+                    poly = numpy.array((pts[0] - v[0], pts[0] + v[0],
+                                        pts[1] + v[1], pts[1] - v[1]))
+                    if end != 'flush':
+                        v0 = poly[3] - poly[0]
+                        v1 = poly[2] - poly[1]
                         if callable(end):
-                            vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
-                            caps[ii] = end(caps[ii][0], caps[ii][1], vecs[0], vecs[1])
+                            cap0 = end(poly[0], poly[1], -v0, v1)
+                            cap1 = end(poly[3], poly[2], v0, -v1)
+                            poly = numpy.array(cap0[::-1] + cap1)
                         elif end == 'smooth':
-                            points = numpy.array(caps[ii])
-                            vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
-                            angles = [numpy.arctan2(vecs[0][1], vecs[0][0]),
-                                      numpy.arctan2(vecs[1][1], vecs[1][0])]
-                            cta, ctb = _hobby(points, angles)
-                            f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                            angles = [numpy.arctan2(-v0[1], -v0[0]), numpy.arctan2(v1[1], v1[0])]
+                            cta, ctb = _hobby(poly[:2], angles)
+                            f = _func_bezier(numpy.array([poly[0], cta[0], ctb[0], poly[1]]))
                             tol = self.tolerance ** 2
                             uu = [0, 1]
                             fu = [f(0), f(1)]
@@ -2697,35 +2621,222 @@ class SimplePath(object):
                             while iu < len(fu):
                                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
                                 test_pt = f(test_u)
-                                if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
+                                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+                                if test_err[0]**2 + test_err[1]**2 > tol:
                                     uu.insert(iu, test_u)
                                     fu.insert(iu, test_pt)
                                 else:
                                     iu += 1
-                            caps[ii] = fu
+                            cap = fu
+                            cta, ctb = _hobby(poly[2:], [angles[1], angles[0]])
+                            f = _func_bezier(numpy.array([poly[2], cta[0], ctb[0], poly[3]]))
+                            tol = self.tolerance ** 2
+                            uu = [0, 1]
+                            fu = [f(0), f(1)]
+                            iu = 1
+                            while iu < len(fu):
+                                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                test_pt = f(test_u)
+                                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+                                if test_err[0]**2 + test_err[1]**2 > tol:
+                                    uu.insert(iu, test_u)
+                                    fu.insert(iu, test_pt)
+                                else:
+                                    iu += 1
+                            cap.extend(fu)
+                            poly = numpy.array(cap)
                         elif end == 'round':
-                            v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
-                            r = 0.5 * self.widths[-ii, kk]
+                            v = pts[1] - pts[0]
+                            r = 0.5 * self.widths[0, kk]
                             np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
-                            ang = (2 * ii - 1) * numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(v[1], v[0])
-                            caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
+                            ang = numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(-v[1], -v[0])
+                            poly = pts[0] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
+                            r = 0.5 * self.widths[1, kk]
+                            np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                            ang = numpy.linspace(_halfpi, -_halfpi, np) + numpy.arctan2(v[1], v[0])
+                            poly = numpy.vstack((poly, pts[1] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T))
                         else: # 'extended'/list
-                            v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
-                            v /= numpy.sqrt(numpy.sum(v**2))
-                            w = (2 * ii - 1) * v[::-1] * numpy.array((1, -1))
-                            r = 0.5 * self.widths[-ii, kk]
-                            d = r if end == 'extended' else end[ii]
-                            caps[ii] = [pts[-ii] + d * v + r * w, pts[-ii] + d * v - r * w]
-                poly = caps[0][::-1]
-                poly.extend(arms[0])
-                poly.extend(caps[1])
-                poly.extend(arms[1][::-1])
-                poly = numpy.array(poly)
-                key = (self.layers[kk], self.datatypes[kk])
-                if key in self._polygon_dict:
-                    self._polygon_dict[key].append(poly)
-                else:
-                    self._polygon_dict[key] = [poly]
+                            v = pts[1] - pts[0]
+                            v /= (v[0]**2 + v[1]**2)**0.5
+                            if end == 'extended':
+                                v0 = 0.5 * self.widths[0, kk] * v
+                                v1 = 0.5 * self.widths[1, kk] * v
+                            else:
+                                v0 = end[0] * v
+                                v1 = end[1] * v
+                            if self.width[0, kk] == self.widths[1, kk]:
+                                poly[0] -= v0
+                                poly[1] -= v0
+                                poly[2] += v1
+                                poly[3] += v1
+                            else:
+                                poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
+                                                    poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
+                    key = (self.layers[kk], self.datatypes[kk])
+                    if key in self._polygon_dict:
+                        self._polygon_dict[key].append(poly)
+                    else:
+                        self._polygon_dict[key] = [poly]
+            else:
+                un = self.points[1:] - self.points[:-1]
+                un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
+                for kk in range(self.n):
+                    corner = self.corners[kk]
+                    end = self.ends[kk]
+                    if any(self.offsets[:, kk] != 0):
+                        pts = numpy.empty(self.points.shape)
+                        sa = self.points[:-1] + un * self.offsets[:-1, kk:kk + 1]
+                        sb = self.points[1:] + un * self.offsets[1:, kk:kk + 1]
+                        vn = sb - sa
+                        den = vn[1:, 0] * vn[:-1, 1] - vn[1:, 1] * vn[:-1, 0]
+                        idx = numpy.nonzero(den**2 < 1e-12 * (vn[1:, 0]**2 + vn[1:, 1]**2) * (vn[:-1, 0]**2 + vn[:-1, 1]**2))[0]
+                        if len(idx) > 0:
+                            den[idx] = 1
+                        ds = sb[:-1] - sa[1:]
+                        u0 = (vn[1:, 1] * ds[:, 0] - vn[1:, 0] * ds[:, 1]) / den
+                        u1 = (vn[:-1, 1] * ds[:, 0] - vn[:-1, 0] * ds[:, 1]) / den
+                        if any(u0 < -1) or any(u1 > 1):
+                            warnings.warn("[GDSPY] Possible inconsistency found in `SimplePath` due to sharp corner.")
+                        pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
+                        if len(idx) > 0:
+                            pts[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
+                        pts[0] = sa[0]
+                        pts[-1] = sb[-1]
+                    else:
+                        pts = self.points
+                    vn = pts[1:] - pts[:-1]
+                    vn = vn[:, ::-1] * _mpone / ((vn[:, 0]**2 + vn[:, 1]**2)**0.5).reshape((vn.shape[0], 1))
+                    arms = [[], []]
+                    caps = [[], []]
+                    for ii in (0, 1):
+                        sign = -1 if ii == 0 else 1
+                        pa = pts[:-1] + vn * (sign * 0.5 * self.widths[:-1, kk:kk + 1])
+                        pb = pts[1:] + vn * (sign * 0.5 * self.widths[1:, kk:kk + 1])
+                        vec = pb - pa
+                        caps[0].append(pa[0])
+                        caps[1].append(pb[-1])
+                        for jj in range(1, self.points.shape[0] - 1):
+                            p0 = pb[jj - 1]
+                            v0 = vec[jj - 1]
+                            p1 = pa[jj]
+                            v1 = vec[jj]
+                            if corner == 'natural':
+                                w = self.widths[jj, kk]
+                                v0 = v0 * (0.5 * w / (v0[0]**2 + v0[1]**2))**0.5
+                                v1 = v1 * (0.5 * w / (v1[0]**2 + v1[1]**2))**0.5
+                                den = v1[1] * v0[0] - v1[0] * v0[1]
+                                if den < (0.5e-3 * w)**2:
+                                    u0 = u1 = 0
+                                    p = 0.5 * (p0 + p1)
+                                else:
+                                    dx = p1[0] - p0[0]
+                                    dy = p1[1] - p0[1]
+                                    u0 = (v1[1] * dx - v1[0] * dy) / den
+                                    u1 = (v0[1] * dx - v0[0] * dy) / den
+                                    p = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
+                                if u0 < 0 and u1 > 0:
+                                    arms[ii].append(p)
+                                elif u0 <= 1 and u1 >= -1:
+                                    arms[ii].append(0.5 * (p0 + min(1, u0) * v0 + p1 + max(-1, u1) * v1))
+                                else:
+                                    arms[ii].append(p0 + min(1, u0) * v0)
+                                    arms[ii].append(p1 + max(-1, u1) * v1)
+                            elif callable(corner):
+                                arms[ii].extend(corner(p0, v0, p1, v1, pts[jj]))
+                            else:
+                                u0, u1, p = _intersect_lines(p0, v0, p1, v1)
+                                if corner == 'miter':
+                                    arms[ii].append(p)
+                                elif u0 <= 0 and u1 >= 0:
+                                    arms[ii].append(p)
+                                elif corner == 'bevel':
+                                    arms[ii].append(p0)
+                                    arms[ii].append(p1)
+                                elif corner == 'round':
+                                    if v0[1] * v1[0] - v0[0] * v1[1] < 0:
+                                        a0 = numpy.arctan2(-v0[0], v0[1])
+                                        a1 = numpy.arctan2(-v1[0], v1[1])
+                                    else:
+                                        a0 = numpy.arctan2(v0[0], -v0[1])
+                                        a1 = numpy.arctan2(v1[0], -v1[1])
+                                    if abs(a1 - a0) > numpy.pi:
+                                        if a0 < a1:
+                                            a0 += 2 * numpy.pi
+                                        else:
+                                            a1 += 2 * numpy.pi
+                                    r = 0.5 * self.widths[jj, kk]
+                                    np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                    angles = numpy.linspace(a0, a1, np)
+                                    arms[ii].extend(pts[jj] + r * numpy.vstack((numpy.cos(angles),
+                                                                                numpy.sin(angles))).T)
+                                elif corner == 'smooth':
+                                    angles = [numpy.arctan2(v0[1], v0[0]), numpy.arctan2(v1[1], v1[0])]
+                                    bezpts = numpy.vstack((p0, p1))
+                                    cta, ctb = _hobby(bezpts, angles)
+                                    f = _func_bezier(numpy.array([bezpts[0], cta[0], ctb[0], bezpts[1]]))
+                                    tol = self.tolerance ** 2
+                                    uu = [0, 1]
+                                    fu = [f(0), f(1)]
+                                    iu = 1
+                                    while iu < len(fu):
+                                        test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                        test_pt = f(test_u)
+                                        test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+                                        if test_err[0]**2 + test_err[1]**2 > tol:
+                                            uu.insert(iu, test_u)
+                                            fu.insert(iu, test_pt)
+                                        else:
+                                            iu += 1
+                                    arms[ii].extend(fu)
+                    if end != 'flush':
+                        for ii in (0, 1):
+                            if callable(end):
+                                vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
+                                caps[ii] = end(caps[ii][0], caps[ii][1], vecs[0], vecs[1])
+                            elif end == 'smooth':
+                                points = numpy.array(caps[ii])
+                                vecs = [caps[ii][0] - arms[0][-ii], arms[1][-ii] - caps[ii][1]]
+                                angles = [numpy.arctan2(vecs[0][1], vecs[0][0]),
+                                          numpy.arctan2(vecs[1][1], vecs[1][0])]
+                                cta, ctb = _hobby(points, angles)
+                                f = _func_bezier(numpy.array([points[0], cta[0], ctb[0], points[1]]))
+                                tol = self.tolerance ** 2
+                                uu = [0, 1]
+                                fu = [f(0), f(1)]
+                                iu = 1
+                                while iu < len(fu):
+                                    test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                                    test_pt = f(test_u)
+                                    test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+                                    if test_err[0]**2 + test_err[1]**2 > tol:
+                                        uu.insert(iu, test_u)
+                                        fu.insert(iu, test_pt)
+                                    else:
+                                        iu += 1
+                                caps[ii] = fu
+                            elif end == 'round':
+                                v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
+                                r = 0.5 * self.widths[-ii, kk]
+                                np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                ang = (2 * ii - 1) * numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(v[1], v[0])
+                                caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
+                            else: # 'extended'/list
+                                v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
+                                v /= (v[0]**2 - v[1]**2)**0.5
+                                w = (2 * ii - 1) * v[::-1] * _pmone
+                                r = 0.5 * self.widths[-ii, kk]
+                                d = r if end == 'extended' else end[ii]
+                                caps[ii] = [pts[-ii] + d * v + r * w, pts[-ii] + d * v - r * w]
+                    poly = caps[0][::-1]
+                    poly.extend(arms[0])
+                    poly.extend(caps[1])
+                    poly.extend(arms[1][::-1])
+                    poly = numpy.array(poly)
+                    key = (self.layers[kk], self.datatypes[kk])
+                    if key in self._polygon_dict:
+                        self._polygon_dict[key].append(poly)
+                    else:
+                        self._polygon_dict[key] = [poly]
         if by_spec:
             return libcopy.deepcopy(self._polygon_dict)
         else:
@@ -2778,9 +2889,8 @@ class SimplePath(object):
         else:
             return self.to_polygonset().to_gds(multiplier)
         data = []
-        inv = numpy.array((-1, 1))
         un = self.points[1:] - self.points[:-1]
-        un = un[:, ::-1] * inv / numpy.sqrt(numpy.sum(un**2, 1)).reshape((un.shape[0], 1))
+        un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
         for ii in range(self.n):
             pathtype = 0 if callable(self.ends[ii]) else SimplePath._pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
@@ -2795,7 +2905,7 @@ class SimplePath(object):
                 sb = self.points[1:] + un * self.offsets[1:, ii:ii + 1]
                 vn = sb - sa
                 den = vn[1:, 0] * vn[:-1, 1] - vn[1:, 1] * vn[:-1, 0]
-                idx = numpy.nonzero(den**2 < 1e-12 * numpy.sum(vn[1:]**2, 1) * numpy.sum(vn[:-1]**2, 1))[0]
+                idx = numpy.nonzero(den**2 < 1e-12 * (vn[1:, 0]**2 + vn[1:, 1]**2) * (vn[:-1, 0]**2 + vn[:-1, 1]**2))[0]
                 if len(idx) > 0:
                     den[idx] = 1
                 u0 = (vn[1:, 1] * (sb[:-1, 0] - sa[1:, 0])
@@ -2880,8 +2990,7 @@ class SimplePath(object):
         """
         self._polygon_dict = None
         ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
+        sa = numpy.sin(angle) * _mpone
         c0 = numpy.array(center)
         x = self.points - c0
         self.points = x * ca + x[:, ::-1] * sa + c0
@@ -2941,17 +3050,15 @@ class SimplePath(object):
         """
         self._polygon_dict = None
         if translation is None:
-            translation = numpy.array((0, 0))
+            translation = _zero
         if array_trans is None:
-            array_trans = numpy.array((0, 0))
+            array_trans = _zero
         if rotation is None:
-            cos = 1
-            sin = 0
+            cos = _one
+            sin = _zero
         else:
-            cos = numpy.cos(rotation)
-            sin = numpy.sin(rotation)
-        cos = numpy.array((cos, cos))
-        sin = numpy.array((-sin, sin))
+            cos = numpy.cos(rotation) * _one
+            sin = numpy.sin(rotation) * _mpone
         if scale is not None:
             cos = cos * scale
             sin = sin * scale
@@ -2978,7 +3085,8 @@ class SimplePath(object):
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3000,7 +3108,7 @@ class SimplePath(object):
         self._polygon_dict = None
         self.points = numpy.vstack((self.points, (self.points[-1] + numpy.array(end_point))
                                                  if relative else end_point))
-        if width is None:
+        if self.gdsii_path or width is None:
             self.widths = numpy.vstack((self.widths, self.widths[-1]))
         elif hasattr(width, '__iter__'):
             self.widths = numpy.vstack((self.widths, width))
@@ -3030,7 +3138,8 @@ class SimplePath(object):
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3044,6 +3153,8 @@ class SimplePath(object):
             This object.
         """
         self._polygon_dict = None
+        if self.gdsii_path:
+            width = None
         if width is None:
             wid = self.widths[-1]
         elif hasattr(width, '__iter__'):
@@ -3062,12 +3173,12 @@ class SimplePath(object):
         pts = radius * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
         self.points = numpy.vstack((self.points, pts[1:] + (self.points[-1] - pts[0])))
         if width is None:
-            self.widths = numpy.vstack((self.widths, numpy.tile(self.widths[-1], (np - 1, 1))))
+            self.widths = numpy.vstack((self.widths, numpy.tile(wid, (np - 1, 1))))
         else:
             u = numpy.linspace(0, 1, np)[1:]
             self.widths = numpy.vstack((self.widths, numpy.outer(1 - u, self.widths[-1]) + numpy.outer(u, wid)))
         if offset is None:
-            self.offsets = numpy.vstack((self.offsets, numpy.tile(self.offsets[-1], (np - 1, 1))))
+            self.offsets = numpy.vstack((self.offsets, numpy.tile(off, (np - 1, 1))))
         else:
             u = numpy.linspace(0, 1, np)[1:]
             self.offsets = numpy.vstack((self.offsets, numpy.outer(1 - u, self.offsets[-1]) + numpy.outer(u, off)))
@@ -3084,13 +3195,17 @@ class SimplePath(object):
         ----------
         radius : number
             Radius of the circular arc.
-        angle : number
-            Turning angle of the arc.
+        angle : 'r', 'l', 'rr', 'll' or number
+            Angle (in *radians*) of rotation of the path.  The values
+            'r' and 'l' represent 90-degree turns cw and ccw,
+            respectively; the values 'rr' and 'll' represent analogous
+            180-degree turns.
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3107,6 +3222,7 @@ class SimplePath(object):
         if self.points.shape[0] < 2:
             raise ValueError("[GDSPY] Cannot define initial angle for turn on a SimplePath withouth previous segments.")
         v = self.points[-1] - self.points[-2]
+        angle = _angle_dic.get(angle, angle)
         initial_angle = numpy.arctan2(v[1], v[0]) + (_halfpi if angle < 0 else -_halfpi)
         self.arc(radius, initial_angle, initial_angle + angle, width, offset)
         return self
@@ -3125,7 +3241,8 @@ class SimplePath(object):
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3144,6 +3261,8 @@ class SimplePath(object):
             This object.
         """
         self._polygon_dict = None
+        if self.gdsii_path:
+            width = None
         if width is None:
             wid = self.widths[-1]
         elif hasattr(width, '__iter__'):
@@ -3165,7 +3284,8 @@ class SimplePath(object):
             while f < 1:
                 test_u = u[i - 1] * (1 - f) +  u[i] * f
                 test_pt = numpy.array(curve_function(test_u))
-                if ((pts[i - 1] * (1 - f) +  pts[i] * f - test_pt)**2).sum() > tol:
+                test_err = pts[i - 1] * (1 - f) +  pts[i] * f - test_pt
+                if test_err[0]**2 + test_err[1]**2 > tol:
                     u.insert(i, test_u)
                     pts.insert(i, test_pt)
                     f = 1
@@ -3177,12 +3297,12 @@ class SimplePath(object):
         np = pts.shape[0] + 1
         self.points = numpy.vstack((self.points, (pts + self.points[-1]) if relative else pts))
         if width is None:
-            self.widths = numpy.vstack((self.widths, numpy.tile(self.widths[-1], (np - 1, 1))))
+            self.widths = numpy.vstack((self.widths, numpy.tile(wid, (np - 1, 1))))
         else:
             u = numpy.linspace(0, 1, np)[1:]
             self.widths = numpy.vstack((self.widths, numpy.outer(1 - u, self.widths[-1]) + numpy.outer(u, wid)))
         if offset is None:
-            self.offsets = numpy.vstack((self.offsets, numpy.tile(self.offsets[-1], (np - 1, 1))))
+            self.offsets = numpy.vstack((self.offsets, numpy.tile(off, (np - 1, 1))))
         else:
             u = numpy.linspace(0, 1, np)[1:]
             self.offsets = numpy.vstack((self.offsets, numpy.outer(1 - u, self.offsets[-1]) + numpy.outer(u, off)))
@@ -3206,7 +3326,8 @@ class SimplePath(object):
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3275,7 +3396,8 @@ class SimplePath(object):
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
-            the parallel paths in this object.
+            the parallel paths in this object.  This argument has no
+            effect if the path was created with ``gdsii_path == True``.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3564,7 +3686,8 @@ class LazyPath(object):
                             while iu < len(fu) < self.max_evals:
                                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
                                 test_pt = f(test_u)
-                                if ((0.5 * (fu[iu - 1] +  fu[iu]) - test_pt)**2).sum() > tol:
+                                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+                                if test_err[0]**2 + test_err[1]**2 > tol:
                                     uu.insert(iu, test_u)
                                     fu.insert(iu, test_pt)
                                 else:
@@ -3580,8 +3703,8 @@ class LazyPath(object):
                                 endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
                                 poly.extend(endpts)
                             else:
-                                v /= numpy.sqrt(numpy.sum(v**2))
-                                w = v[::-1] * numpy.array((1, -1))
+                                v /= (v[0]**2 + v[1]**2)**0.5
+                                w = v[::-1] * _pmone
                                 d = r if end == 'extended' else end[u]
                                 poly.append(p + d * v + r * w)
                                 poly.append(p + d * v - r * w)
@@ -3597,7 +3720,7 @@ class LazyPath(object):
                         u0 = 1 + u0
                         if u0 < 1 and u1 > 0:
                             delta = sub0(u0, arm) - sub1(u1, arm)
-                            err = numpy.sum(delta**2)
+                            err = delta[0]**2 + delta[1]**2
                             iters = 0
                             step = 0.5
                             while err > tol:
@@ -3605,10 +3728,12 @@ class LazyPath(object):
                                 if iters > self.max_evals:
                                     warnings.warn('[GDSPY] Intersection not found.')
                                     break
-                                new_u0 = min(1, max(0, u0 - step * numpy.sum(delta * sub0.grad(u0, arm))))
-                                new_u1 = min(1, max(0, u1 + step * numpy.sum(delta * sub1.grad(u1, arm))))
+                                du = delta * sub0.grad(u0, arm)
+                                new_u0 = min(1, max(0, u0 - step * (du[0] + du[1])))
+                                du = delta * sub1.grad(u1, arm)
+                                new_u1 = min(1, max(0, u1 + step * (du[0] + du[1])))
                                 new_delta = sub0(new_u0, arm) - sub1(new_u1, arm)
-                                new_err = numpy.sum(new_delta**2)
+                                new_err = new_delta[0]**2 + new_delta[1]**2
                                 if new_err >= err:
                                     step /= 2
                                     continue
@@ -3784,8 +3909,7 @@ class LazyPath(object):
         """
         self._polygon_dict = None
         ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
+        sa = numpy.sin(angle) * _mpone
         c0 = numpy.array(center)
         x = self.x - c0
         self.x = x * ca + x[::-1] * sa + c0
@@ -4000,8 +4124,11 @@ class LazyPath(object):
         ----------
         radius : number
             Radius of the circular arc.
-        angle : number
-            Turning angle of the arc.
+        angle : 'r', 'l', 'rr', 'll' or number
+            Angle (in *radians*) of rotation of the path.  The values
+            'r' and 'l' represent 90-degree turns cw and ccw,
+            respectively; the values 'rr' and 'll' represent analogous
+            180-degree turns.
         width : number, callable, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  If this is callable, it must be a
@@ -4027,6 +4154,7 @@ class LazyPath(object):
         i = len(self.paths[0]) - 1
         if i < 0:
             raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty LazyPath.")
+        angle = _angle_dic.get(angle, angle)
         initial_angle = 0
         for p in self.paths:
             v = p[i].grad(1, 0)
@@ -5140,12 +5268,11 @@ class CellReference(object):
             return dict() if by_spec else []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if by_spec:
@@ -5193,12 +5320,11 @@ class CellReference(object):
             return []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         polygonsets = self.ref_cell.get_polygonsets(depth=depth)
@@ -5261,12 +5387,11 @@ class CellReference(object):
             return []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         labels = self.ref_cell.get_labels(depth=depth)
@@ -5510,14 +5635,13 @@ class CellArray(object):
             return dict() if by_spec else []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
@@ -5576,12 +5700,11 @@ class CellArray(object):
             return []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         polygonsets = self.ref_cell.get_polygonsets(depth=depth)
@@ -5659,14 +5782,13 @@ class CellArray(object):
             return []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0)
-            st = numpy.array([-st, st])
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.magnification is not None:
-            mag = numpy.array([self.magnification, self.magnification])
+            mag = self.magnification * _one
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = numpy.array([1, -1], dtype='int')
+            xrefl = _pmone_int
         cell_labels = self.ref_cell.get_labels(depth=depth)
         labels = []
         for ii in range(self.columns):
