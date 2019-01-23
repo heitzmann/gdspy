@@ -2,10 +2,12 @@
 gdspy's Documentation
 #####################
 
+.. automodule:: gdspy
+
 For installation instructions and other information, please check out the `GitHub <https://github.com/heitzmann/gdspy>`_ repository or the README file included with the source.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Table of Contents
 
    gettingstarted

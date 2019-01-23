@@ -2,7 +2,6 @@
 API Reference
 #############
 
-.. automodule:: gdspy
 
 *********************
 Geometry Construction
@@ -85,7 +84,6 @@ SimplePath
 
 .. autoclass:: gdspy.SimplePath
    :members:
-   :undoc-members:
    :inherited-members:
    :show-inheritance:
 
@@ -95,7 +93,6 @@ LazyPath
 
 .. autoclass:: gdspy.LazyPath
    :members:
-   :undoc-members:
    :inherited-members:
    :show-inheritance:
 

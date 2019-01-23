@@ -9,10 +9,11 @@
 """
 gdspy is a Python module that allows the creation of GDSII stream files.
 
-Many features of the GDSII format are implemented, such as cell
-references and arrays, but the support for fonts is quite limited.
+Most features of the GDSII format are implemented, including support for
+polygons with any number of vertices.
 
 GDSII format references:
+
 - http://boolean.klaasholwerda.nl/interface/bnf/gdsformat.html
 - http://www.artwork.com/gdsii/gdsii/
 - http://www.buchanan1.net/stream_description.html
@@ -500,8 +501,8 @@ class PolygonSet(object):
     The last point should not be equal to the first (polygons are
     automatically closed).
 
-    The GDSII specification supports only a maximum of 199 vertices per
-    polygon.
+    The original GDSII specification supports only a maximum of 199
+    vertices per polygon.
     """
 
     __slots__ = 'layers', 'datatypes', 'polygons'
