@@ -215,4 +215,4 @@ get_binary_cells
 current_library
 ===============
 
-.. autodata:: current_library
+.. autodata:: gdspy.current_library

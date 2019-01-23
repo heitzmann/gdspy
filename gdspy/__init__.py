@@ -150,7 +150,7 @@ def _eight_byte_real(value):
     Returns
     -------
     out : string
-        The GDSII binary string that represents ``value``.
+        The GDSII binary string that represents `value`.
     """
     if value == 0:
         return b'\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -183,7 +183,7 @@ def _eight_byte_real_to_float(value):
     Returns
     -------
     out : float
-        The number represented by ``value``.
+        The number represented by `value`.
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256 - 64
@@ -204,9 +204,9 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
     ----------
     points : Numpy array[N, 2]
         Vertices in the interpolating curve.
-    angles : array-like[N] or ``None``
+    angles : array-like[N] or None
         Tangent angles at each point (in *radians*).  Any angles defined
-        as ``None`` are automatically calculated.
+        as None are automatically calculated.
     curl_start : number
         Ratio between the mock curvatures at the first point and at its
         neighbor.  A value of 1 renders the first segment a good
@@ -224,15 +224,15 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
         Tension parameter when leaving each point.  One value per point
         or a single value used for all points.
     cycle : bool
-        If ``True``, calculates control points for a closed curve, with
+        If True, calculates control points for a closed curve, with
         an additional segment connecting the first and last points.
 
     Returns
     -------
     out : 2-tuple of Numpy array[M, 2]
         Pair of control points for each segment in the interpolating
-        curve.  For a closed curve (``cycle = True``), M = N.  For an
-        open curve (``cycle = False``), M = N - 1.
+        curve.  For a closed curve (`cycle` True), M = N.  For an open
+        curve (`cycle` False), M = N - 1.
 
     References
     ----------
@@ -447,9 +447,9 @@ def _gather_polys(args):
 
     Parameters
     ----------
-    args : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    args : None, `PolygonSet`, `CellReference`, `CellArray` or iterable
         Polygon types.  If this is an iterable, each element must be a
-        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        `PolygonSet`, `CellReference`, `CellArray`, or an
         array-like[N][2] of vertices of a polygon.
 
     Returns
@@ -521,9 +521,9 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : Numpy array[2, 2] or ``None``
+        out : Numpy array[2, 2] or None
             Bounding box of this polygon in the form [[x_min, y_min],
-            [x_max, y_max]], or ``None`` if the polygon is empty.
+            [x_max, y_max]], or None if the polygon is empty.
         """
         if len(self.polygons) == 0:
             return None
@@ -545,7 +545,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         ca = numpy.cos(angle)
@@ -566,15 +566,15 @@ class PolygonSet(object):
         ----------
         scalex : number
             Scaling factor along the first axis.
-        scaley : number or ``None``
-            Scaling factor along the second axis.  If ``None``, same as
-            ``scalex``.
+        scaley : number or None
+            Scaling factor along the second axis.  If None, same as
+            `scalex`.
         center : array-like[2]
             Center point for the scaling operation.
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         c0 = numpy.array(center)
@@ -628,7 +628,7 @@ class PolygonSet(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with
+            If True, the return value is a dictionary with
             ``{(layer, datatype): area}``.
 
         Returns
@@ -658,7 +658,7 @@ class PolygonSet(object):
     def fracture(self, max_points=199, precision=1e-3):
         """
         Slice these polygons in the horizontal and vertical directions
-        so that each resulting piece has at most ``max_points``.  This
+        so that each resulting piece has at most `max_points`.  This
         operation occurs in place.
 
         Parameters
@@ -671,7 +671,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         if max_points > 4:
@@ -711,11 +711,11 @@ class PolygonSet(object):
             Radius of the corners.  If number: all corners filleted by
             that amount.  If list: specify fillet radii on a per-polygon
             basis (list length must be equal to the number of polygons
-            in this ``PolygonSet``).  Each element in the list can be a
+            in this `PolygonSet`).  Each element in the list can be a
             number (all corners filleted by the same amount) or a list
             of numbers, one per polygon vertex.  Alternatively, the list
-            can be flattened to have one radius per ``PolygonSet``
-            vertex, instead of being a list of lists.
+            can be flattened to have one radius per `PolygonSet` vertex,
+            instead of being a list of lists.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The
             number of vertices in each corner of the polygon will be the
@@ -730,7 +730,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         two_pi = 2 * numpy.pi
@@ -823,7 +823,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         vec = numpy.array((dx, dy))
@@ -843,7 +843,7 @@ class PolygonSet(object):
 
         Returns
         -------
-        out : ``PolygonSet``
+        out : `PolygonSet`
             This object.
         """
         origin = numpy.array(p1)
@@ -872,8 +872,8 @@ class Polygon(PolygonSet):
     The last point should not be equal to the first (polygons are
     automatically closed).
 
-    The GDSII specification supports only a maximum of 199 vertices per
-    polygon.
+    The original GDSII specification supports only a maximum of 199
+    vertices per polygon.
 
     Examples
     --------
@@ -902,8 +902,7 @@ class Rectangle(PolygonSet):
     point1 : array-like[2]
         Coordinates of a corner of the rectangle.
     point2 : array-like[2]
-        Coordinates of the corner of the rectangle opposite to
-        ``point1``.
+        Coordinates of the corner of the rectangle opposite to `point1`.
     layer : integer
         The GDSII layer number for this element.
     datatype : integer
@@ -955,13 +954,13 @@ class Round(PolygonSet):
     tolerance : float
         Approximate curvature resolution.  The number of points is
         automatically calculated.
-    number_of_points : integer or ``None``
+    number_of_points : integer or None
         Manually define the number of vertices that form the object
-        (polygonal approximation).  Overrides ``tolerance``.
+        (polygonal approximation).  Overrides `tolerance`.
     max_points : integer
         If the number of points in the element is greater than
-        ``max_points``, it will be fractured in smaller polygons with
-        at most ``max_points`` each.  If ``max_points = 0`` no fracture
+        `max_points`, it will be fractured in smaller polygons with
+        at most `max_points` each.  If `max_points` is zero no fracture
         will occur.
     layer : integer
         The GDSII layer number for this element.
@@ -970,8 +969,8 @@ class Round(PolygonSet):
 
     Notes
     -----
-    The GDSII specification supports only a maximum of 199 vertices per
-    polygon.
+    The original GDSII specification supports only a maximum of 199
+    vertices per polygon.
 
     Examples
     --------
@@ -1089,8 +1088,8 @@ class Text(PolygonSet):
     position : array-like[2]
         Text position (lower left corner).
     horizontal : bool
-        If ``True``, the text is written from left to right; if
-        ``False``, from top to bottom.
+        If True, the text is written from left to right; if
+        False, from top to bottom.
     angle : number
         The angle of rotation of the text.
     layer : integer
@@ -1313,7 +1312,7 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
         """
         ca = numpy.cos(angle)
@@ -1359,7 +1358,7 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
         """
         if direction is None:
@@ -1431,13 +1430,13 @@ class Path(PolygonSet):
         tolerance : float
             Approximate curvature resolution.  The number of points is
             automatically calculated.
-        number_of_points : integer or ``None``
+        number_of_points : integer or None
             Manually define the number of vertices that form the object
-            (polygonal approximation).  Overrides ``tolerance``.
+            (polygonal approximation).  Overrides `tolerance`.
         max_points : integer
             If the number of points in the element is greater than
-            ``max_points``, it will be fractured in smaller polygons
-            with at most ``max_points`` each.  If ``max_points = 0`` no
+            `max_points`, it will be fractured in smaller polygons with
+            at most `max_points` each.  If `max_points` is zero no
             fracture will occur.
         final_width : number
             If set, the paths of this segment will have their widths
@@ -1456,13 +1455,13 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The original GDSII specification supports only a maximum of 199
+        vertices per polygon.
         """
         cx = self.x - radius * numpy.cos(initial_angle)
         cy = self.y - radius * numpy.sin(initial_angle)
@@ -1543,13 +1542,13 @@ class Path(PolygonSet):
         tolerance : float
             Approximate curvature resolution.  The number of points is
             automatically calculated.
-        number_of_points : integer or ``None``
+        number_of_points : integer or None
             Manually define the number of vertices that form the object
-            (polygonal approximation).  Overrides ``tolerance``.
+            (polygonal approximation).  Overrides `tolerance`.
         max_points : integer
             If the number of points in the element is greater than
-            ``max_points``, it will be fractured in smaller polygons
-            with at most ``max_points`` each.  If ``max_points = 0`` no
+            `max_points`, it will be fractured in smaller polygons with
+            at most `max_points` each.  If `max_points` is zero no
             fracture will occur.
         final_width : number
             If set, the paths of this segment will have their widths
@@ -1568,13 +1567,13 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The original GDSII specification supports only a maximum of 199
+        vertices per polygon.
         """
         exact = True
         if angle == 'r':
@@ -1619,10 +1618,10 @@ class Path(PolygonSet):
         """
         Add a parametric curve to the path.
 
-        ``curve_function`` will be evaluated uniformly in the interval
-        [0, 1] at least ``number_of_points`` times.  More points will be
+        `curve_function` will be evaluated uniformly in the interval
+        [0, 1] at least `number_of_points` times.  More points will be
         added to the curve at the midpoint between evaluations if that
-        points presents error larger than ``tolerance``.
+        points presents error larger than `tolerance`.
 
         Parameters
         ----------
@@ -1633,18 +1632,18 @@ class Path(PolygonSet):
         curve_derivative : callable
             If set, it should be the derivative of the curve function.
             Must be a function of one argument (that varies from 0 to 1)
-            that returns a 2-element array.  If ``None``, the derivative
+            that returns a 2-element array.  If None, the derivative
             will be calculated numerically.
         tolerance : number
             Acceptable tolerance for the approximation of the curve
             function by a finite number of evaluations.
         number_of_evaluations : integer
             Initial number of points where the curve function will be
-            evaluated.  According to ``tolerance``, more evaluations
-            will be performed.
+            evaluated.  According to `tolerance`, more evaluations will
+            be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.  If ``max_points = 0`` no fracture will
+            `max_points`.  If `max_points` is zero no fracture will
             occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
@@ -1658,10 +1657,10 @@ class Path(PolygonSet):
             function, it must be a function of one argument (that varies
             from 0 to 1) and returns the width of the path.
         relative : bool
-            If ``True``, the return values of ``curve_function`` are
-            used as offsets from the current path position, i.e., to
-            ensure a continuous path, ``curve_function(0)`` must be
-            (0, 0).  Otherwise, they are used as absolute coordinates.
+            If True, the return values of `curve_function` are used as
+            offsets from the current path position, i.e., to ensure a
+            continuous path, ``curve_function(0)`` must be (0, 0).
+            Otherwise, they are used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1673,16 +1672,16 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
 
         Notes
         -----
-        The norm of the vector returned by ``curve_derivative`` is not
+        The norm of the vector returned by `curve_derivative` is not
         important.  Only the direction is used.
 
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The original GDSII specification supports only a maximum of 199
+        vertices per polygon.
 
         Examples
         --------
@@ -1787,8 +1786,7 @@ class Path(PolygonSet):
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
-        position and finishing at the last point in the ``points``
-        array.
+        position and finishing at the last point in the `points` array.
 
         Parameters
         ----------
@@ -1800,11 +1798,11 @@ class Path(PolygonSet):
             function by a finite number of evaluations.
         number_of_evaluations : integer
             Initial number of points where the curve function will be
-            evaluated.  According to ``tolerance``, more evaluations
-            will be performed.
+            evaluated.  According to `tolerance`, more evaluations will
+            be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.  If ``max_points = 0`` no fracture will
+            `max_points`.  If `max_points` is zero no fracture will
             occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
@@ -1818,12 +1816,11 @@ class Path(PolygonSet):
             function, it must be a function of one argument (that varies
             from 0 to 1) and returns the width of the path.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed Bezier will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed Bezier will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1835,13 +1832,13 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The original GDSII specification supports only a maximum of 199
+        vertices per polygon.
         """
         if relative:
             pts = numpy.vstack(([(0, 0)], points))
@@ -1866,9 +1863,9 @@ class Path(PolygonSet):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or ``None``
+        angles : array-like[N] or None
             Tangent angles at each point (in *radians*).  Any angles
-            defined as ``None`` are automatically calculated.
+            defined as None are automatically calculated.
         curl_start : number
             Ratio between the mock curvatures at the first point and at
             its neighbor.  A value of 1 renders the first segment a good
@@ -1886,7 +1883,7 @@ class Path(PolygonSet):
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
-            If ``True``, calculates control points for a closed curve,
+            If True, calculates control points for a closed curve,
             with an additional segment connecting the first and last
             points.
         tolerance : number
@@ -1894,11 +1891,11 @@ class Path(PolygonSet):
             function by a finite number of evaluations.
         number_of_evaluations : integer
             Initial number of points where the curve function will be
-            evaluated.  According to ``tolerance``, more evaluations
-            will be performed.
+            evaluated.  According to `tolerance`, more evaluations will
+            be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            ``max_points``.  If ``max_points = 0`` no fracture will
+            `max_points`.  If `max_points` is zero no fracture will
             occur.
         final_widths : array-like[M]
             Each element corresponds to the final width of a segment in
@@ -1919,12 +1916,11 @@ class Path(PolygonSet):
             in the curve, i.e., M = N - 1 for an open curve and M = N
             for a closed one.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed curve will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed curve will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
         layer : integer, list
             The GDSII layer numbers for the elements of each path.  If
             the number of layers in the list is less than the number of
@@ -1936,13 +1932,13 @@ class Path(PolygonSet):
 
         Returns
         -------
-        out : ``Path``
+        out : `Path`
             This object.
 
         Notes
         -----
-        The GDSII specification supports only a maximum of 199 vertices
-        per polygon.
+        The original GDSII specification supports only a maximum of 199
+        vertices per polygon.
 
         References
         ----------
@@ -1975,8 +1971,8 @@ class L1Path(PolygonSet):
 
     .. deprecated:: 1.4
 
-       ``L1Path`` is deprecated in favor of SimplePath and will be
-       removed in a future version of Gdspy.
+       `L1Path` is deprecated in favor of SimplePath and will be removed
+       in a future version of Gdspy.
 
     Parameters
     ----------
@@ -1992,14 +1988,14 @@ class L1Path(PolygonSet):
         Direction to turn before each section.  The sign indicate the
         turn direction (ccw is positive), and the modulus is a
         multiplicative factor for the path width after each turn.  Must
-        have 1 element less then ``length``.
+        have 1 element less then `length`.
     number_of_paths : positive integer
         Number of parallel paths to create simultaneously.
     distance : number
         Distance between the centers of adjacent paths.
     max_points : integer
         The paths will be fractured in polygons with at most
-        ``max_points`` (must be at least 6).  If ``max_points = 0`` no
+        `max_points` (must be at least 6).  If `max_points` is zero no
         fracture will occur.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
@@ -2171,7 +2167,7 @@ class L1Path(PolygonSet):
 
         Returns
         -------
-        out : ``L1Path``
+        out : `L1Path`
             This object.
         """
         ca = numpy.cos(angle)
@@ -2193,7 +2189,7 @@ class PolyPath(PolygonSet):
 
     .. deprecated:: 1.4
 
-       ``PolyPath`` is deprecated in favor of SimplePath and will be
+       `PolyPath` is deprecated in favor of SimplePath and will be
        removed in a future version of Gdspy.
 
     Parameters
@@ -2214,7 +2210,7 @@ class PolyPath(PolygonSet):
         Type of end caps for the paths.
     max_points : integer
         The paths will be fractured in polygons with at most
-        ``max_points`` (must be at least 4).  If ``max_points = 0`` no
+        `max_points` (must be at least 4).  If `max_points` is zero no
         fracture will occur.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
@@ -2449,7 +2445,7 @@ class SimplePath(object):
     the path and calculates its boundaries only upon request.
 
     It can be stored as a proper path element in the GDSII format,
-    unlike ``Path``.  In this case, the width must be constant along the
+    unlike `Path`.  In this case, the width must be constant along the
     whole path.
 
     Parameters
@@ -2461,7 +2457,7 @@ class SimplePath(object):
         parallel paths being created is defined by the length of this
         list.
     offset : number, list
-        Offsets of each parallel path from the center.  If ``width`` is
+        Offsets of each parallel path from the center.  If `width` is
         not a list, the length of this list is used to determine the
         number of parallel paths being created.  Otherwise, offset must
         be a list with the same length as width, or a number, which is
@@ -2485,17 +2481,17 @@ class SimplePath(object):
         fracturing the final polygonal boundary.
     max_points : integer
         If the number of points in the polygonal path boundary is
-        greater than ``max_points``, it will be fractured in smaller
-        polygons with at most ``max_points`` each.
-        If ``max_points = 0`` no fracture will occur.
+        greater than `max_points`, it will be fractured in smaller
+        polygons with at most `max_points` each.  If `max_points` is
+        zero no fracture will occur.
     gdsii_path : bool
-        If ``True``, treat this object as a GDSII path element.
+        If True, treat this object as a GDSII path element.
         Otherwise, it will be converted into polygonal boundaries when
         required.
     width_transform : bool
-        If ``gdsii_path == True``, this flag indicates whether the width
+        If `gdsii_path` is True, this flag indicates whether the width
         of the path should transform when scaling this object.  It has
-        no effect when ``gdsii_path == False``.
+        no effect when `gdsii_path` is False.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -2507,7 +2503,7 @@ class SimplePath(object):
 
     Notes
     -----
-    The value of ``tolerance`` should not be smaller than ``precision``,
+    The value of `tolerance` should not be smaller than `precision`,
     otherwise there would be wasted computational effort in calculating
     the paths.
     """
@@ -2579,7 +2575,7 @@ class SimplePath(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the
+            If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
 
         Returns
@@ -2587,7 +2583,7 @@ class SimplePath(object):
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
-            ``by_spec`` is ``True``).
+            `by_spec` is True).
         """
         if self._polygon_dict is None:
             self._polygon_dict = {}
@@ -2885,16 +2881,16 @@ class SimplePath(object):
 
     def to_polygonset(self):
         """
-        Create a ``PolygonSet`` representation of this object.
+        Create a `PolygonSet` representation of this object.
 
         The resulting object will be fractured according to the
-        parameter ``max_points`` used when instantiating this object.
+        parameter `max_points` used when instantiating this object.
 
         Returns
         -------
-        out : ``PolygonSet`` or ``None``
-            A ``PolygonSet`` that contains all boundaries for this path.
-            If the path is empty, returns ``None``.
+        out : `PolygonSet` or None
+            A `PolygonSet` that contains all boundaries for this path.
+            If the path is empty, returns None.
         """
         if self.points.shape[0] < 2:
             return None
@@ -2910,7 +2906,7 @@ class SimplePath(object):
         """
         Convert this object to a series of GDSII elements.
 
-        If ``SimplePath.gdsii_path`` is true, GDSII path elements are
+        If `SimplePath.gdsii_path` is True, GDSII path elements are
         created instead of boundaries.  Such paths do not support
         variable widths, but their memeory footprint is smaller than
         full polygonal boundaries.
@@ -2980,14 +2976,14 @@ class SimplePath(object):
         """
         Calculate the total area of this object.
 
-        This functions creates a ``PolgonSet`` from this object and
+        This functions creates a `PolgonSet` from this object and
         calculates its area, which means it is computationally
         expensive.
 
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with
+            If True, the return value is a dictionary with
             ``{(layer, datatype): area}``.
 
         Returns
@@ -3010,7 +3006,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3029,7 +3025,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3048,13 +3044,12 @@ class SimplePath(object):
         ----------
         scale : number
             Scaling factor.
-            ``scalex``.
         center : array-like[2]
             Center point for the scaling operation.
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3083,14 +3078,14 @@ class SimplePath(object):
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
 
         Notes
         -----
         Applies the transformations in the same order as a
-        ``CellReference`` or a ``CellArray``.
-        If ``width_transform == False``, the widths are not scaled.
+        `CellReference` or a `CellArray`.  If `width_transform` is
+        False, the widths are not scaled.
         """
         self._polygon_dict = None
         if translation is None:
@@ -3130,7 +3125,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3138,15 +3133,15 @@ class SimplePath(object):
             (not offset increase) for one of the parallel paths in this
             object.
         relative : bool
-            If ``True``, ``end_point`` is used as an offset from the
-            current path position, i.e., if the path is at (1, -2) and
-            the ``end_point`` is (10, 25), the segment will be
-            constructed from (1, -2) to (1 + 10, -2 + 25) = (11, 23).
-            Otherwise, ``end_point`` is used as an absolute coordinate.
+            If True, `end_point` is used as an offset from the current
+            path position, i.e., if the path is at (1, -2) and the
+            `end_point` is (10, 25), the segment will be constructed
+            from (1, -2) to (1 + 10, -2 + 25) = (11, 23).  Otherwise,
+            `end_point` is used as an absolute coordinate.
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3183,7 +3178,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3193,7 +3188,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3249,7 +3244,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3259,7 +3254,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3286,7 +3281,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3294,14 +3289,14 @@ class SimplePath(object):
             (not offset increase) for one of the parallel paths in this
             object.
         relative : bool
-            If ``True``, the return values of ``curve_function`` are
-            used as offsets from the current path position, i.e., to
-            ensure a continuous path, ``curve_function(0)`` must be
-            (0, 0).  Otherwise, they are used as absolute coordinates.
+            If True, the return values of `curve_function` are used as
+            offsets from the current path position, i.e., to ensure a
+            continuous path, ``curve_function(0)`` must be (0, 0).
+            Otherwise, they are used as absolute coordinates.
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3358,8 +3353,7 @@ class SimplePath(object):
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
-        position and finishing at the last point in the ``points``
-        array.
+        position and finishing at the last point in the `points` array.
 
         Parameters
         ----------
@@ -3371,7 +3365,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3379,16 +3373,15 @@ class SimplePath(object):
             (not offset increase) for one of the parallel paths in this
             object.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed Bezier will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed Bezier will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
         """
         self._polygon_dict = None
@@ -3413,9 +3406,9 @@ class SimplePath(object):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or ``None``
+        angles : array-like[N] or None
             Tangent angles at each point (in *radians*).  Any angles
-            defined as ``None`` are automatically calculated.
+            defined as None are automatically calculated.
         curl_start : number
             Ratio between the mock curvatures at the first point and at
             its neighbor.  A value of 1 renders the first segment a good
@@ -3433,7 +3426,7 @@ class SimplePath(object):
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
-            If ``True``, calculates control points for a closed curve,
+            If True, calculates control points for a closed curve,
             with an additional segment connecting the first and last
             points.
         width : number, list
@@ -3441,7 +3434,7 @@ class SimplePath(object):
             width along the segment.  A list can be used where each
             element (number or callable) defines the width for one of
             the parallel paths in this object.  This argument has no
-            effect if the path was created with ``gdsii_path == True``.
+            effect if the path was created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3449,21 +3442,20 @@ class SimplePath(object):
             (not offset increase) for one of the parallel paths in this
             object.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed curve will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed curve will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
 
         Returns
         -------
-        out : ``SimplePath``
+        out : `SimplePath`
             This object.
 
         Notes
         -----
-        Arguments ``width`` and ``offset`` are repeated for *each* cubic
+        Arguments `width` and `offset` are repeated for *each* cubic
         Bezier that composes this path element.
 
         References
@@ -3494,10 +3486,10 @@ class LazyPath(object):
     automatically to ensure continuity (except in extreme cases).
 
     It can be stored as a proper path element in the GDSII format,
-    unlike ``Path``.  In this case, the width must be constant along the
+    unlike `Path`.  In this case, the width must be constant along the
     whole path.
 
-    The downside of ``LazyPath`` is that it is more computationally
+    The downside of `LazyPath` is that it is more computationally
     expensive than the other path classes.
 
     Parameters
@@ -3509,7 +3501,7 @@ class LazyPath(object):
         parallel paths being created is defined by the length of this
         list.
     offset : number, list
-        Offsets of each parallel path from the center.  If ``width`` is
+        Offsets of each parallel path from the center.  If `width` is
         not a list, the length of this list is used to determine the
         number of parallel paths being created.  Otherwise, offset must
         be a list with the same length as width, or a number, which is
@@ -3525,20 +3517,20 @@ class LazyPath(object):
         fracturing the final polygonal boundary.
     max_points : integer
         If the number of points in the polygonal path boundary is
-        greater than ``max_points``, it will be fractured in smaller
-        polygons with at most ``max_points`` each.
-        If ``max_points = 0`` no fracture will occur.
+        greater than `max_points`, it will be fractured in smaller
+        polygons with at most `max_points` each.  If `max_points` is
+        zero no fracture will occur.
     max_evals : integer
         Limit to the maximal number of evaluations when calculating each
         path component.
     gdsii_path : bool
-        If ``True``, treat this object as a GDSII path element.
+        If True, treat this object as a GDSII path element.
         Otherwise, it will be converted into polygonal boundaries when
         required.
     width_transform : bool
-        If ``gdsii_path == True``, this flag indicates whether the width
+        If `gdsii_path` is True, this flag indicates whether the width
         of the path should transform when scaling this object.  It has
-        no effect when ``gdsii_path == False``.
+        no effect when `gdsii_path` is False.
     layer : integer, list
         The GDSII layer numbers for the elements of each path.  If the
         number of layers in the list is less than the number of paths,
@@ -3550,7 +3542,7 @@ class LazyPath(object):
 
     Notes
     -----
-    The value of ``tolerance`` should not be smaller than ``precision``,
+    The value of `tolerance` should not be smaller than `precision`,
     otherwise there would be wasted computational effort in calculating
     the paths.
     """
@@ -3619,9 +3611,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the ``LazyPath`` to compute.  This argument
-            can range from 0 (start of the path) to ``len(self)`` (end
-            of the path).
+            Position along the `LazyPath` to compute.  This argument can
+            range from 0 (start of the path) to ``len(self)`` (end of
+            the path).
         arm : -1, 0, 1
             Wether to calculate one of the path boundaries (-1 or 1) or
             its central spine (0).
@@ -3645,9 +3637,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the ``LazyPath`` to compute.  This argument
-            can range from 0 (start of the path) to ``len(self)`` (end
-            of the path).
+            Position along the `LazyPath` to compute.  This argument can
+            range from 0 (start of the path) to `len(self)` (end of the
+            path).
         arm : -1, 0, 1
             Wether to calculate one of the path boundaries (-1 or 1) or
             its central spine (0).
@@ -3675,9 +3667,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the ``LazyPath`` to compute.  This argument
-            can range from 0 (start of the path) to ``len(self)`` (end
-            of the path).
+            Position along the `LazyPath` to compute.  This argument can
+            range from 0 (start of the path) to `len(self)` (end of the
+            path).
 
         Returns
         -------
@@ -3698,7 +3690,7 @@ class LazyPath(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the
+            If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
 
         Returns
@@ -3706,7 +3698,7 @@ class LazyPath(object):
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
-            ``by_spec`` is ``True``).
+            `by_spec` is True).
         """
         if self._polygon_dict is None:
             self._polygon_dict = {}
@@ -3835,16 +3827,16 @@ class LazyPath(object):
 
     def to_polygonset(self):
         """
-        Create a ``PolygonSet`` representation of this object.
+        Create a `PolygonSet` representation of this object.
 
         The resulting object will be fractured according to the
-        parameter ``max_points`` used when instantiating this object.
+        parameter `max_points` used when instantiating this object.
 
         Returns
         -------
-        out : ``PolygonSet`` or ``None``
-            A ``PolygonSet`` that contains all boundaries for this path.
-            If the path is empty, returns ``None``.
+        out : `PolygonSet` or None
+            A `PolygonSet` that contains all boundaries for this path.
+            If the path is empty, returns None.
         """
         if len(self.paths[0]) == 0:
             return None
@@ -3860,7 +3852,7 @@ class LazyPath(object):
         """
         Convert this object to a series of GDSII elements.
 
-        If ``LazyPath.gdsii_path`` is true, GDSII path elements are
+        If `LazyPath.gdsii_path` is True, GDSII path elements are
         created instead of boundaries.  Such paths do not support
         variable widths, but their memeory footprint is smaller than
         full polygonal boundaries.
@@ -3917,14 +3909,14 @@ class LazyPath(object):
         """
         Calculate the total area of this object.
 
-        This functions creates a ``PolgonSet`` from this object and
+        This functions creates a `PolgonSet` from this object and
         calculates its area, which means it is computationally
         expensive.
 
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with
+            If True, the return value is a dictionary with
             ``{(layer, datatype): area}``.
 
         Returns
@@ -3947,7 +3939,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -3970,7 +3962,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -3993,13 +3985,12 @@ class LazyPath(object):
         ----------
         scale : number
             Scaling factor.
-            ``scalex``.
         center : array-like[2]
             Center point for the scaling operation.
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4034,14 +4025,14 @@ class LazyPath(object):
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
 
         Notes
         -----
         Applies the transformations in the same order as a
-        ``CellReference`` or a ``CellArray``.
-        If ``width_transform == False``, the widths are not scaled.
+        `CellReference` or a `CellArray`.  If `width_transform` is
+        False, the widths are not scaled.
         """
         self._polygon_dict = None
         for ii in range(self.n):
@@ -4104,15 +4095,15 @@ class LazyPath(object):
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
         relative : bool
-            If ``True``, ``end_point`` is used as an offset from the
-            current path position, i.e., if the path is at (1, -2) and
-            the ``end_point`` is (10, 25), the segment will be
-            constructed from (1, -2) to (1 + 10, -2 + 25) = (11, 23).
-            Otherwise, ``end_point`` is used as an absolute coordinate.
+            If True, `end_point` is used as an offset from the current
+            path position, i.e., if the path is at (1, -2) and the
+            `end_point` is (10, 25), the segment will be constructed
+            from (1, -2) to (1 + 10, -2 + 25) = (11, 23).  Otherwise,
+            `end_point` is used as an absolute coordinate.
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4158,7 +4149,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4213,7 +4204,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4242,7 +4233,7 @@ class LazyPath(object):
         curve_derivative : callable
             If set, it should be the derivative of the curve function.
             Must be a function of one argument (that varies from 0 to 1)
-            that returns a 2-element Numpy array.  If ``None``, the
+            that returns a 2-element Numpy array.  If None, the
             derivative will be calculated numerically.
         width : number, callable, list
             If a number, all parallel paths are linearly tapered to this
@@ -4260,14 +4251,14 @@ class LazyPath(object):
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
         relative : bool
-            If ``True``, the return values of ``curve_function`` are
-            used as offsets from the current path position, i.e., to
-            ensure a continuous path, ``curve_function(0)`` must be
-            (0, 0).  Otherwise, they are used as absolute coordinates.
+            If True, the return values of `curve_function` are used as
+            offsets from the current path position, i.e., to ensure a
+            continuous path, ``curve_function(0)`` must be (0, 0).
+            Otherwise, they are used as absolute coordinates.
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4295,8 +4286,7 @@ class LazyPath(object):
         Add a Bezier curve to the path.
 
         A Bezier curve is added to the path starting from its current
-        position and finishing at the last point in the ``points``
-        array.
+        position and finishing at the last point in the `points` array.
 
         Parameters
         ----------
@@ -4319,16 +4309,15 @@ class LazyPath(object):
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed Bezier will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed Bezier will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
         """
         self._polygon_dict = None
@@ -4362,9 +4351,9 @@ class LazyPath(object):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or ``None``
+        angles : array-like[N] or None
             Tangent angles at each point (in *radians*).  Any angles
-            defined as ``None`` are automatically calculated.
+            defined as None are automatically calculated.
         curl_start : number
             Ratio between the mock curvatures at the first point and at
             its neighbor.  A value of 1 renders the first segment a good
@@ -4382,7 +4371,7 @@ class LazyPath(object):
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
-            If ``True``, calculates control points for a closed curve,
+            If True, calculates control points for a closed curve,
             with an additional segment connecting the first and last
             points.
         width : number, callable, list
@@ -4401,21 +4390,20 @@ class LazyPath(object):
             defines the *absolute* offset (not offset increase) for one
             of the parallel paths in this object.
         relative : bool
-            If ``True``, all coordinates in the ``points`` array are
-            used as offsets from the current path position, i.e., if the
-            path is at (1, -2) and the last point in the array is
-            (10, 25), the constructed curve will end at
-            (1 + 10, -2 + 25) = (11, 23).  Otherwise, the points are
-            used as absolute coordinates.
+            If True, all coordinates in the `points` array are used as
+            offsets from the current path position, i.e., if the path is
+            at (1, -2) and the last point in the array is (10, 25), the
+            constructed curve will end at (1 + 10, -2 + 25) = (11, 23).
+            Otherwise, the points are used as absolute coordinates.
 
         Returns
         -------
-        out : ``LazyPath``
+        out : `LazyPath`
             This object.
 
         Notes
         -----
-        Arguments ``width`` and ``offset`` are repeated for *each* cubic
+        Arguments `width` and `offset` are repeated for *each* cubic
         Bezier that composes this path element.
 
         References
@@ -4455,7 +4443,7 @@ class Label(object):
     magnification : number
         Magnification factor for the label.
     x_reflection : bool
-        If ``True``, the label is reflected parallel to the x direction
+        If True, the label is reflected parallel to the x direction
         before being rotated (not supported by LayoutViewer).
     layer : integer
         The GDSII layer number for these elements.
@@ -4475,7 +4463,7 @@ class Label(object):
     magnification : number
         Magnification factor for the label.
     x_reflection : bool
-        If ``True``, the label is reflected parallel to the x direction
+        If True, the label is reflected parallel to the x direction
         before being rotated (not supported by LayoutViewer).
     layer : integer
         The GDSII layer number for these elements.
@@ -4589,7 +4577,7 @@ class Label(object):
 
         Returns
         -------
-        out : ``Label``
+        out : `Label`
             This object.
 
         Examples
@@ -4612,20 +4600,20 @@ class Cell(object):
     name : string
         The name of the cell.
     exclude_from_current : bool
-        If ``True``, the cell will not be automatically included in the
+        If True, the cell will not be automatically included in the
         current library.
 
     Attributes
     ----------
     name : string
         The name of this cell.
-    polygons : list of ``PolygonSet``
+    polygons : list of `PolygonSet`
         List of cell polygons.
-    paths : list of ``LazyPath`` or ``SimplePath``
+    paths : list of `LazyPath` or `SimplePath`
         List of cell paths.
-    labels : list of ``Label``
+    labels : list of `Label`
         List of cell labels.
-    references : list of ``CellReference`` or ``CellArray``
+    references : list of `CellReference` or `CellArray`
         List of cell references.
     """
     __slots__ = 'name', 'polygons', 'paths', 'labels', 'references', '_bb_valid'
@@ -4653,7 +4641,7 @@ class Cell(object):
             A number that multiplies all dimensions written in the GDSII
             structure.
         timestamp : datetime object
-            Sets the GDSII timestamp.  If ``None``, the current time is
+            Sets the GDSII timestamp.  If None, the current time is
             used.
 
         Returns
@@ -4684,16 +4672,16 @@ class Cell(object):
         name : string
             The name of the cell.
         exclude_from_current : bool
-            If ``True``, the cell will not be included in the global
-            list of cells maintained by ``gdspy``.
+            If True, the cell will not be included in the global list of
+            cells maintained by `gdspy`.
         deep_copy : bool
-            If ``False``, the new cell will contain only references to
-            the existing elements.  If ``True``, copies of all elements
-            are also created.
+            If False, the new cell will contain only references to the
+            existing elements.  If True, copies of all elements are also
+            created.
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             The new copy of this cell.
         """
         new_cell = Cell(name, exclude_from_current)
@@ -4718,13 +4706,13 @@ class Cell(object):
 
         Parameters
         ----------
-        element : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+        element : `PolygonSet`, `CellReference`, `CellArray` or iterable
             The element or iterable of elements to be inserted in this
             cell.
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             This cell.
         """
         if isinstance(element, PolygonSet):
@@ -4754,8 +4742,8 @@ class Cell(object):
         """
         Remove polygons from this cell.
 
-        The function or callable ``test`` is called for each polygon in
-        the cell.  If its return value evaluates to ``True``, the
+        The function or callable `test` is called for each polygon in
+        the cell.  If its return value evaluates to True, the
         corresponding polygon is removed from the cell.
 
         Parameters
@@ -4767,7 +4755,7 @@ class Cell(object):
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             This cell.
 
         Examples
@@ -4802,9 +4790,9 @@ class Cell(object):
         """
         Remove paths from this cell.
 
-        The function or callable ``test`` is called for each SimplePath
-        or LazyPath in the cell.  If its return value evaluates to
-        ``True``, the corresponding label is removed from the cell.
+        The function or callable `test` is called for each `SimplePath`
+        or `LazyPath` in the cell.  If its return value evaluates to
+        True, the corresponding label is removed from the cell.
 
         Parameters
         ----------
@@ -4814,7 +4802,7 @@ class Cell(object):
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             This cell.
         """
         ii = 0
@@ -4829,8 +4817,8 @@ class Cell(object):
         """
         Remove labels from this cell.
 
-        The function or callable ``test`` is called for each label in
-        the cell.  If its return value evaluates to ``True``, the
+        The function or callable `test` is called for each label in
+        the cell.  If its return value evaluates to True, the
         corresponding label is removed from the cell.
 
         Parameters
@@ -4841,7 +4829,7 @@ class Cell(object):
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             This cell.
 
         Examples
@@ -4866,7 +4854,7 @@ class Cell(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas
+            If True, the return value is a dictionary with the areas
             of each individual pair (layer, datatype).
 
         Returns
@@ -4929,9 +4917,9 @@ class Cell(object):
 
         Returns
         -------
-        out : Numpy array[2, 2] or ``None``
+        out : Numpy array[2, 2] or None
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
-            or ``None`` if the cell is empty.
+            or None if the cell is empty.
         """
         if len(self.polygons) == 0 and len(self.paths) == 0 and len(self.references) == 0:
             return None
@@ -4966,25 +4954,25 @@ class Cell(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the
+            If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
-            in a bounding box.  If ``by_spec`` is ``True`` the key will
-            be the name of this cell.
+            in a bounding box.  If `by_spec` is True the key will be the
+            name of this cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
-            ``by_spec`` is ``True``).
+            `by_spec` is True).
 
         Note
         ----
-        Instances of ``SimplePath`` and ``LazyPath`` are also included
-        in the result by computing their polygonal boundary.
+        Instances of `SimplePath` and `LazyPath` are also included in
+        the result by computing their polygonal boundary.
         """
         if depth is not None and depth < 0:
             bb = self.get_bounding_box()
@@ -5042,13 +5030,13 @@ class Cell(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons from.
 
         Returns
         -------
-        out : list of ``PolygonSet``
+        out : list of `PolygonSet`
             List containing the polygons in this cell and its
             references.
         """
@@ -5068,13 +5056,13 @@ class Cell(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve paths from.
 
         Returns
         -------
-        out : list of ``SimplePath`` or ``LazyPath``
+        out : list of `SimplePath` or `LazyPath`
             List containing the paths in this cell and its references.
         """
         paths = libcopy.deepcopy(self.paths)
@@ -5093,13 +5081,13 @@ class Cell(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve labels from.
 
         Returns
         -------
-        out : list of ``Label``
+        out : list of `Label`
             List containing the labels in this cell and its references.
         """
         labels = libcopy.deepcopy(self.labels)
@@ -5123,7 +5111,7 @@ class Cell(object):
 
         Returns
         -------
-        out : set of ``Cell``
+        out : set of `Cell`
             List of the cells referenced by this cell.
         """
         dependencies = set()
@@ -5140,18 +5128,18 @@ class Cell(object):
         Parameters
         ----------
         single_layer : integer or None
-            If not ``None``, all polygons will be transfered to the
+            If not None, all polygons will be transfered to the
             layer indicated by this number.
         single_datatype : integer or None
-            If not ``None``, all polygons will be transfered to the
+            If not None, all polygons will be transfered to the
             datatype indicated by this number.
         single_datatype : integer or None
-            If not ``None``, all labels will be transfered to the
+            If not None, all labels will be transfered to the
             texttype indicated by this number.
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             This cell.
         """
         self.labels = self.get_labels()
@@ -5194,7 +5182,7 @@ class CellReference(object):
 
     Parameters
     ----------
-    ref_cell : ``Cell`` or string
+    ref_cell : `Cell` or string
         The referenced cell or its name.
     origin : array-like[2]
         Position where the reference is inserted.
@@ -5203,10 +5191,10 @@ class CellReference(object):
     magnification : number
         Magnification factor for the reference.
     x_reflection : bool
-        If ``True`` the reference is reflected parallel to the x
+        If True the reference is reflected parallel to the x
         direction before being rotated.
     ignore_missing : bool
-        If ``False`` a warning is issued when the referenced cell is not
+        If False a warning is issued when the referenced cell is not
         found.
     """
     __slots__ = ('ref_cell', 'origin', 'rotation', 'magnification', 'x_reflection')
@@ -5281,7 +5269,7 @@ class CellReference(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas
+            If True, the return value is a dictionary with the areas
             of each individual pair (layer, datatype).
 
         Returns
@@ -5310,25 +5298,25 @@ class CellReference(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the
+            If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
-            in a bounding box.  If ``by_spec`` is ``True`` the key will
-            be the name of the referenced cell.
+            in a bounding box.  If `by_spec` is True the key will be the
+            name of the referenced cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
-            ``by_spec`` is ``True``).
+            `by_spec` is True).
 
         Note
         ----
-        Instances of ``SimplePath`` and ``LazyPath`` are also included
-        in the result by computing their polygonal boundary.
+        Instances of `SimplePath` and `LazyPath` are also included in
+        the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -5372,13 +5360,13 @@ class CellReference(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons from.
 
         Returns
         -------
-        out : list of ``PolygonSet``
+        out : list of `PolygonSet`
             List containing the polygons in this cell and its
             references.
         """
@@ -5412,13 +5400,13 @@ class CellReference(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve paths from.
 
         Returns
         -------
-        out : list of ``SimplePath`` or ``LazyPath``
+        out : list of `SimplePath` or `LazyPath`
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5440,13 +5428,13 @@ class CellReference(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve labels from.
 
         Returns
         -------
-        out : list of ``Label``
+        out : list of `Label`
             List containing the labels in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5478,9 +5466,9 @@ class CellReference(object):
 
         Returns
         -------
-        out : Numpy array[2, 2] or ``None``
+        out : Numpy array[2, 2] or None
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
-            or ``None`` if the cell is empty.
+            or None if the cell is empty.
         """
         if not isinstance(self.ref_cell, Cell):
             return None
@@ -5524,7 +5512,7 @@ class CellReference(object):
 
         Returns
         -------
-        out : ``CellReference``
+        out : `CellReference`
             This object.
         """
         self.origin = (self.origin[0] + dx, self.origin[1] + dy)
@@ -5537,7 +5525,7 @@ class CellArray(object):
 
     Parameters
     ----------
-    ref_cell : ``Cell`` or string
+    ref_cell : `Cell` or string
         The referenced cell or its name.
     columns : positive integer
         Number of columns in the array.
@@ -5552,10 +5540,10 @@ class CellArray(object):
     magnification : number
         Magnification factor for the reference.
     x_reflection : bool
-        If ``True``, the reference is reflected parallel to the x
+        If True, the reference is reflected parallel to the x
         direction before being rotated.
     ignore_missing : bool
-        If ``False`` a warning is issued when the referenced cell is not
+        If False a warning is issued when the referenced cell is not
         found.
     """
     __slots__ = ('ref_cell', 'origin', 'rotation', 'magnification', 'x_reflection', 'columns', 'rows', 'spacing')
@@ -5648,7 +5636,7 @@ class CellArray(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the areas
+            If True, the return value is a dictionary with the areas
             of each individual pair (layer, datatype).
 
         Returns
@@ -5677,25 +5665,25 @@ class CellArray(object):
         Parameters
         ----------
         by_spec : bool
-            If ``True``, the return value is a dictionary with the
+            If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
-            in a bounding box.  If ``by_spec`` is ``True`` the key will
-            be name of the referenced cell.
+            in a bounding box.  If `by_spec` is True the key will be
+            name of the referenced cell.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
             polygon, or dictionary with the list of polygons (if
-            ``by_spec`` is ``True``).
+            `by_spec` is True).
 
         Note
         ----
-        Instances of ``SimplePath`` and ``LazyPath`` are also included
-        in the result by computing their polygonal boundary.
+        Instances of `SimplePath` and `LazyPath` are also included in
+        the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
@@ -5752,13 +5740,13 @@ class CellArray(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve polygons from.
 
         Returns
         -------
-        out : list of ``PolygonSet``
+        out : list of `PolygonSet`
             List containing the polygons in this cell and its
             references.
         """
@@ -5800,13 +5788,13 @@ class CellArray(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve paths from.
 
         Returns
         -------
-        out : list of ``SimplePath`` or ``LazyPath``
+        out : list of `SimplePath` or `LazyPath`
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5835,13 +5823,13 @@ class CellArray(object):
 
         Parameters
         ----------
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
+        depth : integer or None
+            If not None, defines from how many reference levels to
             retrieve labels from.
 
         Returns
         -------
-        out : list of ``Label``
+        out : list of `Label`
             List containing the labels in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5881,9 +5869,9 @@ class CellArray(object):
 
         Returns
         -------
-        out : Numpy array[2, 2] or ``None``
+        out : Numpy array[2, 2] or None
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
-            or ``None`` if the cell is empty.
+            or None if the cell is empty.
         """
         if not isinstance(self.ref_cell, Cell):
             return None
@@ -5925,7 +5913,7 @@ class CellArray(object):
 
         Returns
         -------
-        out : ``CellArray``
+        out : `CellArray`
             This object.
         """
         self.origin = (self.origin[0] + dx, self.origin[1] + dy)
@@ -5993,7 +5981,7 @@ class GdsLibrary(object):
 
         Parameters
         ----------
-        cell : ``Cell`` or iterable
+        cell : `Cell` or iterable
             Cells to be included in the library.
         overwrite_duplicate : bool
             If True an existing cell with the same name in the library
@@ -6001,12 +5989,12 @@ class GdsLibrary(object):
 
         Returns
         -------
-        out : ``GdsLibrary``
+        out : `GdsLibrary`
             This object.
 
         Notes
         -----
-        ``CellReference`` or ``CellArray`` instances that referred to an
+        `CellReference` or `CellArray` instances that referred to an
         overwritten cell are not automatically updated.
         """
         if isinstance(cell, Cell):
@@ -6026,10 +6014,11 @@ class GdsLibrary(object):
 
         The dimensions actually written on the GDSII file will be the
         dimensions of the objects created times the ratio
-        ``unit/precision``.  For example, if a circle with radius 1.5 is
-        created and we set ``unit=1.0e-6`` (1 um) and
-        ``precision=1.0e-9`` (1 nm), the radius of the circle will be
-        1.5 um and the GDSII file will contain the dimension 1500 nm.
+        unit/precision.  For example, if a circle with radius 1.5 is
+        created and we set `GdsLibrary.unit` to 1.0e-6 (1 um) and
+        `GdsLibrary.precision` to 1.0e-9` (1 nm), the radius of the
+        circle will be 1.5 um and the GDSII file will contain the
+        dimension 1500 nm.
 
         Parameters
         ----------
@@ -6038,13 +6027,13 @@ class GdsLibrary(object):
             It must be opened for writing operations in binary format.
         cells : iterable
             The cells or cell names to be included in the library.  If
-            ``None``, all cells are used.
+            None, all cells are used.
         timestamp : datetime object
-            Sets the GDSII timestamp.  If ``None``, the current time is
+            Sets the GDSII timestamp.  If None, the current time is
             used.
         binary_cells : iterable of bytes
             Iterable with binary data for GDSII cells (from
-            ``get_binary_cells``, for example).
+            `get_binary_cells`, for example).
 
         Notes
         -----
@@ -6088,10 +6077,10 @@ class GdsLibrary(object):
             opened for reading in binary format.
         units : {'convert', 'import', 'skip'}
             Controls how to scale and use the units in the imported
-            file.  ``'convert'``: the imported geometry is scaled to
-            this library units. ``'import'``: the unit and precision in
+            file.  'convert': the imported geometry is scaled to
+            this library units. 'import': the unit and precision in
             this library are replaced by those from the imported file.
-            ``'skip'``: the imported geometry is not scaled and units
+            'skip': the imported geometry is not scaled and units
             are not replaced; the geometry is imported in the *user
             units* of the file.
         rename : dictionary
@@ -6099,8 +6088,8 @@ class GdsLibrary(object):
             values must be strings.
         rename_template : string
             Template string used to rename the imported cells. Appiled
-            only if the cell name is not in the ``rename`` dictionary.
-            Examples: ``'prefix-{name}'``, ``'{name}-suffix'``
+            only if the cell name is not in the `rename` dictionary.
+            Examples: 'prefix-{name}', '{name}-suffix'
         layers : dictionary
             Dictionary used to convert the layers in the imported cells.
             Keys and values must be integers.
@@ -6113,13 +6102,13 @@ class GdsLibrary(object):
 
         Returns
         -------
-        out : ``GdsLibrary``
+        out : `GdsLibrary`
             This object.
 
         Notes
         -----
         Not all features from the GDSII specification are currently
-        supported.  A warning will be produced if any unsuported
+        supported.  A warning will be produced if any unsupported
         features are found in the imported file.
         """
         self._references = []
@@ -6307,7 +6296,7 @@ class GdsLibrary(object):
 
         Parameters
         ----------
-        cell : ``Cell`` or string
+        cell : `Cell` or string
             Cell or name of the cell to be extracted from the imported
             file.  Referenced cells will be automatically extracted as
             well.
@@ -6317,12 +6306,12 @@ class GdsLibrary(object):
 
         Returns
         -------
-        out : ``Cell``
+        out : `Cell`
             The extracted cell.
 
         Notes
         -----
-        ``CellReference`` or ``CellArray`` instances that referred to an
+        `CellReference` or `CellArray` instances that referred to an
         overwritten cell are not automatically updated.
         """
         cell = self.cell_dict.get(cell, cell)
@@ -6355,11 +6344,11 @@ class GdsWriter(object):
     GDSII strem library writer.
 
     The dimensions actually written on the GDSII file will be the
-    dimensions of the objects created times the ratio
-    ``unit/precision``. For example, if a circle with radius 1.5 is
-    created and we set ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9``
-    (1 nm), the radius of the circle will be 1.5 um and the GDSII file
-    will contain the dimension 1500 nm.
+    dimensions of the objects created times the ratio unit/precision.
+    For example, if a circle with radius 1.5 is created and we set
+    `unit` to 1.0e-6 (1 um) and `precision` to 1.0e-9 (1 nm), the radius
+    of the circle will be 1.5 um and the GDSII file will contain the
+    dimension 1500 nm.
 
     Parameters
     ----------
@@ -6374,7 +6363,7 @@ class GdsWriter(object):
         Precision for the dimensions of the objects in the library (in
         *meters*).
     timestamp : datetime object
-        Sets the GDSII timestamp.  If ``None``, the current time is
+        Sets the GDSII timestamp.  If None, the current time is
         used.
 
     Notes
@@ -6422,10 +6411,10 @@ class GdsWriter(object):
 
         Parameters
         ----------
-        cell : ``Cell``
+        cell : `Cell`
             Cell to be written.
         timestamp : datetime object
-            Sets the GDSII timestamp.  If ``None``, the current time is
+            Sets the GDSII timestamp.  If None, the current time is
             used.
 
         Notes
@@ -6435,7 +6424,7 @@ class GdsWriter(object):
 
         Returns
         -------
-        out : ``GdsWriter``
+        out : `GdsWriter`
             This object.
         """
         self._outfile.write(cell.to_gds(self._res, timestamp))
@@ -6449,11 +6438,11 @@ class GdsWriter(object):
         ----------
         binary_cells : iterable of bytes
             Iterable with binary data for GDSII cells (from
-            ``get_binary_cells``, for example).
+            `get_binary_cells`, for example).
 
         Returns
         -------
-        out : ``GdsWriter``
+        out : `GdsWriter`
             This object.
         """
         for bc in binary_cells:
@@ -6566,10 +6555,10 @@ def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
 
     Parameters
     ----------
-    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    polygons : `PolygonSet`, `CellReference`, `CellArray` or iterable
         Operand of the slice operation.  If this is an iterable, each
-        element must be a ``PolygonSet``, ``CellReference``,
-        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
+        element must be a `PolygonSet`, `CellReference`, `CellArray`,
+        or an array-like[N][2] of vertices of a polygon.
     position : number or list of numbers
         Positions to perform the slicing operation along the specified
         axis.
@@ -6588,7 +6577,7 @@ def slice(polygons, position, axis, precision=1e-3, layer=0, datatype=0):
 
     Returns
     -------
-    out : list[N] of ``PolygonSet`` or ``None``
+    out : list[N] of `PolygonSet` or None
         Result of the slicing operation, with N = len(positions) + 1.
         Each PolygonSet comprises all polygons between 2 adjacent
         slicing positions, in crescent order.
@@ -6628,10 +6617,10 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
 
     Parameters
     ----------
-    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    polygons : `PolygonSet`, `CellReference`, `CellArray` or iterable
         Polygons to be offset.  If this is an iterable, each element
-        must be a ``PolygonSet``, ``CellReference``, ``CellArray``, or
-        an array-like[N][2] of vertices of a polygon.
+        must be a `PolygonSet`, `CellReference`, `CellArray`, or an
+        array-like[N][2] of vertices of a polygon.
     distance : number
         Offset distance.  Positive to expand, negative to shrink.
     join : 'miter', 'bevel', 'round'
@@ -6649,7 +6638,7 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
         adjacent polygon sides.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure
-        they have at most ``max_points`` vertices.  This is not a
+        they have at most `max_points` vertices.  This is not a
         tessellating function, so this number should be as high as
         possible.  For example, it should be set to 199 for polygons
         being drawn in GDSII files.
@@ -6661,7 +6650,7 @@ def offset(polygons, distance, join='miter', tolerance=2, precision=0.001, join_
 
     Returns
     -------
-    out : ``PolygonSet`` or ``None``
+    out : `PolygonSet` or None
         Return the offset shape as a set of polygons.
     """
     result = clipper.offset(_gather_polys(polygons), distance, join, tolerance, 1 / precision,
@@ -6677,13 +6666,13 @@ def boolean(operand1, operand2, operation, precision=0.001, max_points=199, laye
 
     Parameters
     ----------
-    operand1 : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    operand1 : `PolygonSet`, `CellReference`, `CellArray` or iterable
         First operand.  If this is an iterable, each element must be a
-        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        `PolygonSet`, `CellReference`, `CellArray`, or an
         array-like[N][2] of vertices of a polygon.
-    operand2 : ``None``, ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    operand2 : None, `PolygonSet`, `CellReference`, `CellArray` or iterable
         Second operand.  If this is an iterable, each element must be a
-        ``PolygonSet``, ``CellReference``, ``CellArray``, or an
+        `PolygonSet`, `CellReference`, `CellArray`, or an
         array-like[N][2] of vertices of a polygon.
     operation : {'or', 'and', 'xor', 'not'}
         Boolean operation to be executed.  The 'not' operation returns
@@ -6692,7 +6681,7 @@ def boolean(operand1, operand2, operation, precision=0.001, max_points=199, laye
         Desired precision for rounding vertice coordinates.
     max_points : integer
         If greater than 4, fracture the resulting polygons to ensure
-        they have at most ``max_points`` vertices.  This is not a
+        they have at most `max_points` vertices.  This is not a
         tessellating function, so this number should be as high as
         possible.  For example, it should be set to 199 for polygons
         being drawn in GDSII files.
@@ -6704,7 +6693,7 @@ def boolean(operand1, operand2, operation, precision=0.001, max_points=199, laye
 
     Returns
     -------
-    out : PolygonSet or ``None``
+    out : PolygonSet or None
         Result of the boolean operation.
     """
     poly1 = _gather_polys(operand1)
@@ -6733,10 +6722,10 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
     points : array-like[N][2] or sequence of array-like[N][2]
         Coordinates of the points to be tested or groups of points to be
         tested together.
-    polygons : ``PolygonSet``, ``CellReference``, ``CellArray`` or iterable
+    polygons : `PolygonSet`, `CellReference`, `CellArray` or iterable
         Polygons to be tested against.  If this is an iterable, each
-        element must be a ``PolygonSet``, ``CellReference``,
-        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
+        element must be a `PolygonSet`, `CellReference`, `CellArray`,
+        or an array-like[N][2] of vertices of a polygon.
     short_circuit : {'any', 'all'}
         If `points` is a sequence of point groups, testing within each
         group will be short-circuited if any of the points in the group
@@ -6763,7 +6752,7 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
 
 def copy(obj, dx=0, dy=0):
     """
-    Create a copy of ``obj`` and translate it by (dx, dy).
+    Create a copy of `obj` and translate it by (dx, dy).
 
     Parameters
     ----------
@@ -6778,7 +6767,7 @@ def copy(obj, dx=0, dy=0):
     Returns
     -------
     out : translatable object
-        Translated copy of original ``obj``
+        Translated copy of original `obj`
 
     Examples
     --------
@@ -6800,11 +6789,11 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
     Write the current GDSII library to a file.
 
     The dimensions actually written on the GDSII file will be the
-    dimensions of the objects created times the ratio
-    ``unit/precision``.  For example, if a circle with radius 1.5 is
-    created and we set ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9``
-    (1 nm), the radius of the circle will be 1.5 um and the GDSII file
-    will contain the dimension 1500 nm.
+    dimensions of the objects created times the ratio unit/precision.
+    For example, if a circle with radius 1.5 is created and we set
+    `unit` to 1.0e-6 (1 um) and `precision` to 1.0e-9 (1 nm), the radius
+    of the circle will be 1.5 um and the GDSII file will contain the
+    dimension 1500 nm.
 
     Parameters
     ----------
@@ -6813,7 +6802,7 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
         must be opened for writing operations in binary format.
     cells : array-like
         The sequence of cells or cell names to be included in the
-        library.  If ``None``, all cells are used.
+        library.  If None, all cells are used.
     name : string
         Name of the GDSII library.
     unit : number
@@ -6822,11 +6811,11 @@ def write_gds(outfile, cells=None, name='library', unit=1.0e-6, precision=1.0e-9
         Precision for the dimensions of the objects in the library (in
         *meters*).
     timestamp : datetime object
-        Sets the GDSII timestamp.  If ``None``, the current time is
+        Sets the GDSII timestamp.  If None, the current time is
         used.
     binary_cells : iterable of bytes
         Iterable with binary data for GDSII cells (from
-        ``get_binary_cells``, for example).
+        `get_binary_cells`, for example).
     """
     current_library.name = name
     current_library.unit = unit
@@ -6848,9 +6837,8 @@ def gdsii_hash(filename, engine=None):
         Full path to the GDSII file.
     engine : hashlib-like engine
         The engine that executes the hashing algorithm.  It must provide
-        the methods ``update`` and ``hexdigest`` as defined in the
-        hashlib module.  If ``None``, the dafault ``hashlib.sha1()`` is
-        used.
+        the methods `update` and `hexdigest` as defined in the hashlib
+        module.  If None, the dafault `hashlib.sha1()` is used.
 
     Returns
     -------
@@ -6876,8 +6864,14 @@ def gdsii_hash(filename, engine=None):
 
 current_library = GdsLibrary()
 """
-Current ``GdsLibrary`` instance for automatic creation of GDSII files.
+Current `GdsLibrary` instance for automatic creation of GDSII files.
 
 This variable can be freely overwritten by the user with a new instance
-of ``GdsLibrary``.
+of `GdsLibrary`.
+
+Examples
+--------
+>>> gdspy.Cell('MAIN')
+>>> gdspy.current_library = GdsLibrary()  # Reset current library
+>>> gdspy.Cell('MAIN')  # A new MAIN cell is created without error
 """
