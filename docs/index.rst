@@ -8,9 +8,8 @@ For installation instructions and other information, please check out the `GitHu
    :maxdepth: 2
    :caption: Table of Contents
 
-   tutorial
-   geometry
-   library
+   gettingstarted
+   reference
 
 *******
 Support
