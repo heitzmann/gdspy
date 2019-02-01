@@ -19,7 +19,9 @@ import shlex
 import distutils.command.build
 from distutils.dist import Distribution
 
-from docs import makeimages
+sys.path.append(os.path.abspath('docs'))
+sys.path.append(os.path.abspath('.'))
+import makeimages
 makeimages.main()
 
 # If extensions (or modules to document with autodoc) are in another directory,
