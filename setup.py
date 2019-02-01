@@ -64,7 +64,7 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Manufacturing',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved',
+        'License :: OSI Approved :: BOOST SOFTWARE LICENSE 1.0 (BSL-1.0)',
         'Operating System :: OS Independent',
         'Programming Language :: C',
         'Programming Language :: C++',
