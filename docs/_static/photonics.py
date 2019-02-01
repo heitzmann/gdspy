@@ -99,7 +99,6 @@ if __name__ == '__main__':
     c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
 
     # Positive resist example
-    #_, ring_edge = gdspy.slice(gdspy.Round((20, 0), 70, tolerance=0.001, max_points=0), 0, 0)
     ring_edge = gdspy.Rectangle((0, -50), (70, 50))
     ring_hole = gdspy.Round((20, 0), 20, 20 - w, tolerance=0.001)
     ring_path = gdspy.Path(5, (0, 50), number_of_paths=2, distance=5 + w).segment(400, '+y')

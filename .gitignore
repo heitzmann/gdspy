@@ -1,6 +1,5 @@
 MANIFEST
 *.gds
-docs/_*
 .*.swp
 .DS_Store
 

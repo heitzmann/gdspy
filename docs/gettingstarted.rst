@@ -330,8 +330,8 @@ This example demonstrates the use of gdspy primitives to create more complex str
 
 These structures are commonly used in the field of integrated photonics.
 
-:download:`photonics.py <../examples/photonics.py>`
+:download:`photonics.py <_static/photonics.py>`
 
-.. literalinclude:: ../examples/photonics.py
+.. literalinclude:: _static/photonics.py
    :language: python
    :linenos:
