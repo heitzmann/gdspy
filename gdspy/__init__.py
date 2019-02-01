@@ -1791,8 +1791,7 @@ class Path(PolygonSet):
         Parameters
         ----------
         points : array-like[N][2]
-            Control points defining the Bezier curve as offsets from the
-            current path position.
+            Control points defining the Bezier curve.
         tolerance : number
             Acceptable tolerance for the approximation of the curve
             function by a finite number of evaluations.
@@ -2463,10 +2462,11 @@ class SimplePath(object):
         be a list with the same length as width, or a number, which is
         used as distance between adjacent paths.
     corners : 'natural', 'miter', 'bevel', 'round', 'smooth', callable, list
-        Type of joins.  A callable must receive 5 arguments (vertex and
-        direction vector from both segments being joined and the center
-        of the path) and return a list of vertices that make the join.
-        A list can be used to define the join for each parallel path.
+        Type of joins.  A callable must receive 6 arguments (vertex and
+        direction vector from both segments being joined, the center
+        and width of the path) and return a list of vertices that make
+        the join.  A list can be used to define the join for each
+        parallel path.
     ends : 'flush', 'extended', 'round', 'smooth', 2-tuple, callable, list
         Type of end caps for the paths.  A 2-element tuple represents
         the start and end extensions to the paths.  A callable must
@@ -2669,7 +2669,7 @@ class SimplePath(object):
                             else:
                                 poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
                                                     poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
-                    if self.max_points > 4 and poly.shape[0] > sef.max_points:
+                    if self.max_points > 4 and poly.shape[0] > self.max_points:
                         ii = 0
                         while ii < len(polygons):
                             if len(polygons[ii]) > self.max_points:
@@ -2696,6 +2696,7 @@ class SimplePath(object):
                     else:
                         self._polygon_dict[key] = polygons
             else:
+                # More than 1 path or more than 2 points
                 un = self.points[1:] - self.points[:-1]
                 un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
                 for kk in range(self.n):
@@ -2740,18 +2741,9 @@ class SimplePath(object):
                             v1 = vec[jj]
                             if corner == 'natural':
                                 w = self.widths[jj, kk]
-                                v0 = v0 * (0.5 * w / (v0[0]**2 + v0[1]**2))**0.5
-                                v1 = v1 * (0.5 * w / (v1[0]**2 + v1[1]**2))**0.5
-                                den = v1[1] * v0[0] - v1[0] * v0[1]
-                                if den < (0.5e-3 * w)**2:
-                                    u0 = u1 = 0
-                                    p = 0.5 * (p0 + p1)
-                                else:
-                                    dx = p1[0] - p0[0]
-                                    dy = p1[1] - p0[1]
-                                    u0 = (v1[1] * dx - v1[0] * dy) / den
-                                    u1 = (v0[1] * dx - v0[0] * dy) / den
-                                    p = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
+                                v0 = v0 * (0.5 * w / (v0[0]**2 + v0[1]**2)**0.5)
+                                v1 = v1 * (0.5 * w / (v1[0]**2 + v1[1]**2)**0.5)
+                                u0, u1, p = _intersect_lines(p0, v0, p1, v1)
                                 if u0 < 0 and u1 > 0:
                                     arms[ii].append(p)
                                 elif u0 <= 1 and u1 >= -1:
@@ -2760,7 +2752,7 @@ class SimplePath(object):
                                     arms[ii].append(p0 + min(1, u0) * v0)
                                     arms[ii].append(p1 + max(-1, u1) * v1)
                             elif callable(corner):
-                                arms[ii].extend(corner(p0, v0, p1, v1, pts[jj]))
+                                arms[ii].extend(corner(p0, v0, p1, v1, pts[jj], self.widths[jj, kk]))
                             else:
                                 u0, u1, p = _intersect_lines(p0, v0, p1, v1)
                                 if corner == 'miter':
@@ -2840,7 +2832,7 @@ class SimplePath(object):
                                 caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
                             else: # 'extended'/list
                                 v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
-                                v /= (v[0]**2 - v[1]**2)**0.5
+                                v = v / (v[0]**2 + v[1]**2)**0.5
                                 w = (2 * ii - 1) * v[::-1] * _pmone
                                 r = 0.5 * self.widths[-ii, kk]
                                 d = r if end == 'extended' else end[ii]
@@ -3123,9 +3115,9 @@ class SimplePath(object):
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3176,9 +3168,9 @@ class SimplePath(object):
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3242,9 +3234,9 @@ class SimplePath(object):
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3279,9 +3271,9 @@ class SimplePath(object):
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3358,14 +3350,13 @@ class SimplePath(object):
         Parameters
         ----------
         points : array-like[N][2]
-            Control points defining the Bezier curve as offsets from the
-            current path position.
+            Control points defining the Bezier curve.
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3432,9 +3423,9 @@ class SimplePath(object):
         width : number, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  A list can be used where each
-            element (number or callable) defines the width for one of
-            the parallel paths in this object.  This argument has no
-            effect if the path was created with `gdsii_path` True.
+            element defines the width for one of the parallel paths in
+            this object.  This argument has no effect if the path was
+            created with `gdsii_path` True.
         offset : number, list
             If a number, all parallel paths offsets are linearly
             *increased* by this amount (which can be negative).  A list
@@ -3815,7 +3806,7 @@ class LazyPath(object):
                             polygons.extend(numpy.array(x) for x in itertools.chain.from_iterable(chopped))
                         else:
                             ii += 1
-                key = (self.layers[kk], self.datatypes[kk])
+                key = (layer, datatype)
                 if key in self._polygon_dict:
                     self._polygon_dict[key].extend(polygons)
                 else:
@@ -4291,8 +4282,7 @@ class LazyPath(object):
         Parameters
         ----------
         points : array-like[N][2]
-            Control points defining the Bezier curve as offsets from the
-            current path position.
+            Control points defining the Bezier curve.
         width : number, callable, list
             If a number, all parallel paths are linearly tapered to this
             width along the segment.  If this is callable, it must be a
@@ -4727,7 +4717,7 @@ class Cell(object):
             for e in element:
                 if isinstance(e, PolygonSet):
                     self.polygons.append(e)
-                elif isinstance(e, LazyPath) or isinstance(element, SimplePath):
+                elif isinstance(e, LazyPath) or isinstance(e, SimplePath):
                     self.paths.append(e)
                 elif isinstance(e, Label):
                     self.labels.append(e)
