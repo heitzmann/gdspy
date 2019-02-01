@@ -2461,7 +2461,7 @@ class SimplePath(object):
         number of parallel paths being created.  Otherwise, offset must
         be a list with the same length as width, or a number, which is
         used as distance between adjacent paths.
-    corners : 'natural', 'miter', 'bevel', 'round', 'smooth', callable, list
+    corners : 'natural', 'miter', 'bevel', 'round', 'smooth', 'circular bend', callable, list
         Type of joins.  A callable must receive 6 arguments (vertex and
         direction vector from both segments being joined, the center
         and width of the path) and return a list of vertices that make
@@ -2474,6 +2474,9 @@ class SimplePath(object):
         sides of the path and return a list of vertices that make the
         end cap.  A list can be used to define the end type for each
         parallel path.
+    bend_radius : number, list
+        Bend radii for each path when `corners` is 'circular bend'.
+        It has no effect for other corner types.
     tolerance : number
         Tolerance used to draw the paths and calculate joins.
     precision : number
@@ -2509,13 +2512,13 @@ class SimplePath(object):
     """
     __slots__ = ('n', 'ends', 'corners', 'points', 'offsets', 'widths', 'layers', 'datatypes',
                  'tolerance', 'precision', 'max_points', 'gdsii_path', 'width_transform',
-                 '_polygon_dict')
+                 'bend_radius', '_polygon_dict')
 
     _pathtype_dict = {'flush': 0, 'round': 1, 'extended': 2, 'smooth': 1}
 
-    def __init__(self, points, width, offset=0, corners='natural', ends='flush', tolerance=0.01,
-                 precision=1e-3, max_points=199, gdsii_path=False, width_transform=True, layer=0,
-                 datatype=0):
+    def __init__(self, points, width, offset=0, corners='natural', ends='flush', bend_radius=None,
+                 tolerance=0.01, precision=1e-3, max_points=199, gdsii_path=False, width_transform=True,
+                 layer=0, datatype=0):
         self._polygon_dict = None
         if isinstance(width, list):
             self.n = len(width)
@@ -2543,6 +2546,10 @@ class SimplePath(object):
             self.corners = [corners[i % len(corners)] for i in range(self.n)]
         else:
             self.corners = [corners for _ in range(self.n)]
+        if isinstance(bend_radius, list):
+            self.bend_radius = [bend_radius[i % len(bend_radius)] for i in range(self.n)]
+        else:
+            self.bend_radius = [bend_radius for _ in range(self.n)]
         if isinstance(layer, list):
             self.layers = [layer[i % len(layer)] for i in range(self.n)]
         else:
@@ -2559,7 +2566,7 @@ class SimplePath(object):
         if self.gdsii_path:
             if any(end == 'smooth' or callable(end) for end in self.ends):
                 warnings.warn("[GDSPY] Smooth and custom end caps are not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
-            if any(corner != 'natural' for corner in self.corners):
+            if any(corner != 'natural' and corner != 'circular bend' for corner in self.corners):
                 warnings.warn("[GDSPY] Corner specification not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
@@ -2739,10 +2746,10 @@ class SimplePath(object):
                             v0 = vec[jj - 1]
                             p1 = pa[jj]
                             v1 = vec[jj]
+                            half_w = 0.5 * self.widths[jj, kk]
                             if corner == 'natural':
-                                w = self.widths[jj, kk]
-                                v0 = v0 * (0.5 * w / (v0[0]**2 + v0[1]**2)**0.5)
-                                v1 = v1 * (0.5 * w / (v1[0]**2 + v1[1]**2)**0.5)
+                                v0 = v0 * (half_w / (v0[0]**2 + v0[1]**2)**0.5)
+                                v1 = v1 * (half_w / (v1[0]**2 + v1[1]**2)**0.5)
                                 u0, u1, p = _intersect_lines(p0, v0, p1, v1)
                                 if u0 < 0 and u1 > 0:
                                     arms[ii].append(p)
@@ -2751,6 +2758,34 @@ class SimplePath(object):
                                 else:
                                     arms[ii].append(p0 + min(1, u0) * v0)
                                     arms[ii].append(p1 + max(-1, u1) * v1)
+                            elif corner == 'circular bend':
+                                v2 = p0 - pts[jj]
+                                direction = v0[0] * v1[1] - v0[1] * v1[0]
+                                if direction == 0:
+                                    arms[ii].append(0.5 * (p0 + p1))
+                                else:
+                                    if direction > 0:
+                                        a0 = numpy.arctan2(-v0[0], v0[1])
+                                        a1 = numpy.arctan2(-v1[0], v1[1])
+                                    else:
+                                        a0 = numpy.arctan2(v0[0], -v0[1])
+                                        a1 = numpy.arctan2(v1[0], -v1[1])
+                                    if abs(a1 - a0) > numpy.pi:
+                                        if a1 > a0:
+                                            a0 += 2 * numpy.pi
+                                        else:
+                                            a1 += 2 * numpy.pi
+                                    side = direction * (v0[0] * v2[1] - v0[1] * v2[0])
+                                    if side > 0:
+                                        r = self.bend_radius[kk] - half_w
+                                    else:
+                                        r = self.bend_radius[kk] + half_w
+                                    da = 0.5 * abs(a1 - a0)
+                                    d = self.bend_radius[kk] * numpy.tan(da) / (v0[0]**2 + v0[1]**2)**0.5
+                                    np = max(2, 1 + int(da / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                    angles = numpy.linspace(a0, a1, np)
+                                    points = r * numpy.vstack((numpy.cos(angles), numpy.sin(angles))).T
+                                    arms[ii].extend(points - points[0] + p0 - d * v0)
                             elif callable(corner):
                                 arms[ii].extend(corner(p0, v0, p1, v1, pts[jj], self.widths[jj, kk]))
                             else:
@@ -2774,10 +2809,9 @@ class SimplePath(object):
                                             a0 += 2 * numpy.pi
                                         else:
                                             a1 += 2 * numpy.pi
-                                    r = 0.5 * self.widths[jj, kk]
-                                    np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                    np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / half_w) + 0.5))
                                     angles = numpy.linspace(a0, a1, np)
-                                    arms[ii].extend(pts[jj] + r * numpy.vstack((numpy.cos(angles),
+                                    arms[ii].extend(pts[jj] + half_w * numpy.vstack((numpy.cos(angles),
                                                                                 numpy.sin(angles))).T)
                                 elif corner == 'smooth':
                                     angles = [numpy.arctan2(v0[1], v0[0]), numpy.arctan2(v1[1], v1[0])]
@@ -2949,6 +2983,41 @@ class SimplePath(object):
                 points[-1] = sb[-1]
             else:
                 points = self.points
+            if self.corners[ii] == 'circular bend':
+                r = self.bend_radius[ii]
+                p0 = points[0]
+                p1 = points[1]
+                v0 = p1 - p0
+                bends = [p0]
+                for jj in range(1, points.shape[0] - 1):
+                    p2 = points[jj + 1]
+                    v1 = p2 - p1
+                    direction = v0[0] * v1[1] - v0[1] * v1[0]
+                    if direction == 0:
+                        bends.append(p1)
+                    else:
+                        if direction > 0:
+                            a0 = numpy.arctan2(-v0[0], v0[1])
+                            a1 = numpy.arctan2(-v1[0], v1[1])
+                        elif direction < 0:
+                            a0 = numpy.arctan2(v0[0], -v0[1])
+                            a1 = numpy.arctan2(v1[0], -v1[1])
+                        if abs(a1 - a0) > numpy.pi:
+                            if a1 > a0:
+                                a0 += 2 * numpy.pi
+                            else:
+                                a1 += 2 * numpy.pi
+                        da = 0.5 * abs(a1 - a0)
+                        d = r * numpy.tan(da) / (v0[0]**2 + v0[1]**2)**0.5
+                        np = max(2, 1 + int(da / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                        angles = numpy.linspace(a0, a1, np)
+                        bpts = r * numpy.vstack((numpy.cos(angles), numpy.sin(angles))).T
+                        bends.extend(bpts - bpts[0] + p1 - d * v0)
+                    p0 = p1
+                    p1 = p2
+                    v0 = v1
+                bends.append(p1)
+                points = numpy.array(bends)
             points = (points * multiplier).astype('>i4')
             if points.shape[0] > 8191:
                 warnings.warn("[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.", stacklevel=4)

@@ -53,10 +53,12 @@ def draw(cell, name=None, width=600, height=400, margin=20):
     dr.line([z[0], z[1], p[0], z[1]], fill=(0, 0, 0, 255), width=3)
     dr.line([z[0], z[1], z[0], p[1]], fill=(0, 0, 0, 255), width=3)
     img = img.resize((width, height), Image.ANTIALIAS)
-    img.save('_static/' + (cell.name if name is None else name) + '.png')
+    name = 'docs/_static/' + (cell.name if name is None else name) + '.png'
+    print('Saving', name)
+    img.save(name)
 
 
-def main():
+if __name__ == "__main__":
     # Polygons
     # Create a polygon from a list of vertices
     points = [(0, 0), (2, 2), (2, 6), (-6, 6),
@@ -243,47 +245,13 @@ def main():
     draw(gdspy.Cell('simple_paths_1').add(sp3))
 
     # Simple Paths 2
-    # Corner function to generate bends
-    def bend(radius, tolerance=0.01):
-        '''
-        Corner function generator for bends
-        '''
-        def _f(p0, v0, p1, v1, p2, w):
-            half_w = 0.5 * w
-            v2 = p0 - p2
-            direction = v0[0] * v1[1] - v0[1] * v1[0]
-            if direction == 0:
-                return [0.5 * (p0 + p1)]
-            elif direction > 0:
-                a0 = numpy.arctan2(-v0[0], v0[1])
-                a1 = numpy.arctan2(-v1[0], v1[1])
-            else:
-                a0 = numpy.arctan2(v0[0], -v0[1])
-                a1 = numpy.arctan2(v1[0], -v1[1])
-            if abs(a1 - a0) > numpy.pi:
-                if a1 > a0:
-                    a0 += 2 * numpy.pi
-                else:
-                    a1 += 2 * numpy.pi
-            side = direction * (v0[0] * v2[1] - v0[1] * v2[0])
-            if side > 0:
-                r = radius - half_w
-                d = (r + half_w) * numpy.tan(abs(a1 - a0) / 2)
-            else:
-                r = radius + half_w
-                d = (r - half_w) * numpy.tan(abs(a1 - a0) / 2)
-            np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - tolerance / r) + 0.5))
-            angles = numpy.linspace(a0, a1, np)
-            points = r * numpy.vstack((numpy.cos(angles), numpy.sin(angles))).T
-            return points - points[0] + p0 - d * v0 / (v0[0]**2 + v0[1]**2)**0.5
-        return _f
-
     # Path created with automatic bends of radius 5
     points = [(0, 0), (0, 10), (20, 0), (18, 15), (8, 15)]
-    sp4 = gdspy.SimplePath(points, 0.5, corners=bend(5))
+    sp4 = gdspy.SimplePath(points, 0.5, corners='circular bend',
+                           bend_radius=5, gdsii_path=True)
 
     # Same path, generated with natural corners, for comparison
-    sp5 = gdspy.SimplePath(points, 0.5, layer=1)
+    sp5 = gdspy.SimplePath(points, 0.5, layer=1, gdsii_path=True)
     draw(gdspy.Cell('simple_paths_2').add([sp4, sp5]))
 
     # Lazy Paths

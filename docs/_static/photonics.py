@@ -87,12 +87,10 @@ if __name__ == '__main__':
 
     c = gdspy.Cell('Negative')
     for i in range(8):
-        path = gdspy.SimplePath([(150 * i, 50)], width=w, gdsii_path=True)
-        path.segment((0, 550 - 20 * i), relative=True)
-        path.turn(50, 'r')
-        path.segment((400, 0), relative=True)
-        path.turn(50, 'l')
-        path.segment((0, 250 + 20 * i), relative=True)
+        path = gdspy.SimplePath([(150 * i, 50)], width=w, corners='circular bend', bend_radius=50, gdsii_path=True)
+        path.segment((0, 600 - 20 * i), relative=True)
+        path.segment((500, 0), relative=True)
+        path.segment((0, 300 + 20 * i), relative=True)
         c.add(path)
         c.add(gdspy.CellReference(ring, (150 * i + w / 2 + 0.06 + 0.02 * i, 300)))
     c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
@@ -130,4 +128,5 @@ if __name__ == '__main__':
     c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
     c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
 
+    gdspy.write_gds('photonics.gds')
     gdspy.LayoutViewer()
