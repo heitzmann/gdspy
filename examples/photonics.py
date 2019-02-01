@@ -11,82 +11,8 @@ import numpy
 import gdspy
 
 
-def waveguide(path, points, finish, bend_radius, tolerance=0.005,
-              direction=None, layer=0, datatype=0):
-    '''
-    Easy waveguide creation tool with absolute positioning.
-
-    path        : starting `gdspy.Path`
-    points      : coordinates along which the waveguide will travel
-    finish      : end point of the waveguide
-    bend_radius : radius of the turns in the waveguide
-    tolerance   : same as in `path.turn`
-    direction   : starting direction
-    layer       : GDSII layer number
-    datatype    : GDSII datatype number
-
-    Return `path`.
-    '''
-    if direction is not None:
-        path.direction = direction
-    axis = 0 if path.direction[1] == 'x' else 1
-    points.append(finish[(axis + len(points)) % 2])
-    n = len(points)
-    if points[0] > (path.x, path.y)[axis]:
-        path.direction = ['+x', '+y'][axis]
-    else:
-        path.direction = ['-x', '-y'][axis]
-    for i in range(n):
-        path.segment(abs(points[i] - (path.x, path.y)[axis]) - bend_radius,
-                     layer=layer, datatype=datatype)
-        axis = 1 - axis
-        if i < n - 1:
-            goto = points[i + 1]
-        else:
-            goto = finish[axis]
-        if (goto > (path.x, path.y)[axis]) ^ ((path.direction[0] == '+') ^ (path.direction[1] == 'x')):
-            bend = 'l'
-        else:
-            bend = 'r'
-        path.turn(bend_radius, bend, tolerance=tolerance, layer=layer, datatype=datatype)
-    return path.segment(abs(finish[axis] - (path.x, path.y)[axis]), layer=layer, datatype=datatype)
-
-
-def taper(path, length, final_width, final_distance, direction=None, layer=0, datatype=0):
-    '''
-    Linear tapers for the lazy.
-
-    path        : `gdspy.Path` to append the taper
-    length      : total length
-    final_width : final width of th taper
-    direction   : taper direction
-    layer       : GDSII layer number (int or list)
-    datatype    : GDSII datatype number (int or list)
-
-    Parameters `layer` and `datatype` must be of the same type. If they
-    are lists, they must have the same length. Their length indicate the
-    number of pieces that compose the taper.
-
-    Return `path`.
-    '''
-    if layer.__class__ == datatype.__class__ == [].__class__:
-        assert len(layer) == len(datatype)
-    elif isinstance(layer, int) and isinstance(datatype, int):
-        layer = [layer]
-        datatype = [datatype]
-    else:
-        raise ValueError('Parameters layer and datatype must have the same type (either int or list) and length.')
-    n = len(layer)
-    w = numpy.linspace(2 * path.w, final_width, n + 1)[1:]
-    d = numpy.linspace(path.distance, final_distance, n + 1)[1:]
-    l = float(length) / n
-    for i in range(n):
-        path.segment(l, direction, w[i], d[i], layer=layer[i], datatype=datatype[i])
-    return path
-
-
 def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=1, sin_theta=0,
-            focus_distance=-1, focus_width=-1, tolerance=0.005, layer=0, datatype=0):
+            focus_distance=-1, focus_width=-1, tolerance=0.001, layer=0, datatype=0):
     '''
     Straight or focusing grating.
 
@@ -145,45 +71,64 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
 
 if __name__ == '__main__':
     # Examples
+    w = 0.45
 
-    c1 = gdspy.Cell('Example1')
-    # Waveguide starts at (0, 0)...
-    path = gdspy.Path(0.450, (0, 0))
-    # ... then starts in the +y direction up to y=200, then through x=500,
-    # and stops at (800, 400). All bends have radius 50.
-    waveguide(path, [200, 500], (800, 400), 50, direction='+y')
-    c1.add(path)
+    # Negative resist example
+    ring = gdspy.Cell('NRing')
+    ring.add(gdspy.Round((20, 0), 20, 20 - w, tolerance=0.001))
 
-    # More useful example including a taper and a grating:
-    c2 = gdspy.Cell('Example2')
-    for i in range(3):
-        path = gdspy.Path(0.120, (50 * i, 0))
-        taper(path, 75, 0.450, 0, '+y', layer=list(range(5, 1, -1)), datatype=list(range(1, 5)))
-        waveguide(path, [300 - 20 * i], (500 + 50 * i, 425), 50, layer=1, datatype=1)
-        c2.add(path)
-        c2.add(grating(0.626, 28, 0.5, 19, (path.x, path.y), path.direction, 1.55,
-                       numpy.sin(numpy.pi * 8 / 180), 21.5, 2 * path.w, layer=1, datatype=1))
+    grat = gdspy.Cell('NGrat')
+    grat.add(grating(0.626, 28, 0.5, 19, (0, 0), '+y', 1.55,
+                     numpy.sin(numpy.pi * 8 / 180), 21.5, w,
+                     tolerance=0.001))
 
-    # Straight grating and positive resist example
-    c3 = gdspy.Cell('Example3')
-    spec = {'layer': 4, 'datatype': 3}
-    lda = 1.55
-    gr_width = 10
-    gr_per = 0.626
-    gr_teeth = 20
-    wg_clad = 4
-    wg_width = 0.45
-    tp_len = 700
-    c3.add(grating(gr_per, gr_teeth, 0.5, gr_width, (gr_per * gr_teeth, 0), '-x', lda,
-                   numpy.sin(numpy.pi * 8 / 180), **spec))
-    path = gdspy.Path(wg_clad, (0, 0), number_of_paths=2, distance=gr_width + wg_clad)
-    path.segment(gr_per * gr_teeth, '+x', **spec)
-    taper(path, tp_len, wg_clad, wg_width + wg_clad, **spec)
-    waveguide(path, [800], (tp_len + gr_per * gr_teeth, 200), 50, **spec)
-    taper(path, tp_len, wg_clad, gr_width + wg_clad, **spec)
-    c3.add(grating(gr_per, gr_teeth, 0.5, gr_width, (path.x, path.y), path.direction, lda,
-                   numpy.sin(numpy.pi * 8 / 180), **spec))
-    path.segment(gr_per * gr_teeth, **spec)
-    c3.add(path)
+    taper = gdspy.Cell('NTaper')
+    taper.add(gdspy.Path(0.12, (0, 0)).segment(50, '+y', final_width=w))
+
+    c = gdspy.Cell('Negative')
+    for i in range(8):
+        path = gdspy.SimplePath([(150 * i, 50)], width=w, gdsii_path=True)
+        path.segment((0, 550 - 20 * i), relative=True)
+        path.turn(50, 'r')
+        path.segment((400, 0), relative=True)
+        path.turn(50, 'l')
+        path.segment((0, 250 + 20 * i), relative=True)
+        c.add(path)
+        c.add(gdspy.CellReference(ring, (150 * i + w / 2 + 0.06 + 0.02 * i, 300)))
+    c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
+    c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
+
+    # Positive resist example
+    #_, ring_edge = gdspy.slice(gdspy.Round((20, 0), 70, tolerance=0.001, max_points=0), 0, 0)
+    ring_edge = gdspy.Rectangle((0, -50), (70, 50))
+    ring_hole = gdspy.Round((20, 0), 20, 20 - w, tolerance=0.001)
+    ring_path = gdspy.Path(5, (0, 50), number_of_paths=2, distance=5 + w).segment(400, '+y')
+
+    grat = gdspy.Cell('PGrat')
+    grat.add(grating(0.626, 28, 0.5, 19, (0, 0), '+y', 1.55,
+                     numpy.sin(numpy.pi * 8 / 180), 21.5, tolerance=0.001))
+    grat.add(gdspy.Path(5, (0, 0), number_of_paths=2, distance=5 + w).segment(
+        21.5, '+y', final_distance=5 + 19))
+
+    taper = gdspy.Cell('PTaper')
+    taper.add(gdspy.Path(20, (0, 0), number_of_paths=2, distance=20 + 0.12).segment(
+        50, '+y', final_width=5, final_distance=5 + w))
+
+    c = gdspy.Cell('Positive')
+
+    for i in range(8):
+        path = gdspy.SimplePath([(150 * i, 450)], width=[5, 5], offset=5 + w, gdsii_path=True)
+        path.segment((0, 150 - 20 * i), relative=True)
+        path.turn(50, 'r')
+        path.segment((400, 0), relative=True)
+        path.turn(50, 'l')
+        path.segment((0, 250 + 20 * i), relative=True)
+        c.add(path)
+        dx = w / 2 + 0.06 + 0.2 * i
+        c.add(gdspy.boolean(
+            gdspy.boolean(ring_path, gdspy.copy(ring_edge, dx, 300), 'or', precision=1e-4),
+            gdspy.copy(ring_hole, dx, 300), 'not', precision=1e-4).translate(150 * i, 0))
+    c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
+    c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
 
     gdspy.LayoutViewer()

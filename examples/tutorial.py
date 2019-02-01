@@ -1,6 +1,6 @@
 ######################################################################
 #                                                                    #
-#  Copyright 2009-2019 Lucas Heitzmann Gabrielli.                    #
+#  Copyright 2009-2018 Lucas Heitzmann Gabrielli.                    #
 #  This file is part of gdspy, distributed under the terms of the    #
 #  Boost Software License - Version 1.0.  See the accompanying       #
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
@@ -323,4 +323,4 @@ gdsii.extract('IMPORT_REFS')
 
 # View the layout using a GUI.  Full description of the controls can
 # be found in the online help at http://gdspy.sourceforge.net/
-gdspy.LayoutViewer()
+gdspy.LayoutViewer(cells=[path_cell])
