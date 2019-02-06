@@ -36,97 +36,128 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
     Return `PolygonSet`
     '''
     if focus_distance < 0:
-        path = gdspy.L1Path((position[0] - 0.5 * width, position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
-                            '+x', period * fill_frac, [width], [], number_of_teeth, period, layer=layer, datatype=datatype)
+        p = gdspy.L1Path((position[0] - 0.5 * width,
+                          position[1] + 0.5 * (number_of_teeth - 1 + fill_frac) * period),
+                         '+x', period * fill_frac, [width], [], number_of_teeth, period,
+                         layer=layer, datatype=datatype)
     else:
         neff = lda / float(period) + sin_theta
         qmin = int(focus_distance / float(period) + 0.5)
-        path = gdspy.Path(period * fill_frac, position)
+        p = gdspy.Path(period * fill_frac, position)
         c3 = neff**2 - sin_theta**2
         w = 0.5 * width
         for q in range(qmin, qmin + number_of_teeth):
             c1 = q * lda * sin_theta
             c2 = (q * lda)**2
-            path.parametric(lambda t: (width * t - w, (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
-                            tolerance=tolerance, max_points=0, layer=layer, datatype=datatype)
-            path.x = position[0]
-            path.y = position[1]
-        sz = path.polygons[0].shape[0] // 2
+            p.parametric(lambda t: (width * t - w,
+                                    (c1 + neff * numpy.sqrt(c2 - c3 * (width * t - w)**2)) / c3),
+                         tolerance=tolerance, max_points=0, layer=layer, datatype=datatype)
+            p.x = position[0]
+            p.y = position[1]
+        sz = p.polygons[0].shape[0] // 2
         if focus_width == 0:
-            path.polygons[0] = numpy.vstack((path.polygons[0][:sz, :], [position]))
+            p.polygons[0] = numpy.vstack((p.polygons[0][:sz, :], [position]))
         elif focus_width > 0:
-            path.polygons[0] = numpy.vstack((path.polygons[0][:sz, :],
-                                             [(position[0] + 0.5 * focus_width, position[1]),
-                                              (position[0] - 0.5 * focus_width, position[1])]))
-        path.fracture()
+            p.polygons[0] = numpy.vstack((p.polygons[0][:sz, :],
+                                          [(position[0] + 0.5 * focus_width, position[1]),
+                                           (position[0] - 0.5 * focus_width, position[1])]))
+        p.fracture()
     if direction == '-x':
-        return path.rotate(0.5 * numpy.pi, position)
+        return p.rotate(0.5 * numpy.pi, position)
     elif direction == '+x':
-        return path.rotate(-0.5 * numpy.pi, position)
+        return p.rotate(-0.5 * numpy.pi, position)
     elif direction == '-y':
-        return path.rotate(numpy.pi, position)
+        return p.rotate(numpy.pi, position)
     else:
-        return path
+        return p
 
 
 if __name__ == '__main__':
     # Examples
-    w = 0.45
 
     # Negative resist example
+    width = 0.45
+    bend_radius = 50.0
+    ring_radius = 20.0
+    taper_len = 50.0
+    input_gap = 150.0
+    io_gap = 500.0
+    wg_gap = 20.0
+    ring_gaps = [0.06 + 0.02 * i for i in range(8)]
+
     ring = gdspy.Cell('NRing')
-    ring.add(gdspy.Round((20, 0), 20, 20 - w, tolerance=0.001))
+    ring.add(gdspy.Round((ring_radius, 0), ring_radius, ring_radius - width, tolerance=0.001))
 
     grat = gdspy.Cell('NGrat')
     grat.add(grating(0.626, 28, 0.5, 19, (0, 0), '+y', 1.55,
-                     numpy.sin(numpy.pi * 8 / 180), 21.5, w,
+                     numpy.sin(numpy.pi * 8 / 180), 21.5, width,
                      tolerance=0.001))
 
     taper = gdspy.Cell('NTaper')
-    taper.add(gdspy.Path(0.12, (0, 0)).segment(50, '+y', final_width=w))
+    taper.add(gdspy.Path(0.12, (0, 0)).segment(taper_len, '+y', final_width=width))
 
     c = gdspy.Cell('Negative')
-    for i in range(8):
-        path = gdspy.SimplePath([(150 * i, 50)], width=w, corners='circular bend', bend_radius=50, gdsii_path=True)
-        path.segment((0, 600 - 20 * i), relative=True)
-        path.segment((500, 0), relative=True)
-        path.segment((0, 300 + 20 * i), relative=True)
+    for i, gap in enumerate(ring_gaps):
+        path = gdspy.SimplePath([(input_gap * i, taper_len)], width=width,
+                                corners='circular bend', bend_radius=bend_radius,
+                                gdsii_path=True)
+        path.segment((0, 600 - wg_gap * i), relative=True)
+        path.segment((io_gap, 0), relative=True)
+        path.segment((0, 300 + wg_gap * i), relative=True)
         c.add(path)
-        c.add(gdspy.CellReference(ring, (150 * i + w / 2 + 0.06 + 0.02 * i, 300)))
-    c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
-    c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
+        c.add(gdspy.CellReference(ring, (input_gap * i + width / 2 + gap, 300)))
+    c.add(gdspy.CellArray(taper, len(ring_gaps), 1, (input_gap, 0), (0, 0)))
+    c.add(gdspy.CellArray(grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)))
+
 
     # Positive resist example
-    ring_edge = gdspy.Rectangle((0, -50), (70, 50))
-    ring_hole = gdspy.Round((20, 0), 20, 20 - w, tolerance=0.001)
-    ring_path = gdspy.Path(5, (0, 50), number_of_paths=2, distance=5 + w).segment(400, '+y')
+    width = 0.45
+    ring_radius = 20.0
+    big_margin = 10.0
+    small_margin = 5.0
+    taper_len = 50.0
+    bus_len = 400.0
+    input_gap = 150.0
+    io_gap = 500.0
+    wg_gap = 20.0
+    ring_gaps = [0.06 + 0.02 * i for i in range(8)]
 
-    grat = gdspy.Cell('PGrat')
+    ring_margin = gdspy.Rectangle((0, -ring_radius - big_margin),
+                                  (2 * ring_radius + big_margin, ring_radius + big_margin))
+    ring_hole = gdspy.Round((ring_radius, 0), ring_radius, ring_radius - width, tolerance=0.001)
+    ring_bus = gdspy.Path(small_margin, (0, taper_len), number_of_paths=2,
+                          distance=small_margin + width)
+    ring_bus.segment(bus_len, '+y')
+
+    p = gdspy.Path(small_margin, (0, 0), number_of_paths=2, distance=small_margin + width)
+    p.segment(21.5, '+y', final_distance=small_margin + 19)
+    grat = gdspy.Cell('PGrat').add(p)
     grat.add(grating(0.626, 28, 0.5, 19, (0, 0), '+y', 1.55,
                      numpy.sin(numpy.pi * 8 / 180), 21.5, tolerance=0.001))
-    grat.add(gdspy.Path(5, (0, 0), number_of_paths=2, distance=5 + w).segment(
-        21.5, '+y', final_distance=5 + 19))
 
-    taper = gdspy.Cell('PTaper')
-    taper.add(gdspy.Path(20, (0, 0), number_of_paths=2, distance=20 + 0.12).segment(
-        50, '+y', final_width=5, final_distance=5 + w))
+    p = gdspy.Path(big_margin, (0, 0), number_of_paths=2, distance=big_margin + 0.12)
+    p.segment(taper_len, '+y', final_width=small_margin, final_distance=small_margin + width)
+    taper = gdspy.Cell('PTaper').add(p)
 
     c = gdspy.Cell('Positive')
-
-    for i in range(8):
-        path = gdspy.SimplePath([(150 * i, 450)], width=[5, 5], offset=5 + w, gdsii_path=True)
-        path.segment((0, 150 - 20 * i), relative=True)
-        path.turn(50, 'r')
-        path.segment((400, 0), relative=True)
-        path.turn(50, 'l')
-        path.segment((0, 250 + 20 * i), relative=True)
+    for i, gap in enumerate(ring_gaps):
+        path = gdspy.SimplePath([(input_gap * i, taper_len + bus_len)],
+                                width=[small_margin, small_margin],
+                                offset=small_margin + width, gdsii_path=True)
+        path.segment((0, 600 - bus_len - bend_radius - wg_gap * i), relative=True)
+        path.turn(bend_radius, 'r')
+        path.segment((io_gap - 2 * bend_radius, 0), relative=True)
+        path.turn(bend_radius, 'l')
+        path.segment((0, 300 - bend_radius + wg_gap * i), relative=True)
         c.add(path)
-        dx = w / 2 + 0.06 + 0.2 * i
+        dx = width / 2 + gap
         c.add(gdspy.boolean(
-            gdspy.boolean(ring_path, gdspy.copy(ring_edge, dx, 300), 'or', precision=1e-4),
-            gdspy.copy(ring_hole, dx, 300), 'not', precision=1e-4).translate(150 * i, 0))
-    c.add(gdspy.CellArray(grat, 8, 1, (150, 0), (500, 950)))
-    c.add(gdspy.CellArray(taper, 8, 1, (150, 0), (0, 0)))
+            gdspy.boolean(ring_bus, gdspy.copy(ring_margin, dx, 300), 'or', precision=1e-4),
+            gdspy.copy(ring_hole, dx, 300), 'not', precision=1e-4).translate(input_gap * i, 0))
+    c.add(gdspy.CellArray(taper, len(ring_gaps), 1, (input_gap, 0), (0, 0)))
+    c.add(gdspy.CellArray(grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)))
 
+
+    # Save to a gds file and check out the output
     gdspy.write_gds('photonics.gds')
     gdspy.LayoutViewer()
