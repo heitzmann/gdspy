@@ -260,8 +260,7 @@ A few features of :class:`gdspy.SimplePath` are:
 .. image:: _static/simple_paths.*
    :align: center
 
-The following example show other features, such as width tapering, arbitrary offsets, and custom joins and end caps.
-One application of custom joins is to automatically curve paths as demonstrated in the :ref:`Example: Integrated Photonics`.
+The following example shows other features, such as width tapering, arbitrary offsets, and custom joins and end caps.
 
 .. literalinclude:: makeimages.py
    :language: python
@@ -273,7 +272,8 @@ One application of custom joins is to automatically curve paths as demonstrated 
    :align: center
 
 
-The flexibility offered by custom corner functions allows the creation, for example, of automatically bending paths:
+The corner type 'circular bend' (together with the `bend_radius` argument) can be used to automatically curve the path.
+This feature is used in :ref:`Example: Integrated Photonics`.
 
 .. literalinclude:: makeimages.py
    :language: python
@@ -308,18 +308,112 @@ The advantages are, as mentioned earlier, more robustness when generating the fi
 Note that, analogously to :class:`gdspy.SimplePath`, :class:`gdspy.LazyPath` can be stored as a GDSII path as long as its width is kept constant.
 
 
+****
+Text
+****
+
+Polygonal Text
+==============
+
+TODO
+
+
+Labels
+======
+
+TODO
+
+
 *******************
 Geometry Operations
 *******************
 
-TODO: fillet, boolean, offset, slice, copy
+Gdspy offers a number of functions and methods to modify existing geometry.
+The most useful operations include :func:`gdspy.boolean`, :func:`gdspy.slice`, :func:`gdspy.offset`, and :meth:`gdspy.PolygonSet.fillet`.
 
 
-******************
-GDSII Manipulation
-******************
+Boolean Operations
+==================
 
-TODO: Units, precision, loading/saving...
+Boolean operations (:func:`gdspy.boolean`) can be performed on polygons, paths and whole cells.
+Four operations are defined: union ('or'), intersection ('and'), subtraction ('not'), and symmetric subtraction ('xor').
+
+They can be computationally expensive, so it is usually advisable to avoid using boolean operations whenever possible.
+If they are necessary, keeping the number of vertices is all polygons as low as possible also helps.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Boolean Operations
+   :end-before: draw
+
+.. image:: _static/boolean_operations.*
+   :align: center
+
+
+Slice Operation
+===============
+
+As the name indicates, a slice operation subdivides a set of polygons along horizontal or vertical cut lines.
+
+In a few cases, a boolean operation can be substituted by one or more slice operations.
+Because :func:`gdspy.slice` is ususally much simpler than :func:`gdspy.boolean`, it is a good idea to use the former if possible.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Slice Operation
+   :end-before: draw
+
+.. image:: _static/slice_operation.*
+   :align: center
+
+
+Offset Operation
+================
+
+The function :func:`gdspy.offset` expands or contracts polygons by a fixed amount.
+It can operate on individual polygons or sets of them, in which case it may make sense to use the argument `join_first` to operate on the whole geometry as if a boolean 'or' was executed beforehand.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Offset Operation
+   :end-before: draw
+
+.. image:: _static/offset_operation.*
+   :align: center
+
+
+Fillet Operation
+================
+
+The method :meth:`gdspy.PolygonSet.fillet` can be used to round polygon corners.
+It doesn't have a `join_first` argument as :func:`gdspy.offset`, so if it will be used on a polygon, that polygon should probably not be fractured.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Fillet Operation
+   :end-before: draw
+
+.. image:: _static/fillet_operation.*
+   :align: center
+
+
+*************
+GDSII Library
+*************
+
+TODO: Units, precision, `current_library`
+
+
+Saving a GDSII File
+===================
+
+
+Loading a GDSII File
+====================
 
 
 *****************************

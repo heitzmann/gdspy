@@ -274,3 +274,61 @@ if __name__ == "__main__":
                           lambda u: 0.25 * numpy.cos(24 * numpy.pi * u),
                           -0.75, 0.75])
     draw(gdspy.Cell('lazy_paths').add(lp))
+
+    # Boolean Operations
+    # Create some text
+    text = gdspy.Text('GDSPY', 4, (0, 0))
+    # Create a rectangle extending the text's bounding box by 1
+    bb = numpy.array(text.get_bounding_box())
+    rect = gdspy.Rectangle(bb[0] - 1, bb[1] + 1)
+
+    # Subtract the text from the rectangle
+    inv = gdspy.boolean(rect, text, 'not')
+    draw(gdspy.Cell('boolean_operations').add(inv))
+
+    # Slice Operation
+    ring1 = gdspy.Round((-6, 0), 6, inner_radius=4)
+    ring2 = gdspy.Round((0, 0), 6, inner_radius=4)
+    ring3 = gdspy.Round((6, 0), 6, inner_radius=4)
+
+    # Slice the first ring across x=-3, the second ring across x=-3
+    # and x=3, and the third ring across x=3
+    slices1 = gdspy.slice(ring1, -3, axis=0)
+    slices2 = gdspy.slice(ring2, [-3, 3], axis=0)
+    slices3 = gdspy.slice(ring3, 3, axis=0)
+
+    slices = gdspy.Cell('SLICES')
+
+    # Keep only the left side of slices1, the center part of slices2
+    # and the right side of slices3
+    slices.add(slices1[0])
+    slices.add(slices2[1])
+    slices.add(slices3[1])
+
+    draw(slices, 'slice_operation')
+
+    # Offset Operation
+    rect1 = gdspy.Rectangle((-4, -4), (1, 1))
+    rect2 = gdspy.Rectangle((-1, -1), (4, 4))
+
+    # Offset both polygons
+    # Because we join them first, a single polygon is created.
+    outer = gdspy.offset([rect1, rect2], 0.5, join_first=True, layer=1)
+    draw(gdspy.Cell('offset_operation').add([outer, rect1, rect2]))
+
+    # Fillet Operation
+    multi_path = gdspy.Path(2, (-3, -2))
+    multi_path.segment(4, '+x')
+    multi_path.turn(2, 'l').turn(2, 'r')
+    multi_path.segment(4)
+
+    # Create a copy with joined polygons and no fracturing
+    joined = gdspy.boolean(multi_path, None, 'or', max_points=0)
+    joined.translate(0, -5)
+
+    # Fillet applied to each polygon in the path
+    multi_path.fillet(0.5)
+
+    # Fillet applied to the joined copy
+    joined.fillet(0.5)
+    draw(gdspy.Cell('fillet_operation').add([joined, multi_path]))
