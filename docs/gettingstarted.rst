@@ -411,15 +411,67 @@ It doesn't have a `join_first` argument as :func:`gdspy.offset`, so if it will b
 GDSII Library
 *************
 
-TODO: Units, precision, `current_library`
+All the information used to create a GDSII file is kept within an instance of :class:`GdsLibrary`.
+Besides all the geometric and hierarchical information, this class also holds a name and the units for all entities.
+The name can be any ASCII string.
+It is simply stored in the GDSII file and has no other purpose in gdspy.
+The units require some attention because they can impact the resolution of the polygons in the library when written to a file.
+
+Units in GDSII
+==============
+
+Two values are defined: `unit` and `precision`.
+The value of `unit` defines the unit size—in meters—for all entities in the library.
+For example, if ``unit = 1e-6`` (10⁻⁶ m, the default value), a vertex at (1, 2) should be interpreted as a vertex in real world position (1 × 10⁻⁶ m, 2 × 10⁻⁶ m).
+If `unit` changes to 0.001, then that same vertex would be located (in real world coordinates) at (0.001 m, 0.002 m), or (1 mm, 2 mm).
+
+The value of precision has to do with the type used to store coordinates in the GDSII file: signed 4-byte integers.
+Because of that, a finer coordinate grid than 1 `unit` is usually desired to define coordinates.
+That grid is defined, in meters, by `precision`, which defaults to ``1e-9`` (10⁻⁹ m).
+When the GDSII file is written, all vertices are snapped to the grid defined by `precision`.
+For example, for the default values of `unit` and `precision`, a vertex at (1.0512, 0.0001) represents real world coordinates (1.0512 × 10⁻⁶ m, 0.0001 × 10⁻⁶ m), or (1051.2 × 10⁻⁹ m, 0.1 × 10⁻⁹ m), which will be rounded to integers: (1051 × 10⁻⁹ m, 0 × 10⁻⁹ m), or (1.051 × 10⁻⁶ m, 0 × 10⁻⁶ m).
+The actual coordinate values written in the GDSII file will be the integers (1051, 0).
+By reducing the value of `precision` from 10⁻⁹ m to 10⁻¹² m, for example, the coordinates will have 3 additional decimal places of precision, so the stored values would be (1051200, 100).
+
+The downside of increasing the number of decimal places in the file is reducing the range of coordinates that can be stored (in real world units).
+That is because the range of coordinate values that can be written in the file are [-(2³²); 2³¹ - 1] = [-2,147,483,648; 2,147,483,647].
+For the default `precsision`, this range is [-2.147483648 m; 2.147483647 m].
+If `precision` is set to 10⁻¹² m, the same range is reduced by 1000 times: [-2.147483648 mm; 2.147483647 mm].
 
 
 Saving a GDSII File
 ===================
 
+To save a GDSII file, the easiest way is to use :func:`gdspy.write_gds`, as in the :ref:`First GDSII`.
+That function accepts arguments `unit` and `precision` to change the default values, as explained in the section above.
+
+In reality, it calls the :meth:`gdspy.GdsLibrary.write_gds` method from a global :class:`gdspy.GdsLibrary` instance: :attr:`gdspy.current_library`.
+This instance automatically holds all cells created by gdspy unless specifically told not to with the argument `exclude_from_current` set to True in :class:`gdspy.Cell`.
+
+That means that after saving a file, if a new GDSII library is to be started from scratch using the global instance, it is important to reinitialize it with:
+
+.. code-block:: python
+
+   gdspy.current_library = gdspy.GdsLibrary()
+
 
 Loading a GDSII File
 ====================
+
+To load an existing GDSII file (or to work simultaneously with multiple libraries), a new instance of :class:`GdsLibrary` can be created or an existing one can be used:
+
+.. code-block:: python
+
+   # Load a GDSII file into a new library
+   gdsii = gdspy.GdsLibrary(infile='filename.gds')
+
+   # Use the current global library to load the file
+   gdspy.current_library.read_gds('filename.gds')
+
+In either case, care must be taken to merge the units from the library and the file, which is controlled by the argument `units` in :meth:`gdspy.GdsLibrary.read_gds` (keyword argument in :class:`gdspy.GdsLibrary`).
+
+Access to the cells in the loaded library is provided through the dictionary :attr:`gdspy.GdsLibrary.cell_dict` (cells indexed by name).
+The method :meth:`gdspy.GdsLibrary.top_level` can be used to find the top-level cells in the library (cells on the top of the hierarchy, i.e., cell that are not referenced by any other cells) and :meth:`gdspy.GdsLibrary.extract` can be used to import a given cell and all of its dependencies into :attr:`gdspy.current_library`.
 
 
 *****************************
