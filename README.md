@@ -49,7 +49,7 @@ Installation via `pip` and building from source as above are also possible, but 
 
 ## Documentation
 
-The complete [documentation](http://gdspy.readthedocs.io/en/latest/) can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
+The complete [documentation](http://gdspy.readthedocs.io/) can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
 
 The file [tutorial.py](https://github.com/heitzmann/gdspy/blob/master/examples/tutorial.py) in the `example` folder is a sample script to show the features provided by this module.
 
@@ -60,6 +60,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Upcoming
+* Revised [documentation](http://gdspy.readthedocs.io/).
 * New `SimplePath` and `LazyPath` classes: more efficient path generation when using the original GDSII path specification.
 * Added `PolygonSet.mirror` (thanks to Daan Waardenburg for the contribution).
 * Added `Path.bezier` to create paths based on Bézier curves.
