@@ -330,29 +330,6 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
     return (numpy.vstack((cta.real, cta.imag)).transpose(), numpy.vstack((ctb.real, ctb.imag)).transpose())
 
 
-def _intersect_lines(p0, v0, p1, v1):
-    """
-    Calculate intersection between lines.
-
-    The first line is defined by point p0 and direction v0, and the
-    second by point p1 and direction d1.
-
-    Returns
-    -------
-    out : 2-tuple of float
-        The intersection point is p0 + out[0] * v0 = p1 + out[1] * v1.
-    """
-    den = v1[1] * v0[0] - v1[0] * v0[1]
-    lim = 1e-12 * (v0[0]**2 + v0[1]**2) * (v1[0]**2 + v1[1]**2)
-    if den**2 < lim:
-        return 0, 0, 0.5 * (p0 + p1)
-    dx = p1[0] - p0[0]
-    dy = p1[1] - p0[1]
-    u0 = (v1[1] * dx - v1[0] * dy) / den
-    u1 = (v0[1] * dx - v0[0] * dy) / den
-    return u0, u1, 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
-
-
 def _func_const(c, nargs=1):
     if nargs == 1:
         return lambda u: c
@@ -2753,7 +2730,16 @@ class SimplePath(object):
                             if corner == 'natural':
                                 v0 = v0 * (half_w / (v0[0]**2 + v0[1]**2)**0.5)
                                 v1 = v1 * (half_w / (v1[0]**2 + v1[1]**2)**0.5)
-                                u0, u1, p = _intersect_lines(p0, v0, p1, v1)
+                                den = v1[1] * v0[0] - v1[0] * v0[1]
+                                if den**2 < 1e-12 * half_w**4:
+                                    u0 = u1 = 0
+                                    p = 0.5 * (p0 + p1)
+                                else:
+                                    dx = p1[0] - p0[0]
+                                    dy = p1[1] - p0[1]
+                                    u0 = (v1[1] * dx - v1[0] * dy) / den
+                                    u1 = (v0[1] * dx - v0[0] * dy) / den
+                                    p = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
                                 if u0 < 0 and u1 > 0:
                                     arms[ii].append(p)
                                 elif u0 <= 1 and u1 >= -1:
@@ -2792,7 +2778,17 @@ class SimplePath(object):
                             elif callable(corner):
                                 arms[ii].extend(corner(p0, v0, p1, v1, pts[jj], self.widths[jj, kk]))
                             else:
-                                u0, u1, p = _intersect_lines(p0, v0, p1, v1)
+                                den = v1[1] * v0[0] - v1[0] * v0[1]
+                                lim = 1e-12 * (v0[0]**2 + v0[1]**2) * (v1[0]**2 + v1[1]**2)
+                                if den**2 < lim:
+                                    u0 = u1 = 0
+                                    p = 0.5 * (p0 + p1)
+                                else:
+                                    dx = p1[0] - p0[0]
+                                    dy = p1[1] - p0[1]
+                                    u0 = (v1[1] * dx - v1[0] * dy) / den
+                                    u1 = (v0[1] * dx - v0[0] * dy) / den
+                                    p = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
                                 if corner == 'miter':
                                     arms[ii].append(p)
                                 elif u0 <= 0 and u1 >= 0:
@@ -3815,7 +3811,17 @@ class LazyPath(object):
                         v0 = sub0.grad(1, arm)
                         p1 = sub1(0, arm)
                         v1 = sub1.grad(0, arm)
-                        u0, u1, px = _intersect_lines(p0, v0, p1, v1)
+                        den = v1[1] * v0[0] - v1[0] * v0[1]
+                        lim = 1e-12 * (v0[0]**2 + v0[1]**2) * (v1[0]**2 + v1[1]**2)
+                        if den**2 < lim:
+                            u0 = u1 = 0
+                            px = 0.5 * (p0 + p1)
+                        else:
+                            dx = p1[0] - p0[0]
+                            dy = p1[1] - p0[1]
+                            u0 = (v1[1] * dx - v1[0] * dy) / den
+                            u1 = (v0[1] * dx - v0[0] * dy) / den
+                            px = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
                         u0 = 1 + u0
                         if u0 < 1 and u1 > 0:
                             delta = sub0(u0, arm) - sub1(u1, arm)
