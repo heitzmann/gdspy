@@ -312,16 +312,22 @@ Note that, analogously to :class:`gdspy.SimplePath`, :class:`gdspy.LazyPath` can
 Text
 ****
 
-Polygonal Text
-==============
+In the context of a GDSII file, text is supported in the form of labels, which are ASCII annotations placed somewhere in the geometry of a given cell.
+Similar to polygons, labels are tagged with layer and texttype values (texttype is the label equivalent of the polygon datatype).
+They are supported by the class :class:`gdspy.Label`.
 
-TODO
+Additionally, gdspy offers the possibility of creating text as polygons to be included with the geometry.
+The class :class:`gdspy.Text` creates polygonal text that can be used in the same way as any other polygons in gdspy.
+The font used to render the characters contains only horizontal and vertical edges, which is important for some laser writing systems.
 
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: # Text
+   :end-before: draw
 
-Labels
-======
-
-TODO
+.. image:: _static/text.*
+   :align: center
 
 
 *******************

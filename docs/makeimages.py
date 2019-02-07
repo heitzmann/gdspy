@@ -1,7 +1,7 @@
 import gdspy
 import numpy
 import colorsys
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 
 class ColorDict(dict):
@@ -52,6 +52,13 @@ def draw(cell, name=None, width=600, height=400, margin=20):
     dr = ImageDraw.Draw(img)
     dr.line([z[0], z[1], p[0], z[1]], fill=(0, 0, 0, 255), width=3)
     dr.line([z[0], z[1], z[0], p[1]], fill=(0, 0, 0, 255), width=3)
+    labels = cell.get_labels()
+    if len(labels) > 0:
+        font = ImageFont.truetype('/user/share/fonts/TTF/DejaVuSans.ttf', 72)
+        for l in labels:
+            x = ox + scale * (l.position[0] - ax)
+            y = oy - scale * (l.position[1] - ay)
+            dr.text((x, y), l.text, font=font, fill=color[(l.layer, l.texttype)])
     img = img.resize((width, height), Image.ANTIALIAS)
     name = 'docs/_static/' + (cell.name if name is None else name) + '.png'
     print('Saving', name)
@@ -332,3 +339,16 @@ if __name__ == "__main__":
     # Fillet applied to the joined copy
     joined.fillet(0.5)
     draw(gdspy.Cell('fillet_operation').add([joined, multi_path]))
+
+    # Text
+    # Label anchored at (1, 3) by its north-west corner
+    label = gdspy.Label('Sample label', (1, 3), 'nw')
+
+    # Horizontal text with height 2.25
+    htext = gdspy.Text('12345', 2.25, (0.25, 6))
+
+    # Vertical text with height 1.5
+    vtext = gdspy.Text('ABC', 1.5, (10.5, 4), horizontal=False)
+
+    rect = gdspy.Rectangle((0, 0), (10, 6), layer=10)
+    draw(gdspy.Cell('text').add([htext, vtext, label, rect]))

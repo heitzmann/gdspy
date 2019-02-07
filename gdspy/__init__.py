@@ -1084,7 +1084,10 @@ class Text(PolygonSet):
     text : string
         The text to be converted in geometric objects.
     size : number
-        Base size of each character.
+        Height of the character.  The width of a character and the
+        distance between characters are this value multiplied by 5 / 9
+        and 8 / 9, respectively.  For vertical text, the distance is
+        multiplied by 11 / 9.
     position : array-like[2]
         Text position (lower left corner).
     horizontal : bool
