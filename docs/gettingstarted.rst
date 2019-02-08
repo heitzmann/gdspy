@@ -108,6 +108,23 @@ If the number of vertices in the polygon is larger than `max_points` (199 by def
    :align: center
 
 
+Curves
+======
+
+Constructing complex polygons by manually listing all vertices in :class:`gdspy.Polygon` can be challenging.
+The class :class:`gdspy.Curve` can be used to facilitate the creation of polygons by drawing their shapes step-by-step.
+It uses a syntax similar to the `SVG path specification <https://www.w3.org/TR/SVG/paths.html>`_.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Curves
+   :end-before: draw
+
+.. image:: _static/curves.*
+   :align: center
+
+
 Transformations
 ===============
 

@@ -97,6 +97,15 @@ LazyPath
    :show-inheritance:
 
 
+Curve
+=====
+
+.. autoclass:: gdspy.Curve
+   :members:
+   :inherited-members:
+   :show-inheritance:
+
+
 Label
 =====
 

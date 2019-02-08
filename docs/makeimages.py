@@ -95,6 +95,27 @@ if __name__ == "__main__":
                       tolerance=0.01)
     draw(gdspy.Cell('circles').add([circle, ellipse, arc]))
 
+    # Curves
+    # Start a curve from (0, 0)
+    curve1 = gdspy.Curve(0, 0)
+    # Add line segments to (5, 0) and then to (5, 4)
+    curve1.L(5, 0, 5, 4)
+    # Continue with an horizontal line to x=8
+    curve1.H(8)
+    # Draw an elliptical arc rotated by 0.1 * numpy.pi
+    curve1.arc((5, 3), -0.2 * numpy.pi, 0.5 * numpy.pi, 0.1 * numpy.pi)
+    # Line to (-3, -3) relative to the current end point
+    curve1.l(-3, -3)
+
+    # Curve made of a vertical line and a quadratic Bezier, both
+    # defined with relative coordinates
+    curve2 = gdspy.Curve(5, 0).v(4).q(8, -2, 0, -4)
+
+    # Create a polygon from each curve
+    poly1 = gdspy.Polygon(curve1.get_points(), layer=0)
+    poly2 = gdspy.Polygon(curve2.get_points(), layer=1)
+    draw(gdspy.Cell('curves').add([poly1, poly2]))
+
     # Transformations
     poly = gdspy.Rectangle((-2, -2), (2, 2))
     poly.rotate(numpy.pi / 4)

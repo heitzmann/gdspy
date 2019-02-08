@@ -50,12 +50,6 @@ import numpy
 import copy as libcopy
 import hashlib
 
-from gdspy import clipper
-try:
-    from gdspy.viewer import LayoutViewer
-except ImportError as e:
-    warnings.warn("[GDSPY] LayoutViewer not available: " + str(e), category=ImportWarning, stacklevel=2)
-
 __version__ = '1.3.1'
 
 _halfpi = 0.5 * numpy.pi
@@ -402,6 +396,7 @@ def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, narg
             return x * cos + x[::-1] * sin + translation
     return _f
 
+
 def _func_bezier(ctrl, nargs=1):
     if nargs == 1:
         def _f(u):
@@ -416,8 +411,6 @@ def _func_bezier(ctrl, nargs=1):
                 p = p[1:] * u + p[:-1] * (1 - u)
             return p[0]
     return _f
-
-
 def _gather_polys(args):
     """
     Gather polygons from different argument types into a list.
@@ -1842,7 +1835,7 @@ class Path(PolygonSet):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or None
+        angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles
             defined as None are automatically calculated.
         curl_start : number
@@ -1855,10 +1848,10 @@ class Path(PolygonSet):
             Ratio between the mock curvatures at the last point and at
             its neighbor.  It has no effect for closed curves or when an
             angle is defined for the first point.
-        t_in : number or array-like[N]
+        t_in : number or array-like[N + 1]
             Tension parameter when arriving at each point.  One value
             per point or a single value used for all points.
-        t_out : number or array-like[N]
+        t_out : number or array-like[N + 1]
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
@@ -2360,7 +2353,7 @@ class PolyPath(PolygonSet):
         return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-class _SubPath:
+class _SubPath(object):
     """
     Single path component.
     """
@@ -3467,7 +3460,7 @@ class SimplePath(object):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or None
+        angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles
             defined as None are automatically calculated.
         curl_start : number
@@ -3480,10 +3473,10 @@ class SimplePath(object):
             Ratio between the mock curvatures at the last point and at
             its neighbor.  It has no effect for closed curves or when an
             angle is defined for the first point.
-        t_in : number or array-like[N]
+        t_in : number or array-like[N + 1]
             Tension parameter when arriving at each point.  One value
             per point or a single value used for all points.
-        t_out : number or array-like[N]
+        t_out : number or array-like[N + 1]
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
@@ -4421,7 +4414,7 @@ class LazyPath(object):
         ----------
         points : array-like[N][2]
             Vertices in the interpolating curve.
-        angles : array-like[N] or None
+        angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles
             defined as None are automatically calculated.
         curl_start : number
@@ -4434,10 +4427,10 @@ class LazyPath(object):
             Ratio between the mock curvatures at the last point and at
             its neighbor.  It has no effect for closed curves or when an
             angle is defined for the first point.
-        t_in : number or array-like[N]
+        t_in : number or array-like[N + 1]
             Tension parameter when arriving at each point.  One value
             per point or a single value used for all points.
-        t_out : number or array-like[N]
+        t_out : number or array-like[N + 1]
             Tension parameter when leaving each point.  One value per
             point or a single value used for all points.
         cycle : bool
@@ -6945,3 +6938,10 @@ Examples
 >>> gdspy.current_library = GdsLibrary()  # Reset current library
 >>> gdspy.Cell('MAIN')  # A new MAIN cell is created without error
 """
+
+from gdspy.curve import Curve
+from gdspy import clipper
+try:
+    from gdspy.viewer import LayoutViewer
+except ImportError as e:
+    warnings.warn("[GDSPY] LayoutViewer not available: " + str(e), category=ImportWarning, stacklevel=2)
