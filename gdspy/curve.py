@@ -667,7 +667,7 @@ class Curve(object):
         self.points.extend(xy for xy in pts)
         return self
 
-    def I(self, *xy, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
+    def I(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
         """
         Add a smooth interpolating curve through the given points.
 
@@ -677,8 +677,8 @@ class Curve(object):
 
         Parameters
         ----------
-        xy : numbers
-            Coordinates of the N interpolation points.
+        points : array-like[N][2]
+            Vertices in the interpolating curve.
         angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles
             defined as None are automatically calculated.
@@ -710,8 +710,9 @@ class Curve(object):
 
         Examples
         --------
-        >>> c1 = gdspy.Curve(0, 1).I(1, 1, 2, 1, 1, 0)
-        >>> c2 = gdspy.Curve(0, 2).I(1, 2, 2, 2, 1, 1, cycle=True)
+        >>> c1 = gdspy.Curve(0, 1).I([(1, 1), (2, 1), (1, 0)])
+        >>> c2 = gdspy.Curve(0, 2).I([(1, 2), (2, 2), (1, 1)],
+        ...                          cycle=True)
         >>> ps = gdspy.PolygonSet([c1.get_points(), c2.get_points()])
 
         References
@@ -720,16 +721,7 @@ class Curve(object):
            `DOI: 10.1007/BF02187690
            <https://doi.org/10.1007/BF02187690>`_
         """
-        pts = [self.points[-1]]
-        i = 0
-        while i < len(xy):
-            if isinstance(xy[i], complex):
-                pts.append(numpy.array((xy[i].real, xy[i].imag)))
-                i += 1
-            else:
-                pts.append(numpy.array((xy[i], xy[i + 1])))
-                i += 2
-        pts = numpy.array(pts)
+        pts = numpy.vstack((self.points[-1:], points))
         cta, ctb = _hobby(pts, angles, curl_start, curl_end, t_in, t_out, cycle)
         args = []
         args.extend(x for i in range(pts.shape[0] - 1) for x in
@@ -738,7 +730,7 @@ class Curve(object):
             args.extend([cta[-1, 0], cta[-1, 1], ctb[-1, 0], ctb[-1, 1], pts[0, 0], pts[0, 1]])
         return self.C(*args)
 
-    def i(self, *xy, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
+    def i(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
         """
         Add a smooth interpolating curve through the given points.
 
@@ -748,9 +740,9 @@ class Curve(object):
 
         Parameters
         ----------
-        xy : numbers
-            Coordinates of the N interpolation points.  All coordinates
-            are relative to the current end point.
+        points : array-like[N][2]
+            Vertices in the interpolating curve (relative to teh current
+            endpoint).
         angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles
             defined as None are automatically calculated.
@@ -782,8 +774,9 @@ class Curve(object):
 
         Examples
         --------
-        >>> c1 = gdspy.Curve(0, 1).i(1, 0, 2, 0, 1, -1)
-        >>> c2 = gdspy.Curve(0, 2).i(1, 0, 2, 0, 1, -1, cycle=True)
+        >>> c1 = gdspy.Curve(0, 1).i([(1, 0), (2, 0), (1, -1)])
+        >>> c2 = gdspy.Curve(0, 2).i([(1, 0), (2, 0), (1, -1)],
+        ...                          cycle=True)
         >>> ps = gdspy.PolygonSet([c1.get_points(), c2.get_points()])
 
         References
@@ -792,16 +785,7 @@ class Curve(object):
            `DOI: 10.1007/BF02187690
            <https://doi.org/10.1007/BF02187690>`_
         """
-        pts = [_zero]
-        i = 0
-        while i < len(xy):
-            if isinstance(xy[i], complex):
-                pts.append(numpy.array((xy[i].real, xy[i].imag)))
-                i += 1
-            else:
-                pts.append(numpy.array((xy[i], xy[i + 1])))
-                i += 2
-        pts = numpy.array(pts) + self.points[-1]
+        pts = numpy.vstack((_zero.reshape((1, 2)), points)) + self.points[-1]
         cta, ctb = _hobby(pts, angles, curl_start, curl_end, t_in, t_out, cycle)
         args = []
         args.extend(x for i in range(pts.shape[0] - 1) for x in
