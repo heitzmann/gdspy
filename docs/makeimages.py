@@ -96,25 +96,39 @@ if __name__ == "__main__":
     draw(gdspy.Cell('circles').add([circle, ellipse, arc]))
 
     # Curves
-    # Start a curve from (0, 0)
-    curve1 = gdspy.Curve(0, 0)
-    # Add line segments to (5, 0) and then to (5, 4)
-    curve1.L(5, 0, 5, 4)
-    # Continue with an horizontal line to x=8
-    curve1.H(8)
-    # Draw an elliptical arc rotated by 0.1 * numpy.pi
-    curve1.arc((5, 3), -0.2 * numpy.pi, 0.5 * numpy.pi, 0.1 * numpy.pi)
-    # Line to (-3, -3) relative to the current end point
-    curve1.l(-3, -3)
+    # Construct a curve made of a sequence of line segments
+    c1 = gdspy.Curve(0, 0).L(1, 0, 2, 1, 2, 2, 0, 2)
+    p1 = gdspy.Polygon(c1.get_points())
 
-    # Curve made of a vertical line and a quadratic Bezier, both
-    # defined with relative coordinates
-    curve2 = gdspy.Curve(5, 0).v(4).q(8, -2, 0, -4)
+    # Construct another curve using relative coordinates
+    c2 = gdspy.Curve(3, 1).l(1, 0, 2, 1, 2, 2, 0, 2)
+    p2 = gdspy.Polygon(c2.get_points())
+    draw(gdspy.Cell('curves').add([p1, p2]))
 
-    # Create a polygon from each curve
-    poly1 = gdspy.Polygon(curve1.get_points(), layer=0)
-    poly2 = gdspy.Polygon(curve2.get_points(), layer=1)
-    draw(gdspy.Cell('curves').add([poly1, poly2]))
+    # Curves 1
+    # Use complex numbers to facilitate writing polar coordinates
+    c3 = gdspy.Curve(0, 2).l(4 * numpy.exp(1j * numpy.pi / 6))
+    # Elliptical arcs have syntax similar to gdspy.Round
+    c3.arc((4, 2), 0.5 * numpy.pi, -0.5 * numpy.pi)
+    p3 = gdspy.Polygon(c3.get_points())
+    draw(gdspy.Cell('curves_1').add(p3))
+
+    # Curves 2
+    # Cubic Bezier curves can be easily created with C and c
+    c4 = gdspy.Curve(0, 0).c(1, 0, 1, 1, 2, 1)
+    # Smooth continuation with S or s
+    c4.s(1, 1, 0, 1).S(numpy.exp(1j * numpy.pi / 6), 0, 0)
+    p4 = gdspy.Polygon(c4.get_points())
+
+    # Similarly for quadratic Bezier curves
+    c5 = gdspy.Curve(5, 3).Q(3, 2, 3, 0, 5, 0, 4.5, 1).T(5, 3)
+    p5 = gdspy.Polygon(c5.get_points())
+
+    # Smooth interpolating curves can be built using I or i, including
+    # closed shapes
+    c6 = gdspy.Curve(0, 3).i([(1, 0), (2, 0), (1, -1)], cycle=True)
+    p6 = gdspy.Polygon(c6.get_points())
+    draw(gdspy.Cell('curves_2').add([p4, p5, p6]))
 
     # Transformations
     poly = gdspy.Rectangle((-2, -2), (2, 2))

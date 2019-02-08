@@ -18,21 +18,26 @@ class Curve(object):
     """
     Generation of curves loosely based on SVG paths.
 
-    Short summary of available commands:
+    Short summary of available methods:
 
-    - `L`: straight line segments
-    - `H`: horizontal line segments
-    - `V`: vertical line segments
-    - `C`: cubic Bezier curve
-    - `S`: smooth cubic Bezier curve
-    - `Q`: quadratic Bezier curve
-    - `T`: smooth quadratic Bezier curve
-    - `I`: smooth interpolating curve
-    - `arc`: elliptical arc
+    ====== =============================
+    Method Primitive
+    ====== =============================
+    L/l    Line segments
+    H/h    Horizontal line segments
+    V/v    Vertical line segments
+    C/c    Cubic Bezier curve
+    S/s    Smooth cubic Bezier curve
+    Q/q    Quadratic Bezier curve
+    T/t    Smooth quadratic Bezier curve
+    B/b    General degree Bezier curve
+    I/i    Smooth interpolating curve
+    arc    Elliptical arc
+    ====== =============================
 
-    All commands (except arc) have a lowercase variation that indicates
-    the use of relative coordinates (relative to the current end point
-    of the curve).
+    The uppercase version of the methods considers that all coordinates
+    are absolute, whereas the lowercase considers that they are relative
+    to the current end point of the curve.
 
     Parameters
     ----------
@@ -216,6 +221,49 @@ class Curve(object):
         self.points.extend(numpy.array((x0, y0 + yy)) for yy in y)
         return self
 
+    def arc(self, radius, initial_angle, final_angle, rotation=0):
+        """
+        Add an elliptical arc to the curve.
+
+        Parameters
+        ----------
+        radius : number, array-like[2]
+            Arc radius.  An elliptical arc can be created by passing an
+            array with 2 radii.
+        initial_angle : number
+            Initial angle of the arc (in *radians*).
+        final_angle : number
+            Final angle of the arc (in *radians*).
+        rotation : number
+            Rotation of the axis of the ellipse.
+
+        Returns
+        -------
+        out : `Curve`
+            This curve.
+        """
+        self.last_c = self.last_q = None
+        if hasattr(radius, '__iter__'):
+            rx, ry = radius
+            radius = max(radius)
+        else:
+            rx = ry = radius
+        full_angle = abs(final_angle - initial_angle)
+        number_of_points = max(3, 1 + int(0.5 * full_angle / numpy.arccos(1 - self.tol**0.5 / radius) + 0.5))
+        angles = numpy.linspace(initial_angle - rotation, final_angle - rotation, number_of_points)
+        pts = numpy.vstack((rx * numpy.cos(angles), ry * numpy.sin(angles))).T
+        if rotation != 0:
+            rot = numpy.empty_like(pts)
+            c = numpy.cos(rotation)
+            s = numpy.sin(rotation)
+            rot[:, 0] = pts[:, 0] * c - pts[:, 1] * s
+            rot[:, 1] = pts[:, 0] * s + pts[:, 1] * c
+        else:
+            rot = pts
+        pts = rot[1:] - rot[0] + self.points[-1]
+        self.points.extend(xy for xy in pts)
+        return self
+
     def C(self, *xy):
         """
         Add cubic Bezier curves to the curve.
@@ -247,8 +295,8 @@ class Curve(object):
                     ctrl[j, 1] = xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -297,8 +345,8 @@ class Curve(object):
                     ctrl[j, 1] = y0 + xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -351,8 +399,8 @@ class Curve(object):
                     ctrl[j, 1] = xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -408,8 +456,8 @@ class Curve(object):
                     ctrl[j, 1] = y0 + xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -454,8 +502,8 @@ class Curve(object):
                     ctrl[j, 1] = xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -503,8 +551,8 @@ class Curve(object):
                     ctrl[j, 1] = y0 + xy[i + 1]
                     i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -538,13 +586,13 @@ class Curve(object):
             This curve.
         """
         self.last_c = None
-        if self.last_c is None:
-            self.last_c = self.points[-1]
+        if self.last_q is None:
+            self.last_q = self.points[-1]
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((3, 2))
             ctrl[0] = self.points[-1]
-            ctrl[1] = 2 * ctrl[0] - self.last_c
+            ctrl[1] = 2 * ctrl[0] - self.last_q
             if isinstance(xy[i], complex):
                 ctrl[2, 0] = xy[i].real
                 ctrl[2, 1] = xy[i].imag
@@ -554,8 +602,8 @@ class Curve(object):
                 ctrl[2, 1] = xy[i + 1]
                 i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -590,15 +638,15 @@ class Curve(object):
             This curve.
         """
         self.last_c = None
-        if self.last_c is None:
-            self.last_c = self.points[-1]
+        if self.last_q is None:
+            self.last_q = self.points[-1]
         x0, y0 = self.points[-1]
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((3, 2))
             ctrl[0, 0] = x0
             ctrl[0, 1] = y0
-            ctrl[1] = 2 * ctrl[0] - self.last_c
+            ctrl[1] = 2 * ctrl[0] - self.last_q
             if isinstance(xy[i], complex):
                 ctrl[2, 0] = x0 + xy[i].real
                 ctrl[2, 1] = y0 + xy[i].imag
@@ -608,8 +656,8 @@ class Curve(object):
                 ctrl[2, 1] = y0 + xy[i + 1]
                 i += 2
             f = _func_bezier(ctrl)
-            uu = [0, 1]
-            fu = [f(0), f(1)]
+            uu = [0, 0.2, 0.5, 0.8, 1]
+            fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
                 test_u = 0.5 * (uu[iu - 1] +  uu[iu])
@@ -624,21 +672,15 @@ class Curve(object):
             self.last_q = ctrl[1]
         return self
 
-    def arc(self, radius, initial_angle, final_angle, rotation=0):
+    def B(self, *xy):
         """
-        Add an elliptical arc to the curve.
+        Add a general degree Bezier curve.
 
         Parameters
         ----------
-        radius : number, array-like[2]
-            Arc radius.  An elliptical arc can be created by passing an
-            array with 2 radii.
-        initial_angle : number
-            Initial angle of the arc (in *radians*).
-        final_angle : number
-            Final angle of the arc (in *radians*).
-        rotation : number
-            Rotation of the axis of the ellipse.
+        xy : numbers
+            Coordinate pairs.  The last coordinate is the endpoint of
+            curve and all other are control points.
 
         Returns
         -------
@@ -646,25 +688,76 @@ class Curve(object):
             This curve.
         """
         self.last_c = self.last_q = None
-        if hasattr(radius, '__iter__'):
-            rx, ry = radius
-            radius = max(radius)
-        else:
-            rx = ry = radius
-        full_angle = abs(final_angle - initial_angle)
-        number_of_points = max(3, 1 + int(0.5 * full_angle / numpy.arccos(1 - self.tol**0.5 / radius) + 0.5))
-        angles = numpy.linspace(initial_angle - rotation, final_angle - rotation, number_of_points)
-        pts = numpy.vstack((rx * numpy.cos(angles), ry * numpy.sin(angles))).T
-        if rotation != 0:
-            rot = numpy.empty_like(pts)
-            c = numpy.cos(rotation)
-            s = numpy.sin(rotation)
-            rot[:, 0] = pts[:, 0] * c - pts[:, 1] * s
-            rot[:, 1] = pts[:, 0] * s + pts[:, 1] * c
-        else:
-            rot = pts
-        pts = rot[1:] - rot[0] + self.points[-1]
-        self.points.extend(xy for xy in pts)
+        i = 0
+        ctrl = [self.points[-1]]
+        while i < len(xy):
+            if isinstance(xy[i], complex):
+                ctrl.append((xy[i].real, xy[i].imag))
+                i += 1
+            else:
+                ctrl.append((xy[i], xy[i + 1]))
+                i += 2
+        ctrl = numpy.array(ctrl)
+        f = _func_bezier(ctrl)
+        uu = numpy.linspace(-1, 1, ctrl.shape[0] + 1)
+        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu)**0.8))
+        fu = [f(u) for u in uu]
+        iu = 1
+        while iu < len(fu):
+            test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+            test_pt = f(test_u)
+            test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+            if test_err[0]**2 + test_err[1]**2 > self.tol:
+                uu.insert(iu, test_u)
+                fu.insert(iu, test_pt)
+            else:
+                iu += 1
+        self.points.extend(xy for xy in fu[1:])
+        return self
+
+    def b(self, *xy):
+        """
+        Add a general degree Bezier curve.
+
+        Parameters
+        ----------
+        xy : numbers
+            Coordinate pairs.  The last coordinate is the endpoint of
+            curve and all other are control points.  All coordinates are
+            relative to the current end point.
+
+        Returns
+        -------
+        out : `Curve`
+            This curve.
+        """
+        self.last_c = self.last_q = None
+        x0, y0 = self.points[-1]
+        i = 0
+        ctrl = [self.points[-1]]
+        while i < len(xy):
+            if isinstance(xy[i], complex):
+                ctrl.append((x0 + xy[i].real, y0 + xy[i].imag))
+                i += 1
+            else:
+                ctrl.append((x0 + xy[i], y0 + xy[i + 1]))
+                i += 2
+        ctrl = numpy.array(ctrl)
+        f = _func_bezier(ctrl)
+        uu = numpy.linspace(-1, 1, ctrl.shape[0] + 1)
+        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu)**0.8))
+        fu = [f(u) for u in uu]
+        iu = 1
+        while iu < len(fu):
+            test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+            test_pt = f(test_u)
+            test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
+            if test_err[0]**2 + test_err[1]**2 > self.tol:
+                uu.insert(iu, test_u)
+                fu.insert(iu, test_pt)
+            else:
+                iu += 1
+        self.points.extend(xy for xy in fu[1:])
         return self
 
     def I(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):

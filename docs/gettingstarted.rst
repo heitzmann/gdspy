@@ -115,6 +115,26 @@ Constructing complex polygons by manually listing all vertices in :class:`gdspy.
 The class :class:`gdspy.Curve` can be used to facilitate the creation of polygons by drawing their shapes step-by-step.
 It uses a syntax similar to the `SVG path specification <https://www.w3.org/TR/SVG/paths.html>`_.
 
+A short summary of the available methods is presented below:
+
+====== =============================
+Method Primitive
+====== =============================
+L/l    Line segments
+H/h    Horizontal line segments
+V/v    Vertical line segments
+C/c    Cubic Bezier curve
+S/s    Smooth cubic Bezier curve
+Q/q    Quadratic Bezier curve
+T/t    Smooth quadratic Bezier curve
+B/b    General degree Bezier curve
+I/i    Smooth interpolating curve
+arc    Elliptical arc
+====== =============================
+
+The uppercase version of the methods considers that all coordinates are absolute, whereas the lowercase considers that they are relative to the current end point of the curve.
+Except for :meht:`gdspy.Curve.I`, :meht:`gdspy.Curve.i` and :meht:`gdspy.Curve.arc`, they accept variable numbers of arguments that are used as coordinates to construct the primitive.
+
 .. literalinclude:: makeimages.py
    :language: python
    :dedent: 4
@@ -122,6 +142,32 @@ It uses a syntax similar to the `SVG path specification <https://www.w3.org/TR/S
    :end-before: draw
 
 .. image:: _static/curves.*
+   :align: center
+
+Coordinate pairs can be given as a complex number: real and imaginary parts are used as x and y coordinates, respectively.
+That is useful to define points in polar coordinates.
+
+Elliptical arcs have syntax similar to :class:`gdspy.Round`, but they allow for an extra rotation of the major axis of the ellipse.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Curves 1
+   :end-before: draw
+
+.. image:: _static/curves_1.*
+   :align: center
+
+Other curves can be constructed as cubic, quadratic and general-degree Bezier curves.
+Additionally, a smooth interpolating curve can be calculated with the methods :meth:`gdspy.Curve.I` and :meth:`gdspy.Curve.i`, which have a number of arguments to control the shape of the curve.
+
+.. literalinclude:: makeimages.py
+   :language: python
+   :dedent: 4
+   :start-after: Curves 2
+   :end-before: draw
+
+.. image:: _static/curves_2.*
    :align: center
 
 
