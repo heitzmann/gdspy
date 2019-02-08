@@ -240,9 +240,9 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
        `DOI: 10.1007/BF02187690 <https://doi.org/10.1007/BF02187690>`_
     """
     z = points[:, 0] + 1j * points[:, 1]
-    if not hasattr(t_in, '__getitem__'):
+    if numpy.isscalar(t_in):
         t_in = t_in * numpy.ones(len(z))
-    if not hasattr(t_out, '__getitem__'):
+    if numpy.isscalar(t_out):
         t_out = t_out * numpy.ones(len(z))
     if angles is None:
         angles = [None] * len(z)
@@ -684,15 +684,15 @@ class PolygonSet(object):
 
         Parameters
         ----------
-        radius : number, list
+        radius : number, array-like
             Radius of the corners.  If number: all corners filleted by
-            that amount.  If list: specify fillet radii on a per-polygon
-            basis (list length must be equal to the number of polygons
-            in this `PolygonSet`).  Each element in the list can be a
-            number (all corners filleted by the same amount) or a list
-            of numbers, one per polygon vertex.  Alternatively, the list
-            can be flattened to have one radius per `PolygonSet` vertex,
-            instead of being a list of lists.
+            that amount.  If array: specify fillet radii on a
+            per-polygon basis (length must be equal to the number of
+            polygons in this `PolygonSet`).  Each element in the array
+            can be a number (all corners filleted by the same amount) or
+            another array of numbers, one per polygon vertex.
+            Alternatively, the array can be flattened to have one radius
+            per `PolygonSet` vertex.
         points_per_2pi : integer
             Number of vertices used to approximate a full circle.  The
             number of vertices in each corner of the polygon will be the
@@ -712,16 +712,18 @@ class PolygonSet(object):
         """
         two_pi = 2 * numpy.pi
         fracture = False
-        if hasattr(radius, '__getitem__'):
+        if numpy.isscalar(radius):
+            radii = [[radius] * p.shape[0] for p in self.polygons]
+        else:
             if len(radius) == len(self.polygons):
                 radii = []
                 for r, p in zip(radius, self.polygons):
-                    if hasattr(r, '__getitem__'):
+                    if numpy.isscalar(r):
+                        radii.append([r] * p.shape[0])
+                    else:
                         if len(r) != p.shape[0]:
                             raise ValueError("[GDSPY] Wrong length in fillet radius list.  Expected lengths are {} or {}; got {}.".format(len(self.polygons), total, len(radius)))
                         radii.append(r)
-                    else:
-                        radii.append([r] * p.shape[0])
             else:
                 total = sum(p.shape[0] for p in self.polygons)
                 if len(radius) != total:
@@ -731,8 +733,6 @@ class PolygonSet(object):
                 for p in self.polygons:
                     radii.append(radius[n:n + p.shape[0]])
                     n += p.shape[0]
-        else:
-            radii = [[radius] * p.shape[0] for p in self.polygons]
 
         for jj in range(len(self.polygons)):
             vec = self.polygons[jj].astype(float) - numpy.roll(self.polygons[jj], 1, 0)
@@ -2219,8 +2219,10 @@ class PolyPath(PolygonSet):
         else:
             width = numpy.array([width * 0.5])
         len_w = len(width)
-        if not hasattr(distance, '__getitem__'):
-            distance = (distance, )
+        if hasattr(distance, '__iter__'):
+            distance = numpy.array(distance)
+        else:
+            distance = numpy.array([distance])
         len_d = len(distance)
         points = numpy.array(points, dtype=float)
         self.polygons = []
@@ -6809,12 +6811,12 @@ def inside(points, polygons, short_circuit='any', precision=0.001):
         groups is inside the set of polygons.
     """
     polys = _gather_polys(polygons)
-    if hasattr(points[0][0], '__getitem__'):
-        pts = points
-        sc = 1 if short_circuit == 'any' else -1
-    else:
+    if numpy.isscalar(points[0][0]):
         pts = (points, )
         sc = 0
+    else:
+        pts = points
+        sc = 1 if short_circuit == 'any' else -1
     return clipper.inside(pts, polys, sc, 1 / precision)
 
 
