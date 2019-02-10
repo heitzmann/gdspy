@@ -98,9 +98,9 @@ if __name__ == '__main__':
 
     c = gdspy.Cell('Negative')
     for i, gap in enumerate(ring_gaps):
-        path = gdspy.SimplePath([(input_gap * i, taper_len)], width=width,
-                                corners='circular bend', bend_radius=bend_radius,
-                                gdsii_path=True)
+        path = gdspy.FlexPath([(input_gap * i, taper_len)], width=width,
+                              corners='circular bend', bend_radius=bend_radius,
+                              gdsii_path=True)
         path.segment((0, 600 - wg_gap * i), relative=True)
         path.segment((io_gap, 0), relative=True)
         path.segment((0, 300 + wg_gap * i), relative=True)
@@ -141,9 +141,9 @@ if __name__ == '__main__':
 
     c = gdspy.Cell('Positive')
     for i, gap in enumerate(ring_gaps):
-        path = gdspy.SimplePath([(input_gap * i, taper_len + bus_len)],
-                                width=[small_margin, small_margin],
-                                offset=small_margin + width, gdsii_path=True)
+        path = gdspy.FlexPath([(input_gap * i, taper_len + bus_len)],
+                              width=[small_margin, small_margin],
+                              offset=small_margin + width, gdsii_path=True)
         path.segment((0, 600 - bus_len - bend_radius - wg_gap * i), relative=True)
         path.turn(bend_radius, 'r')
         path.segment((io_gap - 2 * bend_radius, 0), relative=True)

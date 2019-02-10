@@ -241,11 +241,10 @@ if __name__ == "__main__":
 
     draw(gdspy.Cell('polygonal-only_paths_2').add(path3))
 
-    # Simple Paths
+    # Flexible Paths
     # Path defined by a sequence of points and stored as a GDSII path
-    sp1 = gdspy.SimplePath([(0, 0), (3, 0), (3, 2),
-                            (5, 3), (3, 4), (0, 4)], 1,
-                            gdsii_path=True)
+    sp1 = gdspy.FlexPath([(0, 0), (3, 0), (3, 2),
+                          (5, 3), (3, 4), (0, 4)], 1, gdsii_path=True)
 
     # Other construction methods can still be used
     sp1.smooth([(0, 2), (2, 2), (4, 3), (5, 1)], relative=True)
@@ -253,15 +252,15 @@ if __name__ == "__main__":
     # Multiple parallel paths separated by 0.5 with different widths,
     # end caps, and joins.  Because of the join specification, they
     # cannot be stared as GDSII paths, only as polygons.
-    sp2 = gdspy.SimplePath([(12, 0), (8, 0), (8, 3), (10, 2)],
-                           [0.3, 0.2, 0.4], 0.5,
-                           ends=['extended', 'flush', 'round'],
-                           corners=['bevel', 'miter', 'round'])
+    sp2 = gdspy.FlexPath([(12, 0), (8, 0), (8, 3), (10, 2)],
+                         [0.3, 0.2, 0.4], 0.5,
+                         ends=['extended', 'flush', 'round'],
+                         corners=['bevel', 'miter', 'round'])
     sp2.arc(2, -0.5 * numpy.pi, 0.5 * numpy.pi)
     sp2.arc(1, 0.5 * numpy.pi, 1.5 * numpy.pi)
-    draw(gdspy.Cell('simple_paths').add([sp1, sp2]))
+    draw(gdspy.Cell('flexible_paths').add([sp1, sp2]))
 
-    # Simple Paths 1
+    # Flexible Paths 1
     # Path corners and end caps can be custom functions.
     # This corner function creates 'broken' joins.
     def broken(p0, v0, p1, v1, p2, w):
@@ -293,28 +292,28 @@ if __name__ == "__main__":
         return [p0, 0.5 * (p0 + p1) + 0.5 * (v0 - v1) * r, p1]
 
     # Paths with arbitrary offsets from the center and multiple layers.
-    sp3 = gdspy.SimplePath([(0, 0), (0, 1)], [0.1, 0.3, 0.5],
-                           offset=[-0.2, 0, 0.4], layer=[0, 1, 2],
-                           corners=broken, ends=pointy)
+    sp3 = gdspy.FlexPath([(0, 0), (0, 1)], [0.1, 0.3, 0.5],
+                         offset=[-0.2, 0, 0.4], layer=[0, 1, 2],
+                         corners=broken, ends=pointy)
     sp3.segment((3, 3), offset=[-0.5, -0.1, 0.5])
     sp3.segment((4, 1), width=[0.2, 0.2, 0.2], offset=[-0.2, 0, 0.2])
     sp3.segment((0, -1), relative=True)
-    draw(gdspy.Cell('simple_paths_1').add(sp3))
+    draw(gdspy.Cell('flexible_paths_1').add(sp3))
 
-    # Simple Paths 2
+    # Flexible Paths 2
     # Path created with automatic bends of radius 5
     points = [(0, 0), (0, 10), (20, 0), (18, 15), (8, 15)]
-    sp4 = gdspy.SimplePath(points, 0.5, corners='circular bend',
-                           bend_radius=5, gdsii_path=True)
+    sp4 = gdspy.FlexPath(points, 0.5, corners='circular bend',
+                         bend_radius=5, gdsii_path=True)
 
     # Same path, generated with natural corners, for comparison
-    sp5 = gdspy.SimplePath(points, 0.5, layer=1, gdsii_path=True)
-    draw(gdspy.Cell('simple_paths_2').add([sp4, sp5]))
+    sp5 = gdspy.FlexPath(points, 0.5, layer=1, gdsii_path=True)
+    draw(gdspy.Cell('flexible_paths_2').add([sp4, sp5]))
 
-    # Lazy Paths
+    # Robust Paths
     # Create 4 parallel paths in different layers
-    lp = gdspy.LazyPath((50, 0), [2, 0.5, 1, 1], [0, 0, -1, 1],
-                        ends=['extended', 'round', 'flush', 'flush'],
+    lp = gdspy.RobustPath((50, 0), [2, 0.5, 1, 1], [0, 0, -1, 1],
+                          ends=['extended', 'round', 'flush', 'flush'],
                         layer=[0, 2, 1, 1])
     lp.segment((45, 0))
     lp.segment((5, 0),
@@ -330,7 +329,7 @@ if __name__ == "__main__":
                   offset=[lambda u: -0.25 * numpy.cos(24 * numpy.pi * u),
                           lambda u: 0.25 * numpy.cos(24 * numpy.pi * u),
                           -0.75, 0.75])
-    draw(gdspy.Cell('lazy_paths').add(lp))
+    draw(gdspy.Cell('robust_paths').add(lp))
 
     # Boolean Operations
     # Create some text

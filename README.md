@@ -61,7 +61,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * Revised [documentation](http://gdspy.readthedocs.io/).
-* New `SimplePath` and `LazyPath` classes: more efficient path generation when using the original GDSII path specification.
+* New `FlexPath` and `RobustPath` classes: more efficient path generation when using the original GDSII path specification.
 * New `Curve` class: SVG-like polygon creation.
 * Added `PolygonSet.mirror` (thanks to Daan Waardenburg for the contribution).
 * Added `Path.bezier` to create paths based on Bézier curves.

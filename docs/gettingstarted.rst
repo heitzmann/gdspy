@@ -133,7 +133,7 @@ arc    Elliptical arc
 ====== =============================
 
 The uppercase version of the methods considers that all coordinates are absolute, whereas the lowercase considers that they are relative to the current end point of the curve.
-Except for :meht:`gdspy.Curve.I`, :meht:`gdspy.Curve.i` and :meht:`gdspy.Curve.arc`, they accept variable numbers of arguments that are used as coordinates to construct the primitive.
+Except for :meth:`gdspy.Curve.I`, :meth:`gdspy.Curve.i` and :meth:`gdspy.Curve.arc`, they accept variable numbers of arguments that are used as coordinates to construct the primitive.
 
 .. literalinclude:: makeimages.py
    :language: python
@@ -299,15 +299,15 @@ Finally, parallel paths can be created simultaneously with the help of arguments
    :align: center
 
 
-Simple Paths
-============
+Flexible Paths
+==============
 
 Although very efficient, :class:`gdspy.Path` is limited in the type of path it can provide.
 For example, if we simply want a path going through a sequence of points, we need a class that can correctly compute the joins between segments.
-That's one of the advantages of class :class:`gdspy.SimplePath`.
+That's one of the advantages of class :class:`gdspy.FlexPath`.
 Other path construction methods are similar to those in :class:`gdspy.Path`.
 
-A few features of :class:`gdspy.SimplePath` are:
+A few features of :class:`gdspy.FlexPath` are:
 
 - paths can be stored as proper GDSII paths;
 - end caps and joins can be specified by the user;
@@ -317,10 +317,10 @@ A few features of :class:`gdspy.SimplePath` are:
 .. literalinclude:: makeimages.py
    :language: python
    :dedent: 4
-   :start-after: Simple Paths
+   :start-after: Flexible Paths
    :end-before: draw
 
-.. image:: _static/simple_paths.*
+.. image:: _static/flexible_paths.*
    :align: center
 
 The following example shows other features, such as width tapering, arbitrary offsets, and custom joins and end caps.
@@ -328,10 +328,10 @@ The following example shows other features, such as width tapering, arbitrary of
 .. literalinclude:: makeimages.py
    :language: python
    :dedent: 4
-   :start-after: Simple Paths 1
+   :start-after: Flexible Paths 1
    :end-before: draw
 
-.. image:: _static/simple_paths_1.*
+.. image:: _static/flexible_paths_1.*
    :align: center
 
 
@@ -341,34 +341,34 @@ This feature is used in :ref:`Example: Integrated Photonics`.
 .. literalinclude:: makeimages.py
    :language: python
    :dedent: 4
-   :start-after: Simple Paths 2
+   :start-after: Flexible Paths 2
    :end-before: draw
 
-.. image:: _static/simple_paths_2.*
+.. image:: _static/flexible_paths_2.*
    :align: center
 
 
-Lazy Paths
-==========
+Robust Paths
+============
 
-In some situations, :class:`gdspy.SimplePath` is unable to properly calculate all the joins.
+In some situations, :class:`gdspy.FlexPath` is unable to properly calculate all the joins.
 This often happens when the width or offset of the path is relatively large with respect to the length of the segments being joined.
 Curves that join other curves or segments at sharp angles are an example of such situation.
 
-The class :class:`gdspy.LazyPath` can be used in such scenarios where robustness is more important than efficiency due to sharp corners or large offsets in the paths.
-The drawbacks of using :class:`gdspy.LazyPath` are the loss in computation efficiency (compared to the other 2 classes) and the impossibility of specifying corner shapes.
+The class :class:`gdspy.RobustPath` can be used in such scenarios where robustness is more important than efficiency due to sharp corners or large offsets in the paths.
+The drawbacks of using :class:`gdspy.RobustPath` are the loss in computation efficiency (compared to the other 2 classes) and the impossibility of specifying corner shapes.
 The advantages are, as mentioned earlier, more robustness when generating the final geometry, and freedom to use custom functions to parameterize the widths or offsets of the paths in any construction method.
 
 .. literalinclude:: makeimages.py
    :language: python
    :dedent: 4
-   :start-after: Lazy Paths
+   :start-after: Robust Paths
    :end-before: draw
 
-.. image:: _static/lazy_paths.*
+.. image:: _static/robust_paths.*
    :align: center
 
-Note that, analogously to :class:`gdspy.SimplePath`, :class:`gdspy.LazyPath` can be stored as a GDSII path as long as its width is kept constant.
+Note that, analogously to :class:`gdspy.FlexPath`, :class:`gdspy.RobustPath` can be stored as a GDSII path as long as its width is kept constant.
 
 
 ****

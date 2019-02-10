@@ -431,13 +431,13 @@ def _gather_polys(args):
         return []
     if isinstance(args, PolygonSet):
         return [p for p in args.polygons]
-    if isinstance(args, LazyPath) or isinstance(args, SimplePath) or isinstance(args, CellReference) or isinstance(args, CellArray):
+    if isinstance(args, RobustPath) or isinstance(args, FlexPath) or isinstance(args, CellReference) or isinstance(args, CellArray):
         return args.get_polygons()
     polys = []
     for p in args:
         if isinstance(p, PolygonSet):
             polys.extend(p.polygons)
-        elif isinstance(p, LazyPath) or isinstance(args, SimplePath) or isinstance(p, CellReference) or isinstance(p, CellArray):
+        elif isinstance(p, RobustPath) or isinstance(args, FlexPath) or isinstance(p, CellReference) or isinstance(p, CellArray):
             polys.extend(p.get_polygons())
         else:
             polys.append(p)
@@ -1943,7 +1943,7 @@ class L1Path(PolygonSet):
 
     .. deprecated:: 1.4
 
-       `L1Path` is deprecated in favor of SimplePath and will be removed
+       `L1Path` is deprecated in favor of FlexPath and will be removed
        in a future version of Gdspy.
 
     Parameters
@@ -1999,7 +1999,7 @@ class L1Path(PolygonSet):
 
     def __init__(self, initial_point, direction, width, length, turn, number_of_paths=1, distance=0,
                  max_points=199, layer=0, datatype=0):
-        warnings.warn("[GDSPY] L1Path is deprecated favor of SimplePath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
+        warnings.warn("[GDSPY] L1Path is deprecated favor of FlexPath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
@@ -2161,8 +2161,8 @@ class PolyPath(PolygonSet):
 
     .. deprecated:: 1.4
 
-       `PolyPath` is deprecated in favor of SimplePath and will be
-       removed in a future version of Gdspy.
+       `PolyPath` is deprecated in favor of FlexPath and will be removed
+       in a future version of Gdspy.
 
     Parameters
     ----------
@@ -2202,7 +2202,7 @@ class PolyPath(PolygonSet):
 
     def __init__(self, points, width, number_of_paths=1, distance=0, corners='miter', ends='flush',
                  max_points=199, layer=0, datatype=0):
-        warnings.warn("[GDSPY] PolyPath is deprecated favor of SimplePath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
+        warnings.warn("[GDSPY] PolyPath is deprecated favor of FlexPath and will be removed in a future version of Gdspy.", category=DeprecationWarning, stacklevel=2)
         if not isinstance(layer, list):
             layer = [layer]
         if not isinstance(datatype, list):
@@ -2411,7 +2411,7 @@ class _SubPath(object):
         return pts
 
 
-class SimplePath(object):
+class FlexPath(object):
     """
     Path object.
 
@@ -2540,15 +2540,15 @@ class SimplePath(object):
         self.width_transform = width_transform
         if self.gdsii_path:
             if any(end == 'smooth' or callable(end) for end in self.ends):
-                warnings.warn("[GDSPY] Smooth and custom end caps are not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
+                warnings.warn("[GDSPY] Smooth and custom end caps are not supported in `FlexPath` with `gdsii_path == True`.", stacklevel=3)
             if any(corner != 'natural' and corner != 'circular bend' for corner in self.corners):
-                warnings.warn("[GDSPY] Corner specification not supported in `SimplePath` with `gdsii_path == True`.", stacklevel=3)
+                warnings.warn("[GDSPY] Corner specification not supported in `FlexPath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
         if self.n > 1:
-            return "SimplePath (x{}, {} segments, layers {}, datatypes {})".format(self.n, self.points.shape[0], self.layers, self.datatypes)
+            return "FlexPath (x{}, {} segments, layers {}, datatypes {})".format(self.n, self.points.shape[0], self.layers, self.datatypes)
         else:
-            return "SimplePath ({} segments, layer {}, datatype {})".format(self.points.shape[0], self.layers[0], self.datatypes[0])
+            return "FlexPath ({} segments, layer {}, datatype {})".format(self.points.shape[0], self.layers[0], self.datatypes[0])
 
     def get_polygons(self, by_spec=False):
         """
@@ -2697,7 +2697,7 @@ class SimplePath(object):
                         u0 = (vn[1:, 1] * ds[:, 0] - vn[1:, 0] * ds[:, 1]) / den
                         u1 = (vn[:-1, 1] * ds[:, 0] - vn[:-1, 0] * ds[:, 1]) / den
                         if any(u0 < -1) or any(u1 > 1):
-                            warnings.warn("[GDSPY] Possible inconsistency found in `SimplePath` due to sharp corner.")
+                            warnings.warn("[GDSPY] Possible inconsistency found in `FlexPath` due to sharp corner.")
                         pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
                         if len(idx) > 0:
                             pts[idx + 1] = 0.5 * (sa[idx + 1] + sb[idx])
@@ -2926,7 +2926,7 @@ class SimplePath(object):
         """
         Convert this object to a series of GDSII elements.
 
-        If `SimplePath.gdsii_path` is True, GDSII path elements are
+        If `FlexPath.gdsii_path` is True, GDSII path elements are
         created instead of boundaries.  Such paths do not support
         variable widths, but their memeory footprint is smaller than
         full polygonal boundaries.
@@ -2952,7 +2952,7 @@ class SimplePath(object):
         un = self.points[1:] - self.points[:-1]
         un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
         for ii in range(self.n):
-            pathtype = 0 if callable(self.ends[ii]) else SimplePath._pathtype_dict.get(self.ends[ii], 4)
+            pathtype = 0 if callable(self.ends[ii]) else FlexPath._pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
                                     6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
                                     8, 0x0F03, sign * int(round(self.widths[0, ii] * multiplier))))
@@ -3061,7 +3061,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3080,7 +3080,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3104,7 +3104,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3133,7 +3133,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
 
         Notes
@@ -3196,7 +3196,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3243,7 +3243,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3309,12 +3309,12 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
         if self.points.shape[0] < 2:
-            raise ValueError("[GDSPY] Cannot define initial angle for turn on a SimplePath withouth previous segments.")
+            raise ValueError("[GDSPY] Cannot define initial angle for turn on a FlexPath withouth previous segments.")
         v = self.points[-1] - self.points[-2]
         angle = _angle_dic.get(angle, angle)
         initial_angle = numpy.arctan2(v[1], v[0]) + (_halfpi if angle < 0 else -_halfpi)
@@ -3351,7 +3351,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3435,7 +3435,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
         """
         self._polygon_dict = None
@@ -3504,7 +3504,7 @@ class SimplePath(object):
 
         Returns
         -------
-        out : `SimplePath`
+        out : `FlexPath`
             This object.
 
         Notes
@@ -3530,7 +3530,7 @@ class SimplePath(object):
         return self
 
 
-class LazyPath(object):
+class RobustPath(object):
     """
     Path object with lazy evaluation.
 
@@ -3543,7 +3543,7 @@ class LazyPath(object):
     unlike `Path`.  In this case, the width must be constant along the
     whole path.
 
-    The downside of `LazyPath` is that it is more computationally
+    The downside of `RobustPath` is that it is more computationally
     expensive than the other path classes.
 
     Parameters
@@ -3644,13 +3644,13 @@ class LazyPath(object):
         self.gdsii_path = gdsii_path
         self.width_transform = width_transform
         if self.gdsii_path and any(end == 'smooth' for end in self.ends):
-            warnings.warn("[GDSPY] Smooth end caps not supported in `LazyPath` with `gdsii_path == True`.", stacklevel=3)
+            warnings.warn("[GDSPY] Smooth end caps not supported in `RobustPath` with `gdsii_path == True`.", stacklevel=3)
 
     def __str__(self):
         if self.n > 1:
-            return "LazyPath (x{}, end at ({}, {}), length {}, layers {}, datatypes {})".format(self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes)
+            return "RobustPath (x{}, end at ({}, {}), length {}, layers {}, datatypes {})".format(self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes)
         else:
-            return "LazyPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
+            return "RobustPath (end at ({}, {}), length {}, layer {}, datatype {})".format(self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0])
 
     def __len__(self):
         """
@@ -3665,9 +3665,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the `LazyPath` to compute.  This argument can
-            range from 0 (start of the path) to ``len(self)`` (end of
-            the path).
+            Position along the `RobustPath` to compute.  This argument
+            can range from 0 (start of the path) to ``len(self)`` (end
+            of the path).
         arm : -1, 0, 1
             Wether to calculate one of the path boundaries (-1 or 1) or
             its central spine (0).
@@ -3691,9 +3691,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the `LazyPath` to compute.  This argument can
-            range from 0 (start of the path) to `len(self)` (end of the
-            path).
+            Position along the `RobustPath` to compute.  This argument
+            can range from 0 (start of the path) to `len(self)` (end of
+            the path).
         arm : -1, 0, 1
             Wether to calculate one of the path boundaries (-1 or 1) or
             its central spine (0).
@@ -3721,9 +3721,9 @@ class LazyPath(object):
         Parameters
         ----------
         u : number
-            Position along the `LazyPath` to compute.  This argument can
-            range from 0 (start of the path) to `len(self)` (end of the
-            path).
+            Position along the `RobustPath` to compute.  This argument
+            can range from 0 (start of the path) to `len(self)` (end of
+            the path).
 
         Returns
         -------
@@ -3847,12 +3847,12 @@ class LazyPath(object):
                                 path_arm.extend(sub0.points(start, u0, arm)[:-1])
                             else:
                                 path_arm.extend(sub0.points(start, 1, arm))
-                                warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
+                                warnings.warn("[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=3)
                             start = u1
                         else:
                             if u0 <= 1:
                                 path_arm.extend(sub0.points(start, u0, arm))
-                                warnings.warn("[GDSPY] LazyPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
+                                warnings.warn("[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(path_arm[-1][0], path_arm[-1][1]), stacklevel=2)
                             else:
                                 path_arm.extend(sub0.points(start, 1, arm))
                                 path_arm.append(px)
@@ -3916,7 +3916,7 @@ class LazyPath(object):
         """
         Convert this object to a series of GDSII elements.
 
-        If `LazyPath.gdsii_path` is True, GDSII path elements are
+        If `RobustPath.gdsii_path` is True, GDSII path elements are
         created instead of boundaries.  Such paths do not support
         variable widths, but their memeory footprint is smaller than
         full polygonal boundaries.
@@ -3940,7 +3940,7 @@ class LazyPath(object):
             return self.to_polygonset().to_gds(multiplier)
         data = []
         for ii in range(self.n):
-            pathtype = LazyPath._pathtype_dict.get(self.ends[ii], 4)
+            pathtype = RobustPath._pathtype_dict.get(self.ends[ii], 4)
             data.append(struct.pack('>4Hh2Hh2Hh2Hl', 4, 0x0900, 6, 0x0D02, self.layers[ii],
                                     6, 0x0E02, self.datatypes[ii], 6, 0x2102, pathtype,
                                     8, 0x0F03, sign * int(round(self.widths[ii] * multiplier))))
@@ -4003,7 +4003,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4026,7 +4026,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4054,7 +4054,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4089,7 +4089,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
 
         Notes
@@ -4125,7 +4125,7 @@ class LazyPath(object):
     def _parse_width(self, arg, idx):
         if arg is None or self.gdsii_path:
             if arg is not None:
-                warnings.warn("[GDSPY] Argument `width` ignored in LazyPath with `gdsii_path == True`.", stacklevel=3)
+                warnings.warn("[GDSPY] Argument `width` ignored in RobustPath with `gdsii_path == True`.", stacklevel=3)
             return _func_const(self.widths[idx])
         elif hasattr(arg, '__getitem__'):
             if callable(arg[idx]):
@@ -4167,7 +4167,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4213,7 +4213,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4268,13 +4268,13 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
         i = len(self.paths[0]) - 1
         if i < 0:
-            raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty LazyPath.")
+            raise ValueError("[GDSPY] Cannot define initial angle for turn on an empty RobustPath.")
         angle = _angle_dic.get(angle, angle)
         initial_angle = 0
         for p in self.paths:
@@ -4322,7 +4322,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4380,7 +4380,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
         """
         self._polygon_dict = None
@@ -4461,7 +4461,7 @@ class LazyPath(object):
 
         Returns
         -------
-        out : `LazyPath`
+        out : `RobustPath`
             This object.
 
         Notes
@@ -4672,7 +4672,7 @@ class Cell(object):
         The name of this cell.
     polygons : list of `PolygonSet`
         List of cell polygons.
-    paths : list of `LazyPath` or `SimplePath`
+    paths : list of `RobustPath` or `FlexPath`
         List of cell paths.
     labels : list of `Label`
         List of cell labels.
@@ -4780,7 +4780,7 @@ class Cell(object):
         """
         if isinstance(element, PolygonSet):
             self.polygons.append(element)
-        elif isinstance(element, LazyPath) or isinstance(element, SimplePath):
+        elif isinstance(element, RobustPath) or isinstance(element, FlexPath):
             self.paths.append(element)
         elif isinstance(element, Label):
             self.labels.append(element)
@@ -4790,14 +4790,14 @@ class Cell(object):
             for e in element:
                 if isinstance(e, PolygonSet):
                     self.polygons.append(e)
-                elif isinstance(e, LazyPath) or isinstance(e, SimplePath):
+                elif isinstance(e, RobustPath) or isinstance(e, FlexPath):
                     self.paths.append(e)
                 elif isinstance(e, Label):
                     self.labels.append(e)
                 elif isinstance(e, CellReference) or isinstance(e, CellArray):
                     self.references.append(e)
                 else:
-                    raise ValueError("[GDSPY] Only instances of `PolygonSet`, `SimplePath`, `LazyPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`.")
+                    raise ValueError("[GDSPY] Only instances of `PolygonSet`, `FlexPath`, `RobustPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`.")
         self._bb_valid = False
         return self
 
@@ -4853,8 +4853,8 @@ class Cell(object):
         """
         Remove paths from this cell.
 
-        The function or callable `test` is called for each `SimplePath`
-        or `LazyPath` in the cell.  If its return value evaluates to
+        The function or callable `test` is called for each `FlexPath`
+        or `RobustPath` in the cell.  If its return value evaluates to
         True, the corresponding label is removed from the cell.
 
         Parameters
@@ -5034,7 +5034,7 @@ class Cell(object):
 
         Note
         ----
-        Instances of `SimplePath` and `LazyPath` are also included in
+        Instances of `FlexPath` and `RobustPath` are also included in
         the result by computing their polygonal boundary.
         """
         if depth is not None and depth < 0:
@@ -5125,7 +5125,7 @@ class Cell(object):
 
         Returns
         -------
-        out : list of `SimplePath` or `LazyPath`
+        out : list of `FlexPath` or `RobustPath`
             List containing the paths in this cell and its references.
         """
         paths = libcopy.deepcopy(self.paths)
@@ -5378,7 +5378,7 @@ class CellReference(object):
 
         Note
         ----
-        Instances of `SimplePath` and `LazyPath` are also included in
+        Instances of `FlexPath` and `RobustPath` are also included in
         the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5469,7 +5469,7 @@ class CellReference(object):
 
         Returns
         -------
-        out : list of `SimplePath` or `LazyPath`
+        out : list of `FlexPath` or `RobustPath`
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5745,7 +5745,7 @@ class CellArray(object):
 
         Note
         ----
-        Instances of `SimplePath` and `LazyPath` are also included in
+        Instances of `FlexPath` and `RobustPath` are also included in
         the result by computing their polygonal boundary.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -5857,7 +5857,7 @@ class CellArray(object):
 
         Returns
         -------
-        out : list of `SimplePath` or `LazyPath`
+        out : list of `FlexPath` or `RobustPath`
             List containing the paths in this cell and its references.
         """
         if not isinstance(self.ref_cell, Cell):
@@ -6315,7 +6315,7 @@ class GdsLibrary(object):
             kwargs['ends'] = (kwargs.pop('bgnextn', 0), kwargs.pop('endextn', 0))
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
         kwargs['gdsii_path'] = True
-        return SimplePath(**kwargs)
+        return FlexPath(**kwargs)
 
     def _create_label(self, xy, width=None, ends=None, **kwargs):
         kwargs['position'] = xy

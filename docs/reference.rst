@@ -79,19 +79,19 @@ L1Path
    :show-inheritance:
 
 
-SimplePath
-==========
+FlexPath
+========
 
-.. autoclass:: gdspy.SimplePath
+.. autoclass:: gdspy.FlexPath
    :members:
    :inherited-members:
    :show-inheritance:
 
 
-LazyPath
-========
+RobustPath
+==========
 
-.. autoclass:: gdspy.LazyPath
+.. autoclass:: gdspy.RobustPath
    :members:
    :inherited-members:
    :show-inheritance:
