@@ -1272,6 +1272,28 @@ class Path(PolygonSet):
         else:
             return "Path (end at ({}, {}) towards {}, length {}, width {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, self.length, self.w * 2, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
+    def translate(self, dx, dy):
+        """
+        Translate this object.
+
+        Parameters
+        ----------
+        dx : number
+            Distance to move in the x-direction.
+        dy : number
+            Distance to move in the y-direction.
+
+        Returns
+        -------
+        out : `Path`
+            This object.
+        """
+        vec = numpy.array((dx, dy))
+        self.polygons = [points + vec for points in self.polygons]
+        self.x += dx
+        self.y += dy
+        return self
+
     def rotate(self, angle, center=(0, 0)):
         """
         Rotate this object.
