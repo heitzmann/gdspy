@@ -59,6 +59,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.3.2 (Mar 14, 2019)
+* Small fix for building on Mac OS X Mojave.
+
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
 * Added `Cell.remove_polygons` and `Cell.remove_labels` functions to allow filtering a cell contents based, for example, on each element's layer.
@@ -175,8 +178,8 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Bug fix in the fracture method for `Polygon` and `PolygonSet`.
 
 ### Version 0.3 (April 25, 2012)
-* Support for Python 3.2 and 2.7 
-* Further improvements to the `boolean` function via caching.  
+* Support for Python 3.2 and 2.7
+* Further improvements to the `boolean` function via caching.
 * Added methods `get_bounding_box` and `get_layers` to `Cell`.
 * Added method `top_level` to `GdsImport`.
 * Added support for importing GDSII path elements.
