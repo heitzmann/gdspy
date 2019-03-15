@@ -1321,6 +1321,68 @@ class Path(PolygonSet):
         self.polygons = [(points - c0) * ca + (points - c0)[:, ::-1] * sa + c0 for points in self.polygons]
         return self
 
+    def scale(self, scalex, scaley=None, center=(0, 0)):
+        """
+        Scale this object.
+
+        Parameters
+        ----------
+        scalex : number
+            Scaling factor along the first axis.
+        scaley : number or None
+            Scaling factor along the second axis.  If None, same as
+            `scalex`.
+        center : array-like[2]
+            Center point for the scaling operation.
+
+        Returns
+        -------
+        out : `Path`
+            This object.
+
+        Notes
+        -----
+        The direction of the path is not modified by this method and
+        its width is scaled only by `scalex`.
+        """
+        c0 = numpy.array(center)
+        s = scalex if scaley is None else numpy.array((scalex, scaley))
+        self.polygons = [(points - c0) * s + c0 for points in self.polygons]
+        self.x = (self.x - c0[0]) * scalex + c0[0]
+        self.y = (self.y - c0[1]) * (scalex if scaley is None else scaley) + c0[1]
+        self.w *= scalex
+        return self
+
+    def mirror(self, p1, p2=(0, 0)):
+        """
+        Mirror the polygons over a line through points 1 and 2
+
+        Parameters
+        ----------
+        p1 : array-like[2]
+            first point defining the reflection line
+        p2 : array-like[2]
+            second point defining the reflection line
+
+        Returns
+        -------
+        out : `Path`
+            This object.
+        """
+        origin = numpy.array(p1)
+        vec = numpy.array(p2) - origin
+        vec_r = vec * (2 / numpy.inner(vec, vec))
+        self.polygons = [numpy.outer(numpy.inner(points - origin, vec_r), vec) - points + 2 * origin
+                         for points in self.polygons]
+        dot = (self.x - origin[0]) * vec_r[0] + (self.y - origin[1]) * vec_r[1]
+        self.x = dot * vec[0] - self.x + 2 * origin[0]
+        self.y = dot * vec[1] - self.y + 2 * origin[1]
+        if isinstance(self.direction, basestring):
+            self.direction = _directions_dict[self.direction] * numpy.pi
+        self.direction = 2 * numpy.arctan2(vec[1], vec[0]) - self.direction
+        return self
+
+
     def segment(self, length, direction=None, final_width=None, final_distance=None, axis_offset=0,
                 layer=0, datatype=0):
         """
