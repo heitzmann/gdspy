@@ -537,9 +537,12 @@ Access to the cells in the loaded library is provided through the dictionary :at
 The method :meth:`gdspy.GdsLibrary.top_level` can be used to find the top-level cells in the library (cells on the top of the hierarchy, i.e., cell that are not referenced by any other cells) and :meth:`gdspy.GdsLibrary.extract` can be used to import a given cell and all of its dependencies into :attr:`gdspy.current_library`.
 
 
-*****************************
-Example: Integrated Photonics
-*****************************
+********
+Examples
+********
+
+Integrated Photonics
+====================
 
 This example demonstrates the use of gdspy primitives to create more complex structures.
 
@@ -548,5 +551,18 @@ These structures are commonly used in the field of integrated photonics.
 :download:`photonics.py <_static/photonics.py>`
 
 .. literalinclude:: _static/photonics.py
+   :language: python
+   :linenos:
+
+
+Using System Fonts
+==================
+
+This example uses `matplotlib <https://matplotlib.org/>`_ to render text using any typeface present in the system.
+The glyph paths are then transformed into polygon arrays that can be used to create `gdspy.PolygonSet` objects.
+
+:download:`fonts.py <_static/fonts.py>`
+
+.. literalinclude:: _static/fonts.py
    :language: python
    :linenos:
