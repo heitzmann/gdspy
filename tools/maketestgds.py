@@ -11,12 +11,32 @@ import numpy
 import gdspy
 
 
-cell = gdspy.Cell('polygonset')
+cell = gdspy.Cell('PolygonSet0')
 p = gdspy.PolygonSet([
-    [(1, 1), (1, 2), (5, 3)],
-    [(0, 0.5), (0, 3), (-4, 1), (0, -1), (4, 0.5)],
-], 8, 9)
+    [(10, 0), (11, 0), (10, 1)],
+    [(11, 0), (10, 1), (11, 1)],
+    [(11, 1), (12, 1), (11, 2)],
+], 1, 2)
 cell.add(p)
 
-gdspy.write_gds('tests/test.gds')
+cell = gdspy.Cell('PolygonSet1')
+p = gdspy.PolygonSet([
+    [(10, 0), (11, 0), (10, 1)],
+    [(11, 0), (10, 1), (11, 1)],
+    [(11, 1), (12, 1), (11, 2)],
+], 2, 3)
+p.rotate(numpy.pi / 3, (10, 1))
+cell.add(p)
+
+cell = gdspy.Cell('PolygonSet2')
+p = gdspy.PolygonSet([
+    [(10, 0), (11, 0), (10, 1)],
+    [(11, 0), (10, 1), (11, 1)],
+    [(11, 1), (12, 1), (11, 2)],
+], 3, 4)
+p.scale(0.5)
+p.scale(1, 2, center=(5, 1))
+cell.add(p)
+
+gdspy.write_gds('tests/test.gds', unit=1, precision=1e-7)
 gdspy.LayoutViewer()
