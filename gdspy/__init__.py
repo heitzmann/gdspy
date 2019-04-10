@@ -2712,11 +2712,11 @@ class FlexPath(object):
                         elif end == 'round':
                             v = pts[1] - pts[0]
                             r = 0.5 * self.widths[0, kk]
-                            np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                            np = max(5, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                             ang = numpy.linspace(_halfpi, -_halfpi, np) + numpy.arctan2(-v[1], -v[0])
                             poly = pts[0] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
                             r = 0.5 * self.widths[1, kk]
-                            np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                            np = max(5, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                             ang = numpy.linspace(_halfpi, -_halfpi, np) + numpy.arctan2(v[1], v[0])
                             poly = numpy.vstack((poly, pts[1] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T))
                         else: # 'extended'/list
@@ -2736,6 +2736,7 @@ class FlexPath(object):
                             else:
                                 poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
                                                     poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
+                    polygons = [poly]
                     if self.max_points > 4 and poly.shape[0] > self.max_points:
                         ii = 0
                         while ii < len(polygons):
@@ -2755,8 +2756,6 @@ class FlexPath(object):
                                 polygons.extend(numpy.array(x) for x in itertools.chain.from_iterable(chopped))
                             else:
                                 ii += 1
-                    else:
-                        polygons = [poly]
                     key = (self.layers[kk], self.datatypes[kk])
                     if key in self._polygon_dict:
                         self._polygon_dict[key].extend(polygons)
@@ -2888,7 +2887,7 @@ class FlexPath(object):
                                             a0 += 2 * numpy.pi
                                         else:
                                             a1 += 2 * numpy.pi
-                                    np = max(2, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / half_w) + 0.5))
+                                    np = max(4, 1 + int(0.5 * abs(a1 - a0) / numpy.arccos(1 - self.tolerance / half_w) + 0.5))
                                     angles = numpy.linspace(a0, a1, np)
                                     arms[ii].extend(pts[jj] + half_w * numpy.vstack((numpy.cos(angles),
                                                                                 numpy.sin(angles))).T)
@@ -2940,7 +2939,7 @@ class FlexPath(object):
                             elif end == 'round':
                                 v = pts[0] - pts[1] if ii == 0 else pts[-1] - pts[-2]
                                 r = 0.5 * self.widths[-ii, kk]
-                                np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                np = max(5, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                                 ang = (2 * ii - 1) * numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(v[1], v[0])
                                 caps[ii] = list(pts[-ii] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T)
                             else: # 'extended'/list
