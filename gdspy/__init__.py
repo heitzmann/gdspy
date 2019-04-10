@@ -2713,7 +2713,7 @@ class FlexPath(object):
                             v = pts[1] - pts[0]
                             r = 0.5 * self.widths[0, kk]
                             np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
-                            ang = numpy.linspace(-_halfpi, _halfpi, np) + numpy.arctan2(-v[1], -v[0])
+                            ang = numpy.linspace(_halfpi, -_halfpi, np) + numpy.arctan2(-v[1], -v[0])
                             poly = pts[0] + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
                             r = 0.5 * self.widths[1, kk]
                             np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
@@ -2728,7 +2728,7 @@ class FlexPath(object):
                             else:
                                 v0 = end[0] * v
                                 v1 = end[1] * v
-                            if self.width[0, kk] == self.widths[1, kk]:
+                            if self.widths[0, kk] == self.widths[1, kk]:
                                 poly[0] -= v0
                                 poly[1] -= v0
                                 poly[2] += v1
