@@ -20,12 +20,19 @@ def assertsame(c1, c2):
     d2 = c2.get_polygons(by_spec=True)
     for key in d1:
         assert key in d2
-        result = gdspy.boolean(d1[key], d2[key], 'xor', precision=1e-6, layer=key[0] + 1)
+        result = gdspy.boolean(d1[key], d2[key], 'xor', precision=1e-7)
         if result is not None:
-            c1.add(result)
-            c2.add(result)
-            result = gdspy.offset(result, -1e-6, precision=1e-7)
-            if result is not None:
+            r1 = gdspy.boolean(d1[key], gdspy.offset(d2[key], 1e-6, precision=1e-7), 'not',
+                               precision=1e-7, layer=key[0] + 1, datatype=key[1] + 1)
+            r2 = gdspy.boolean(d2[key], gdspy.offset(d1[key], 1e-6, precision=1e-7), 'not',
+                               precision=1e-7, layer=key[0] + 1, datatype=key[1] + 1)
+            if not (r1 is None and r2 is None):
+                if r1 is not None:
+                    c1.add(r1)
+                if r2 is not None:
+                    c2.add(r2)
                 gdspy.LayoutViewer(cells=[c1, c2])
-        assert result is None
-
+            assert r1 is None
+            assert r2 is None
+        else:
+            assert result is None
