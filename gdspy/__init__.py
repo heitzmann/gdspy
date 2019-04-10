@@ -732,8 +732,9 @@ class PolygonSet(object):
             length = (vec[:, 0]**2 + vec[:, 1]**2)**0.5
             ii = numpy.flatnonzero(length)
             if len(ii) < len(length):
-                self.polygons[jj] = self.polygons[jj][ii]
-                vec = self.polygons[jj] - numpy.roll(self.polygons[jj], 1, 0)
+                self.polygons[jj] = numpy.array(self.polygons[jj][ii])
+                radii[jj] = [radii[jj][i] for i in ii]
+                vec = self.polygons[jj].astype(float) - numpy.roll(self.polygons[jj], 1, 0)
                 length = (vec[:, 0]**2 + vec[:, 1]**2)**0.5
             vec[:, 0] = vec[:, 0] / length
             vec[:, 1] = vec[:, 1] / length
@@ -749,7 +750,7 @@ class PolygonSet(object):
 
             new_points = []
             for ii in range(-1, len(self.polygons[jj]) - 1):
-                if theta[ii] > 0:
+                if theta[ii] > 1e-6:
                     a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
                     a0 = numpy.arctan2(a0[1], a0[0])
                     a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
