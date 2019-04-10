@@ -44,30 +44,43 @@ def test_polygonset(target):
     assert numpy.max(numpy.abs(bb - numpy.array(((10, 0), (12, 2))))) == 0
     assert gdspy.PolygonSet([]).get_bounding_box() == None
     cell = gdspy.Cell('test', True).add(ps)
-    assertsame(cell, target['PolygonSet0'])
+    assertsame(cell, target['PolygonSet'])
 
-def test_rotation(target):
-    ps = gdspy.PolygonSet([
-        [(10, 0), (11, 0), (10, 1)],
-        numpy.array([(11.0, 0), (10, 1), (11, 1)]),
-        [numpy.array((11, 1)), numpy.array((12.0, 1.0)), (11, 2)],
-    ], 2, 3)
-    ps.rotate(numpy.pi / 3, center=(10, 1))
+def test_translate():
+    ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
+    ps.translate(-1, -2)
+    tgt = gdspy.PolygonSet([[(-1, -2), (0, -2), (0, 0), (-1, 0)]])
+    assertsame(gdspy.Cell('test', True).add(ps), gdspy.Cell('TGT', True).add(tgt))
+
+def test_rotation():
+    ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
+    ps.rotate(-numpy.pi / 6, center=(1, 0))
+    x = 3**0.5 / 2
+    a = numpy.arctan(2) + numpy.pi / 6
+    l = 5**0.5
+    tgt = gdspy.PolygonSet([[(1 - x, 0.5), (1, 0), (2, 2 * x),
+                             (1 - l * numpy.cos(a), l * numpy.sin(a))]])
+    assertsame(gdspy.Cell('test', True).add(ps), gdspy.Cell('TGT', True).add(tgt))
+
+def test_mirror():
+    ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
+    ps.mirror((-1, 1), (1, -1))
+    tgt = gdspy.PolygonSet([[(0, 0), (-2, 0), (-2, -1), (0, -1)]])
+    assertsame(gdspy.Cell('test', True).add(ps), gdspy.Cell('TGT', True).add(tgt))
+
+def test_scale():
+    ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
     cell = gdspy.Cell('test', True).add(ps)
-    assertsame(cell, target['PolygonSet1'])
-
-def test_scale(target):
-    ps = gdspy.PolygonSet([
-        [(10, 0), (11, 0), (10, 1)],
-        numpy.array([(11.0, 0), (10, 1), (11, 1)]),
-        [numpy.array((11, 1)), numpy.array((12.0, 1.0)), (11, 2)],
-    ], 3, 4)
     ps.scale(0.5)
-    ps.scale(1, 2, center=(5, 1))
+    tgt = gdspy.PolygonSet([[(0, 0), (0.5, 0), (0.5, 1), (0, 1)]])
+    assertsame(cell, gdspy.Cell('TGT', True).add(tgt))
+    ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
     cell = gdspy.Cell('test', True).add(ps)
-    assertsame(cell, target['PolygonSet2'])
+    ps.scale(0.2, 2, center=(1, 2))
+    tgt = gdspy.PolygonSet([[(0.8, -2), (1, -2), (1, 2), (0.8, 2)]])
+    assertsame(cell, gdspy.Cell('TGT', True).add(tgt))
 
-def test_polygonset3(tmpdir):
+def test_togds(tmpdir):
     ps = gdspy.PolygonSet([
         [(10 + i * 1e-3, i**2 * 1e-6) for i in range(8191)],
     ])
@@ -79,7 +92,7 @@ def test_polygonset3(tmpdir):
     lib = gdspy.GdsLibrary(infile=fname)
     assertsame(lib.cell_dict['LARGE'], cell)
 
-def test_fracture(target):
+def test_fracture():
     ps1 = gdspy.PolygonSet([[(-2, -1), (-2, 1), (-1, 2), (1, 2),
                              (2, 1), (2, -1), (1, -2), (-1, -2)]])
     ps2 = gdspy.PolygonSet([[(-2, -1), (-2, 1), (-1, 2), (1, 2),
@@ -110,3 +123,31 @@ def test_fracture(target):
     pt2.fracture(199, precision=1e-6)
     assert all(len(p) <= 199 for p in pt2.polygons)
     assertsame(gdspy.Cell('3', True).add(pt1), gdspy.Cell('4', True).add(pt2))
+
+def test_fillet(target):
+    cell = gdspy.Cell('test')
+    orig = gdspy.PolygonSet([
+        [(0, 0), (-1, 0), (0, -1), (0.5, -0.5), (1, 0), (1, 1), (4, -1), (1, 3), (1, 2), (0, 1)],
+        [(2, -1), (3, -1), (2.5, -2)],
+    ])
+    orig.datatypes=[0, 1]
+    p = gdspy.copy(orig, 0, 5)
+    p.layers = [1, 1]
+    p.fillet(0.3, max_points=0)
+    cell.add(p)
+    p = gdspy.copy(orig, 5, 5)
+    p.layers = [2, 2]
+    p.fillet([0.3, 0.2, 0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.1, 0.2, 0], max_points=0)
+    cell.add(p)
+    p = gdspy.copy(orig, 5, 0)
+    p.layers = [3, 3]
+    p.fillet([[0.1, 0.1, 0.4, 0, 0.4, 0.1, 0.1, 0.4, 0.4, 0.1], [0.2, 0.2, 0.5]], max_points=0)
+    cell.add(p)
+    p = gdspy.PolygonSet([
+        [(0, 0), (0, 0), (-1, 0), (0, -1), (0.5, -0.5), (1, 0), (1, 0), (1, 1), (4, -1), (1, 3), (1, 2), (0, 1)],
+        [(2, -1), (3, -1), (2.5, -2), (2, -1)],
+    ], layer=4)
+    p.datatypes=[0, 1]
+    p.fillet([0.8, [10.0, 10.0, 20.0, 20.0]], max_points=199, precision=1e-6)
+    cell.add(p)
+    assertsame(cell, target['PolygonSet_fillet'])
