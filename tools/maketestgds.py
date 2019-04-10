@@ -7,9 +7,10 @@
 #                                                                    #
 ######################################################################
 
-import numpy
 import gdspy
 
+
+### PolygonSet
 
 cell = gdspy.Cell('PolygonSet')
 p = gdspy.PolygonSet([
@@ -41,5 +42,22 @@ p = gdspy.copy(orig, 0, 0)
 p.layers = [4, 4]
 p.fillet([0.8, [10.0, 10.0, 20.0]], max_points=199, precision=1e-6)
 cell.add(p)
+
+
+### FlexPath
+
+cell = gdspy.Cell('FlexPath1')
+fp = gdspy.FlexPath([(0, 0), (1, 1)], 0.1, layer=[1])
+cell.add(fp)
+fp = gdspy.FlexPath([(1, 0), (2, 1)], 0.1, [-0.1, 0.1], ends=['round', 'extended'], tolerance=1e-3, layer=[2, 3])
+cell.add(fp)
+fp = gdspy.FlexPath([(2, 0), (3, 1)], [0.1, 0.2], 0.2, ends=(0.2, 0.1), layer=4, datatype=[1, 1])
+cell.add(fp)
+fp = gdspy.FlexPath([(3, 0), (4, 1)], [0.1, 0.2], [-0.1, 0.1], ends=[(0.2, 0.1), 'smooth'], tolerance=1e-3, datatype=5)
+cell.add(fp)
+
+
+### END
+
 gdspy.write_gds('tests/test.gds', unit=1, precision=1e-7)
 gdspy.LayoutViewer()
