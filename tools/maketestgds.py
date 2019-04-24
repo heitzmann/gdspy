@@ -22,7 +22,8 @@ cell.add(p)
 
 cell = gdspy.Cell('PolygonSet_fillet')
 orig = gdspy.PolygonSet([
-    [(0, 0), (-1, 0), (0, -1), (0.5, -0.5), (1, 0), (1, 1), (4, -1), (1, 3), (1, 2), (0, 1)],
+    [(0, 0), (-1, 0), (0, -1), (0.5, -0.5), (1, 0), (1, 1), (4, -1),
+     (1, 3), (1, 2), (0, 1)],
     [(2, -1), (3, -1), (2.5, -2)],
 ])
 orig.datatypes=[0, 1]
@@ -32,11 +33,13 @@ p.fillet(0.3, max_points=0)
 cell.add(p)
 p = gdspy.copy(orig, 5, 5)
 p.layers = [2, 2]
-p.fillet([0.3, 0.2, 0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.1, 0.2, 0], max_points=0)
+p.fillet([0.3, 0.2, 0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.1, 0.2, 0],
+         max_points=0)
 cell.add(p)
 p = gdspy.copy(orig, 5, 0)
 p.layers = [3, 3]
-p.fillet([[0.1, 0.1, 0.4, 0, 0.4, 0.1, 0.1, 0.4, 0.4, 0.1], [0.2, 0.2, 0.5]], max_points=0)
+p.fillet([[0.1, 0.1, 0.4, 0, 0.4, 0.1, 0.1, 0.4, 0.4, 0.1], [0.2, 0.2, 0.5]],
+         max_points=0)
 cell.add(p)
 p = gdspy.copy(orig, 0, 0)
 p.layers = [4, 4]
@@ -82,24 +85,120 @@ fp = gdspy.FlexPath([(3, 0), (4, 1)], [0.1, 0.2, 0.1], [-0.2, 0, 0.2],
 cell.add(fp)
 
 cell = gdspy.Cell('FlexPath2')
-fp = gdspy.FlexPath([(0, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)], 0.05, [0, -0.1, 0, 0.1],
-                    corners=['natural', 'circular bend', 'circular bend', 'circular bend'],
+fp = gdspy.FlexPath([(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)], 0.05,
+                    [0, -0.1, 0, 0.1], corners=['natural', 'circular bend',
+                                                'circular bend', 'circular bend'],
                     ends=['flush', 'extended', (0.1, 0.2), 'round'], tolerance=1e-4,
                     layer=[0, 1, 1, 2], bend_radius=[0, 0.3, 0.3, 0.2], max_points=10)
 cell.add(fp)
 
 cell = gdspy.Cell('FlexPath3')
-pts = numpy.array([(0, 0), (1, 0), (1, 2), (3, 0), (2, -1), (2, -2), (0, -1),
-                   (1, -2), (1, -3)])
-fp = gdspy.FlexPath(pts + numpy.array((0, 5)), [0.1, 0.1, 0.1], 0.15, layer=[1, 2, 3],
-                    corners=['natural', 'miter', 'bevel'], ends=(0.5, 0))
+pts = numpy.array([(0, 0), (0.5, 0), (1, 0), (1, 2), (3, 0), (2, -1), (2, -2),
+                   (0, -1), (1, -2), (1, -3)])
+fp = gdspy.FlexPath(pts + numpy.array((0, 5)), [0.1, 0.1, 0.1], 0.15,
+                    layer=[1, 2, 3], corners=['natural', 'miter', 'bevel'],
+                    ends=(0.5, 0))
 cell.add(fp)
-fp = gdspy.FlexPath(pts + numpy.array((5, 0)), [0.1, 0.1, 0.1], 0.15, layer=[4, 5, 6],
-                    corners=['round', 'smooth', broken],
+fp = gdspy.FlexPath(pts + numpy.array((5, 0)), [0.1, 0.1, 0.1], 0.15,
+                    layer=[4, 5, 6], corners=['round', 'smooth', broken],
                     ends=[pointy, 'smooth', (0, 0.5)])
 cell.add(fp)
 
+cell = gdspy.Cell('FlexPath4')
+fp = gdspy.FlexPath([(0, 0)], [0.1, 0.2, 0.1], 0.15, layer=[1, 2, 3],
+                    corners=['natural', 'miter', 'bevel'])
+fp.segment((1, 0))
+fp.segment((1, 1), 0.1, 0.05)
+fp.segment((1, 1), [0.2, 0.1, 0.1], -0.05, True)
+fp.segment((-1, 1), 0.2, [-0.2, 0, 0.3], True)
+fp.arc(2, 0, 0.5 * numpy.pi)
+fp.arc(3, 0.5 * numpy.pi, numpy.pi, 0.1, 0)
+fp.arc(1, 0.4 * numpy.pi, -0.4 * numpy.pi, [0.1, 0.2, 0.1], [0.2, 0, -0.2])
+fp.turn(1, 0.4 * numpy.pi)
+fp.turn(1, 'll', 0.15, 0)
+fp.turn(0.5, 'r', [0.1, 0.05, 0.1], [0.15, 0, -0.15])
+cell.add(fp)
+fp = gdspy.FlexPath([(5, 2)], [0.05, 0.1, 0.2], [-0.2, 0, 0.4], layer=[4, 5, 6])
+fp.parametric(lambda u: numpy.array((5.5 + 3 * u, 2 + 3 * u**2)), relative=False)
+fp.segment((0, 1), relative=True)
+fp.parametric(lambda u: numpy.array((2 * numpy.cos(0.5 * numpy.pi * u) - 2,
+                                     3 * numpy.sin(0.5 * numpy.pi * u))),
+              [0.2, 0.1, 0.05], [-0.3, 0, 0.3])
+fp.parametric(lambda u: numpy.array((-2*u, 0)), 0.1, 0.2)
+fp.bezier([(-3, 0), (-2, -3), (0, -4), (0, -5)], offset=[-0.2, 0, 0.2])
+fp.bezier([(5, 0), (1, -1),  (1, 5), (3, 2), (5, 2)], [0.05, 0.1, 0.2],
+          [-0.2, 0, 0.4], relative=False)
+cell.add(fp)
+#fp = gdspy.FlexPath([(2, -1)], 0.1, layer=7, tolerance=1e-5, max_points=0)
+#fp.smooth([(1, 0), (1, -1), (0, -1)], angles=[numpy.pi / 3, None, -2 / 3 * numpy.pi, None],
+#          cycle=True)
+#cell.add(fp)
+#fp = gdspy.FlexPath([(2.5, -1.5)], 0.1, layer=8)
+#fp.smooth([(3, -1.5), (4, -2), (5, -1), (6, -2), (7, -1.5), (7.5, -1.5)], relative=False)
+#cell.add(fp)
+
+
+### Curve
+
+cell = gdspy.Cell('Curve')
+c = gdspy.Curve(0, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)])
+cell.add(gdspy.Polygon(c.get_points(), layer=1))
+c = gdspy.Curve(2, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[numpy.pi / 3, None, None, None])
+cell.add(gdspy.Polygon(c.get_points(), layer=3))
+c = gdspy.Curve(4, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, None, None, 2/3 * numpy.pi])
+cell.add(gdspy.Polygon(c.get_points(), layer=5))
+c = gdspy.Curve(0, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[numpy.pi / 3, None, None, 3/4 * numpy.pi])
+cell.add(gdspy.Polygon(c.get_points(), layer=7))
+c = gdspy.Curve(2, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, None, numpy.pi/2, None])
+cell.add(gdspy.Polygon(c.get_points(), layer=9))
+c = gdspy.Curve(4, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, None, None])
+cell.add(gdspy.Polygon(c.get_points(), layer=11))
+c = gdspy.Curve(0, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, None, -numpy.pi/2])
+cell.add(gdspy.Polygon(c.get_points(), layer=13))
+c = gdspy.Curve(2, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, -numpy.pi, -numpy.pi/2])
+cell.add(gdspy.Polygon(c.get_points(), layer=15))
+c = gdspy.Curve(4, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[-numpy.pi/4, 0, numpy.pi/2, -numpy.pi])
+cell.add(gdspy.Polygon(c.get_points(), layer=17))
+
+c = gdspy.Curve(0, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=2))
+c = gdspy.Curve(2, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[numpy.pi / 3, None, None, None], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=4))
+c = gdspy.Curve(4, 0, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, None, None, 2/3 * numpy.pi], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=6))
+c = gdspy.Curve(0, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[numpy.pi / 3, None, None, 3/4 * numpy.pi], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=8))
+c = gdspy.Curve(2, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, None, numpy.pi/2, None], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=10))
+c = gdspy.Curve(4, 2, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, None, None], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=12))
+c = gdspy.Curve(0, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, None, -numpy.pi/2], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=14))
+c = gdspy.Curve(2, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[None, 0, -numpy.pi, -numpy.pi/2], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=16))
+c = gdspy.Curve(4, 4, tolerance=1e-3)
+c.i([(1, 0), (1, 1), (0, 1)], angles=[-numpy.pi/4, 0, numpy.pi/2, -numpy.pi], cycle=True)
+cell.add(gdspy.Polygon(c.get_points(), layer=18))
+
 ### END
 
+
 gdspy.write_gds('tests/test.gds', unit=1, precision=1e-7)
-gdspy.LayoutViewer()
+gdspy.LayoutViewer(cells=[cell])
