@@ -2793,8 +2793,8 @@ class FlexPath(object):
                                 poly[2] += v1
                                 poly[3] += v1
                             else:
-                                poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
-                                                    poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
+                                poly = numpy.array((poly[0] - v0, poly[1] - v0,
+                                                    poly[2] + v1, poly[3] + v1))
                     polygons = [poly]
                     if self.max_points > 4 and poly.shape[0] > self.max_points:
                         ii = 0
