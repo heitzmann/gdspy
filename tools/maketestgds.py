@@ -10,9 +10,11 @@
 import gdspy
 import numpy
 
+
 ### PolygonSet
 
 cell = gdspy.Cell('PolygonSet')
+
 p = gdspy.PolygonSet([
     [(10, 0), (11, 0), (10, 1)],
     [(11, 0), (10, 1), (11, 1)],
@@ -21,6 +23,7 @@ p = gdspy.PolygonSet([
 cell.add(p)
 
 cell = gdspy.Cell('PolygonSet_fillet')
+
 orig = gdspy.PolygonSet([
     [(0, 0), (-1, 0), (0, -1), (0.5, -0.5), (1, 0), (1, 1), (4, -1),
      (1, 3), (1, 2), (0, 1)],
@@ -71,7 +74,9 @@ def pointy(p0, v0, p1, v1):
     v1 /= numpy.sqrt(numpy.sum(v1**2))
     return [p0, 0.5 * (p0 + p1) + 0.5 * (v0 - v1) * r, p1]
 
+
 cell = gdspy.Cell('FlexPath1')
+
 fp = gdspy.FlexPath([(0, 0), (1, 1)], 0.1, layer=[1], gdsii_path=True)
 cell.add(fp)
 fp = gdspy.FlexPath([(1, 0), (2, 1)], 0.1, [-0.1, 0.1], tolerance=1e-5,
@@ -85,6 +90,7 @@ fp = gdspy.FlexPath([(3, 0), (4, 1)], [0.1, 0.2, 0.1], [-0.2, 0, 0.2],
 cell.add(fp)
 
 cell = gdspy.Cell('FlexPath2')
+
 fp = gdspy.FlexPath([(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)], 0.05,
                     [0, -0.1, 0, 0.1], corners=['natural', 'circular bend',
                                                 'circular bend', 'circular bend'],
@@ -93,6 +99,7 @@ fp = gdspy.FlexPath([(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)
 cell.add(fp)
 
 cell = gdspy.Cell('FlexPath3')
+
 pts = numpy.array([(0, 0), (0.5, 0), (1, 0), (1, 2), (3, 0), (2, -1), (2, -2),
                    (0, -1), (1, -2), (1, -3)])
 fp = gdspy.FlexPath(pts + numpy.array((0, 5)), [0.1, 0.1, 0.1], 0.15,
@@ -105,6 +112,7 @@ fp = gdspy.FlexPath(pts + numpy.array((5, 0)), [0.1, 0.1, 0.1], 0.15,
 cell.add(fp)
 
 cell = gdspy.Cell('FlexPath4')
+
 fp = gdspy.FlexPath([(0, 0)], [0.1, 0.2, 0.1], 0.15, layer=[1, 2, 3],
                     corners=['natural', 'miter', 'bevel'])
 fp.segment((1, 0))
@@ -173,6 +181,98 @@ fp = gdspy.FlexPath([(2.5, -1.5)], 0.1, layer=8)
 fp.smooth([(3, -1.5), (4, -2), (5, -1), (6, -2), (7, -1.5), (7.5, -1.5)], relative=False,
           width=0.2)
 cell.add(fp)
+
+
+### RobustPath
+
+cell = gdspy.Cell('RobustPath1')
+
+rp = gdspy.RobustPath((0, 0), 0.1, layer=[1], gdsii_path=True)
+rp.segment((1, 1))
+cell.add(rp)
+rp = gdspy.RobustPath((1, 0), 0.1, [-0.1, 0.1], tolerance=1e-5,
+                      ends=['round', 'extended'], layer=[2, 3], max_points=6)
+rp.segment((2, 1))
+cell.add(rp)
+rp = gdspy.RobustPath((2, 0), [0.1, 0.2], 0.2, ends=(0.2, 0.1),
+                      layer=4, datatype=[1, 1])
+rp.segment((3, 1))
+cell.add(rp)
+rp = gdspy.RobustPath((3, 0), [0.1, 0.2, 0.1], [-0.2, 0, 0.2],
+                      ends=[(0.2, 0.1), 'smooth', 'flush'], datatype=5)
+rp.segment((4, 1))
+cell.add(rp)
+
+cell = gdspy.Cell('RobustPath2')
+
+rp = gdspy.RobustPath((0, 0), [0.1, 0.2, 0.1], 0.15, layer=[1, 2, 3])
+rp.segment((1, 0))
+rp.segment((1, 1), 0.1, 0.05)
+rp.segment((1, 1), [0.2, 0.1, 0.1], -0.05, True)
+rp.segment((-1, 1), 0.2, [-0.2, 0, 0.3], True)
+rp.arc(2, 0, 0.5 * numpy.pi)
+rp.arc(3, 0.7 * numpy.pi, numpy.pi, 0.1, 0)
+rp.arc(2, 0.4 * numpy.pi, -0.4 * numpy.pi, [0.1, 0.2, 0.1], [0.2, 0, -0.2])
+rp.turn(1, -0.3 * numpy.pi)
+rp.turn(1, 'rr', 0.15)
+rp.turn(0.5, 'l', [0.05, 0.1, 0.05], [0.15, 0, -0.15])
+cell.add(rp)
+rp = gdspy.RobustPath((-5, 6), 0.8, layer=20, ends='round', tolerance=1e-4)
+rp.segment((1, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-5, 6), 0.8, layer=21, ends='extended', tolerance=1e-4)
+rp.segment((1, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-5, 6), 0.8, layer=22, ends=(0.1, 0.2), tolerance=1e-4)
+rp.segment((1, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-5, 6), 0.8, layer=23, ends='smooth', tolerance=1e-4)
+rp.segment((1, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 6), 0.8, layer=10, ends='round', tolerance=1e-5)
+rp.segment((1, 0), 0.1, relative=True)
+rp.segment((0, 1), 0.8, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 6), 0.8, layer=11, ends='extended', tolerance=1e-5)
+rp.segment((1, 0), 0.1, relative=True)
+rp.segment((0, 1), 0.8, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 6), 0.8, layer=12, ends='smooth', tolerance=1e-5)
+rp.segment((1, 0), 0.1, relative=True)
+rp.segment((0, 1), 0.8, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 8), 0.1, layer=13, ends='round', tolerance=1e-5)
+rp.segment((1, 0), 0.8, relative=True)
+rp.segment((0, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 8), 0.1, layer=14, ends=(0.2, 0.2), tolerance=1e-5)
+rp.segment((1, 0), 0.8, relative=True)
+rp.segment((0, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((-3, 8), 0.1, layer=15, ends='smooth', tolerance=1e-5)
+rp.segment((1, 0), 0.8, relative=True)
+rp.segment((0, 1), 0.1, relative=True)
+cell.add(rp)
+rp = gdspy.RobustPath((5, 2), [0.05, 0.1, 0.2], [-0.2, 0, 0.4], layer=[4, 5, 6])
+rp.parametric(lambda u: numpy.array((5.5 + 3 * u, 2 + 3 * u**2)), relative=False)
+rp.segment((0, 1), relative=True)
+rp.parametric(lambda u: numpy.array((2 * numpy.cos(0.5 * numpy.pi * u) - 2,
+                                     3 * numpy.sin(0.5 * numpy.pi * u))),
+              width=[0.2, 0.1, 0.05], offset=[-0.3, 0, 0.3])
+rp.parametric(lambda u: numpy.array((-2*u, 0)), width=0.1, offset=0.2)
+rp.bezier([(-3, 0), (-2, -3), (0, -4), (0, -5)], offset=[-0.2, 0, 0.2])
+rp.bezier([(4.5, 0), (1, -1),  (1, 5), (3, 2), (5, 2)], width=[0.05, 0.1, 0.2],
+          offset=[-0.2, 0, 0.4], relative=False)
+cell.add(rp)
+rp = gdspy.RobustPath((2, -1), 0.1, layer=7, tolerance=1e-4, max_points=0)
+rp.smooth([(1, 0), (1, -1), (0, -1)], angles=[numpy.pi / 3, None, -2 / 3 * numpy.pi, None],
+          cycle=True)
+cell.add(rp)
+rp = gdspy.RobustPath((2.5, -1.5), 0.1, layer=8)
+rp.smooth([(3, -1.5), (4, -2), (5, -1), (6, -2), (7, -1.5), (7.5, -1.5)], relative=False,
+          width=0.2)
+cell.add(rp)
+
 
 ### Curve
 
@@ -301,6 +401,7 @@ c.i([(1, 2), (2, 1), (3, 2), (4, 0)],
     angles=[numpy.pi * 3/4, None, None, None, -numpy.pi * 3/4],
     t_in=[1, 1, 1, 1, 1], t_out=[1, 1, 1, 1, 1], cycle=True)
 cell.add(gdspy.Polygon(c.get_points(), layer=14))
+
 
 ### END
 
