@@ -2793,8 +2793,8 @@ class FlexPath(object):
                                 poly[2] += v1
                                 poly[3] += v1
                             else:
-                                poly = numpy.array((poly[0] - v0, poly[1] - v0,
-                                                    poly[2] + v1, poly[3] + v1))
+                                poly = numpy.array((poly[0], poly[0] - v0, poly[1] - v0, poly[1],
+                                                    poly[2], poly[2] + v1, poly[3] + v1, poly[3]))
                     polygons = [poly]
                     if self.max_points > 4 and poly.shape[0] > self.max_points:
                         ii = 0
@@ -3007,7 +3007,8 @@ class FlexPath(object):
                                 w = (2 * ii - 1) * v[::-1] * _pmone
                                 r = 0.5 * self.widths[-ii, kk]
                                 d = r if end == 'extended' else end[ii]
-                                caps[ii] = [pts[-ii] + d * v + r * w, pts[-ii] + d * v - r * w]
+                                caps[ii] = [pts[-ii] + r * w, pts[-ii] + r * w + d * v,
+                                            pts[-ii] - r * w + d * v, pts[-ii] - r * w]
                     poly = caps[0][::-1]
                     poly.extend(arms[0])
                     poly.extend(caps[1])
@@ -3952,12 +3953,12 @@ class RobustPath(object):
                         v1 = sub1.grad(0, arm)
                         den = v1[1] * v0[0] - v1[0] * v0[1]
                         lim = 1e-12 * (v0[0]**2 + v0[1]**2) * (v1[0]**2 + v1[1]**2)
-                        if den**2 < lim:
+                        dx = p1[0] - p0[0]
+                        dy = p1[1] - p0[1]
+                        if den**2 < lim or dx**2 + dy**2 <= tol:
                             u0 = u1 = 0
                             px = 0.5 * (p0 + p1)
                         else:
-                            dx = p1[0] - p0[0]
-                            dy = p1[1] - p0[1]
                             u0 = (v1[1] * dx - v1[0] * dy) / den
                             u1 = (v0[1] * dx - v0[0] * dy) / den
                             px = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
