@@ -273,6 +273,17 @@ rp.smooth([(3, -1.5), (4, -2), (5, -1), (6, -2), (7, -1.5), (7.5, -1.5)], relati
           width=0.2)
 cell.add(rp)
 
+cell = gdspy.Cell('RobustPath3')
+
+rp = gdspy.RobustPath((0, 0), 0.1)
+rp.parametric(lambda u: numpy.array((3 * numpy.sin(numpy.pi * u),
+                                     -3 * numpy.cos(numpy.pi * u))),
+              relative=False)
+rp.parametric(lambda u: numpy.array((3.5 - 3 * numpy.cos(numpy.pi * u),
+                                     -0.5 + 3 * numpy.sin(numpy.pi * u))),
+              relative=True)
+cell.add(rp)
+
 
 ### Curve
 
@@ -405,6 +416,5 @@ cell.add(gdspy.Polygon(c.get_points(), layer=14))
 
 ### END
 
-
 gdspy.write_gds('tests/test.gds', unit=1, precision=1e-7)
-gdspy.LayoutViewer()#cells=[cell])
+gdspy.LayoutViewer(cells=[cell])
