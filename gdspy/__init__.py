@@ -3854,7 +3854,7 @@ class RobustPath(object):
         """
         i = int(u)
         u -= i
-        if u == 0 and (side == '-' or i == len(self.paths[0])):
+        if u == 0 and ((i > 0 and side == '-') or i == len(self.paths[0])):
             i -= 1
             u = 1
         return numpy.array([p[i].grad(u, arm) for p in self.paths])
