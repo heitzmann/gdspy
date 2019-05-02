@@ -550,10 +550,11 @@ These structures are commonly used in the field of integrated photonics.
 
 :download:`photonics.py <_static/photonics.py>`
 
+:download:`photonics.gds <_static/photonics.gds>`
+
 .. literalinclude:: _static/photonics.py
    :language: python
    :linenos:
-
 
 Using System Fonts
 ==================
@@ -562,6 +563,8 @@ This example uses `matplotlib <https://matplotlib.org/>`_ to render text using a
 The glyph paths are then transformed into polygon arrays that can be used to create `gdspy.PolygonSet` objects.
 
 :download:`fonts.py <_static/fonts.py>`
+
+:download:`fonts.gds <_static/fonts.gds>`
 
 .. literalinclude:: _static/fonts.py
    :language: python

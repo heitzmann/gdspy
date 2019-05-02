@@ -18,7 +18,7 @@ def render_text(text, size=None, position=(0, 0), font_prop=None, tolerance=0.1)
     xmax = position[0]
     for points, code in path.iter_segments():
         if code == path.MOVETO:
-            c = gdspy.Curve(*points, tolerance)
+            c = gdspy.Curve(*points, tolerance=tolerance)
         elif code == path.LINETO:
             c.L(*points)
         elif code == path.CURVE3:
@@ -50,4 +50,5 @@ if __name__ == "__main__":
     fp = FontProperties(family='serif', style='italic')
     text = gdspy.PolygonSet(render_text('Text rendering', 10, font_prop=fp), layer=1)
     gdspy.Cell('TXT').add(text)
+    gdspy.write_gds('fonts.gds')
     gdspy.LayoutViewer()
