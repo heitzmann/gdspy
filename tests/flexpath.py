@@ -145,7 +145,7 @@ def test_flexpath4(target):
               [-0.2, 0, 0.4], relative=False)
     cell.add(fp)
     fp = gdspy.FlexPath([(2, -1)], 0.1, layer=7, tolerance=1e-5, max_points=0)
-    fp.smooth([(1, 0), (1, -1), (0, -1)], angles=[numpy.pi / 3, None, -2 / 3 * numpy.pi, None],
+    fp.smooth([(1, 0), (1, -1), (0, -1)], angles=[numpy.pi / 3, None, -2 / 3.0 * numpy.pi, None],
               cycle=True)
     cell.add(fp)
     fp = gdspy.FlexPath([(2.5, -1.5)], 0.1, layer=8)

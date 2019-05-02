@@ -7,13 +7,14 @@
 #                                                                    #
 ######################################################################
 
+import os
 import pytest
 import gdspy
 
 
 @pytest.fixture
 def target():
-    return gdspy.GdsLibrary(infile='tests/test.gds').cell_dict
+    return gdspy.GdsLibrary(infile='tests' + os.sep + 'test.gds').cell_dict
 
 def assertsame(c1, c2, tolerance=1e-6):
     d1 = c1.get_polygons(by_spec=True)
