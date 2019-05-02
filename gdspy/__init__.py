@@ -3933,7 +3933,7 @@ class RobustPath(object):
                             v = -arm * path[i].grad(u, 0)
                             r = 0.5 * path[i].wid(u)
                             if end == 'round':
-                                np = max(2, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
+                                np = max(5, 1 + int(_halfpi / numpy.arccos(1 - self.tolerance / r) + 0.5))
                                 ang = numpy.linspace(-_halfpi, _halfpi, np)[1:-1] + numpy.arctan2(v[1], v[0])
                                 endpts = p + r * numpy.vstack((numpy.cos(ang), numpy.sin(ang))).T
                                 poly.extend(endpts)

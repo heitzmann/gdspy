@@ -168,7 +168,60 @@ def test_robustpath3(target):
                   relative=False)
     rp.parametric(lambda u: numpy.array((3.5 - 3 * numpy.cos(numpy.pi * u),
                                          -0.5 + 3 * numpy.sin(numpy.pi * u))),
+                  lambda u: numpy.array((numpy.sin(numpy.pi * u),
+                                         numpy.cos(numpy.pi * u))),
                   relative=True)
     cell.add(rp)
     assertsame(target['RobustPath3'], cell)
 
+def test_robustpath_gdsiipath():
+    cells = []
+    for gdsii_path in [True, False]:
+        cells.append(gdspy.Cell(str(gdsii_path), True))
+        rp = gdspy.RobustPath((0, 0), 0.05, [-0.1, 0.1], ends=['extended', (0.1, 0.2)],
+                              layer=[0, 1], gdsii_path=gdsii_path)
+        rp.segment((1, 1))
+        rp.parametric(lambda u: numpy.array((u, u - u**2)))
+        cells[-1].add(rp)
+    assertsame(*cells)
+
+def test_robustpath_getpolygons():
+    rp = gdspy.RobustPath((0, 0),
+                          0.05, [-0.1, 0.1], ends=['extended', (0.1, 0.2)],
+                          layer=[0, 1], datatype=[1, 0])
+    rp.segment((1, 1))
+    rp.parametric(lambda u: numpy.array((u, u - u**2)))
+    d = rp.get_polygons(True)
+    l = rp.get_polygons()
+    assert len(d) == 2
+    assert (1, 0) in d
+    assert (0, 1) in d
+    assert sum(len(p) for p in d.values()) == len(l)
+    assert sum(sum(len(x) for x in p) for p in d.values()) == sum(len(x) for x in l)
+    ps = rp.to_polygonset()
+    assert len(ps.layers) == len(ps.datatypes) == len(ps.polygons)
+    assert gdspy.RobustPath((0, 0), 1).to_polygonset() == None
+
+def test_robustpath_togds(tmpdir):
+    cell = gdspy.Cell('robustpath')
+    rp = gdspy.RobustPath((0, 0), 0.1, layer=[1])
+    rp.segment((1, 1))
+    rp.segment((2, 3), 0)
+    cell.add(rp)
+    rp = gdspy.RobustPath((2, 0), [0.1, 0.2], 0.2, ends=['round', (0.2, 0.1)],
+                          layer=4, datatype=[1, 1], gdsii_path=True)
+    rp.segment((3, 1))
+    cell.add(rp)
+    rp = gdspy.RobustPath((0, 0), 0.1, layer=5, tolerance=1e-5, max_points=0,
+                          max_evals=1e6, gdsii_path=True)
+    rp.segment((10, 0))
+    rp.turn(20, 'll')
+    rp.turn(20, 'rr')
+    rp.turn(20, 'll')
+    cell.add(rp)
+    fname = str(tmpdir.join('test.gds'))
+    with pytest.warns(UserWarning):
+        gdspy.write_gds(fname, unit=1, precision=1e-7)
+    lib = gdspy.GdsLibrary(infile=fname, rename={'robustpath': 'file'})
+    assertsame(lib.cell_dict['file'], cell, tolerance=1e-3)
+    gdspy.current_library = gdspy.GdsLibrary()

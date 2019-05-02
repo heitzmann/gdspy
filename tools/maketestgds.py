@@ -281,6 +281,8 @@ rp.parametric(lambda u: numpy.array((3 * numpy.sin(numpy.pi * u),
               relative=False)
 rp.parametric(lambda u: numpy.array((3.5 - 3 * numpy.cos(numpy.pi * u),
                                      -0.5 + 3 * numpy.sin(numpy.pi * u))),
+              lambda u: numpy.array((numpy.sin(numpy.pi * u),
+                                     numpy.cos(numpy.pi * u))),
               relative=True)
 cell.add(rp)
 
