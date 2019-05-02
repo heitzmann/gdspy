@@ -24,8 +24,9 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 * [Python](http://www.python.org/) (tested with versions 2.7, 3.5, 3.6, and 3.7)
 * [Numpy](http://numpy.scipy.org/)
 * [Python-future](http://python-future.org/) (only for Python 2)
-* Tkinter (optional: needed for the `LayoutViewer` GUI)
 * C compiler (needed only if built from source)
+* Tkinter (optional: needed for the `LayoutViewer` GUI)
+* [Sphinx](http://sphinx-doc.org/) (optional: to build the documentation)
 
 ### Linux / OS X
 
@@ -49,9 +50,9 @@ Installation via `pip` and building from source as above are also possible, but 
 
 ## Documentation
 
-The complete [documentation](http://gdspy.readthedocs.io/) can be built from the sources in the `docs` folder with [Sphinx](http://sphinx-doc.org/).
+The complete documentation is available [here](http://gdspy.readthedocs.io/).
 
-The file [tutorial.py](https://github.com/heitzmann/gdspy/blob/master/examples/tutorial.py) in the `example` folder is a sample script to show the features provided by this module.
+The source files can be found in the `docs` directory.
 
 ## Support
 
@@ -81,6 +82,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added correct support for radius in `PolygonSet.fillet` on a per-vertex basis.
 * Speed improvements in GDSII file generation (thanks to @fbeutel for the contribution) and geometry creation.
 * Font rendering example using [matplotlib](https://matplotlib.org/) (thanks Hernan Pastoriza for the contribution).
+* Expanded test suite.
 
 ### Version 1.3.1 (Jun 29, 2018)
 * `PolygonSet` becomes the base class for all polygons, in particular `Polygon` and `Rectangle`.
