@@ -7090,4 +7090,4 @@ from gdspy import clipper
 try:
     from gdspy.viewer import LayoutViewer
 except ImportError as e:
-    warnings.warn("[GDSPY] LayoutViewer not available: " + str(e), category=ImportWarning, stacklevel=2)
+    warnings.warn("[GDSPY] LayoutViewer not available: " + repr(e), category=ImportWarning, stacklevel=2)
