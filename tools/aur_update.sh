@@ -9,7 +9,7 @@ if [ "$GOON" = 'Y' ] ; then
 	sha256=$(sha256sum "$v.tar.gz" | cut -d' ' -f1)
 
 	for i in '' 2; do
-		git clone "aur@aur.archlinux.org/python${i}-gdspy.git"
+		git clone "ssh://aur@aur.archlinux.org/python${i}-gdspy.git"
 
 		cd "python${i}-gdspy"
 		sed -i -e "s|pkgver=.*$|pkgver=${v:1}|" \
