@@ -60,7 +60,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Upcoming
+### Version 1.4 (May 18, 2019)
 * Revised [documentation](http://gdspy.readthedocs.io/).
 * New `FlexPath` and `RobustPath` classes: more efficient path generation when using the original GDSII path specification.
 * New `Curve` class: SVG-like polygon creation.

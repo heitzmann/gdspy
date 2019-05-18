@@ -59,7 +59,7 @@ except ImportError as e:
         category=ImportWarning,
         stacklevel=2)
 
-__version__ = '1.3.2'
+__version__ = '1.4'
 
 _halfpi = 0.5 * numpy.pi
 _zero = numpy.array((0.0, 0.0))
