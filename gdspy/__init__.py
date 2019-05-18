@@ -50,7 +50,16 @@ import numpy
 import copy as libcopy
 import hashlib
 
-__version__ = '1.3.1'
+from gdspy import clipper
+try:
+    from gdspy.viewer import LayoutViewer
+except ImportError as e:
+    warnings.warn(
+        "[GDSPY] LayoutViewer not available: " + str(e),
+        category=ImportWarning,
+        stacklevel=2)
+
+__version__ = '1.3.2'
 
 _halfpi = 0.5 * numpy.pi
 _zero = numpy.array((0.0, 0.0))
