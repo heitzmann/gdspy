@@ -28,14 +28,6 @@ def assertsame(c1, c2, tolerance=1e-6):
                                'not', precision=1e-7, layer=key[0], datatype=99)
             r2 = gdspy.boolean(d2[key], gdspy.offset(d1[key], tolerance, precision=1e-7),
                                'not', precision=1e-7, layer=key[0], datatype=99)
-            if r1 is not None:
-                print('r1: ', len(r1.polygons))
-                for pol in r1.polygons:
-                    print(pol)
-            if r2 is not None:
-                print('r2: ', len(r2.polygons))
-                for pol in r2.polygons:
-                    print(pol)
             #if not (r1 is None and r2 is None):
             #    c1.add(result)
             #    c2.add(result)
