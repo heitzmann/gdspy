@@ -221,6 +221,12 @@ get_binary_cells
 .. autofunction:: gdspy.get_binary_cells
 
 
+get_gds_units
+=============
+
+.. autofunction:: gdspy.get_gds_units
+
+
 current_library
 ===============
 
