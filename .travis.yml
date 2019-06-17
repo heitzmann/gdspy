@@ -19,11 +19,11 @@ matrix:
           python --version
 
 install:
-  - pip3 install --upgrade pip
-  - pip3 install -r requirements.txt
-  - pip3 install sphinx sphinx_rtd_theme pytest
+  - pip install --upgrade pip
+  - pip install -r requirements.txt
+  - pip install sphinx sphinx_rtd_theme pytest
   - python setup.py build build_sphinx
   - python setup.py install
 
 script:
-  - python -m pytest ./tests
+  - pytest
