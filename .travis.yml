@@ -5,37 +5,25 @@ python:
   - "3.5"
   - "3.6"
 
+# From: https://docs.travis-ci.com/user/languages/python/#running-python-tests-on-multiple-operating-systems
 matrix:
   include:
     - python: "3.7"
       dist: xenial
-      sudo: required
     - os: osx
-      language: generic
-      env: PYTHON=3.7.3
-
-# From: https://pythonhosted.org/CodeChat/.travis.yml.html
-before_install: |
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew update
-    brew install openssl readline
-    brew outdated pyenv || brew upgrade pyenv
-    brew install pyenv-virtualenv
-    pyenv install $PYTHON
-    export PYENV_VERSION=$PYTHON
-    export PATH="/Users/travis/.pyenv/shims:${PATH}"
-    pyenv-virtualenv venv
-    source venv/bin/activate
-    python --version
-  fi
+      osx_image: xcode10.2
+      language: shell
+      before_install: |
+          python3 -m venv venv
+          source venv/bin/activate
+          python --version
 
 install:
-  - pip install -r requirements.txt
-  - pip install sphinx
-  - pip install sphinx_rtd_theme
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip install pytest; fi
+  - pip3 install --upgrade pip
+  - pip3 install -r requirements.txt
+  - pip3 install sphinx sphinx_rtd_theme pytest
   - python setup.py build build_sphinx
   - python setup.py install
 
 script:
-  - pytest
+  - python -m pytest ./tests
