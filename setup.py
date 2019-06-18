@@ -1,6 +1,6 @@
 ######################################################################
 #                                                                    #
-#  Copyright 2009-2018 Lucas Heitzmann Gabrielli.                    #
+#  Copyright 2009-2019 Lucas Heitzmann Gabrielli.                    #
 #  This file is part of gdspy, distributed under the terms of the    #
 #  Boost Software License - Version 1.0.  See the accompanying       #
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
@@ -30,7 +30,7 @@ if 'build_sphinx' in sys.argv:
 # Mac OS X Mojave C++ compile + linking arguments
 extra_compile_args = []
 extra_link_args = []
-if platform.system() == 'Darwin' and LooseVersion(platform.release()) >= LooseVersion('18'):
+if platform.system() == 'Darwin' and LooseVersion(platform.release()) >= LooseVersion('17.7'):
     extra_compile_args = ['-std=c++11', "-mmacosx-version-min=10.9"]
     extra_link_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
 
