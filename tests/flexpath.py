@@ -210,3 +210,13 @@ def test_flexpath_togds(tmpdir):
     lib = gdspy.GdsLibrary(infile=fname, rename={'flexpath': 'file'})
     assertsame(lib.cell_dict['file'], cell, tolerance=1e-3)
     gdspy.current_library = gdspy.GdsLibrary()
+
+def test_flexpath_duplicates():
+    fp = gdspy.FlexPath([(1.1, 2), (1.1, 2.0)], 0.1)
+    poly = fp.get_polygons()
+    assert isinstance(poly, list) and len(poly) == 0
+    poly = fp.get_polygons(True)
+    assert isinstance(poly, dict) and len(poly) == 0
+    fp1 = gdspy.FlexPath([(1.1, 2), (1.1, 2.0), (1, 1), (1, 1), (1, 1.0), (0, 1), (0.0, 1.0)], 0.1)
+    fp2 = gdspy.FlexPath([(1.1, 2), (1, 1.0), (0.0, 1.0)], 0.1)
+    assertsame(gdspy.Cell('DUPS').add(fp1), gdspy.Cell('SNGL').add(fp2))

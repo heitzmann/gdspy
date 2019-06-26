@@ -2725,6 +2725,8 @@ class FlexPath(object):
             if self.points.shape[0] == 2:
                 # Common case: single path with 2 points
                 un = self.points[1] - self.points[0]
+                if un[0] == 0 and un[1] == 0:
+                    return {} if by_spec else []
                 un = un[::-1] * _mpone / (un[0]**2 + un[1]**2)**0.5
                 for kk in range(self.n):
                     end = self.ends[kk]
@@ -2832,7 +2834,16 @@ class FlexPath(object):
             else:
                 # More than 1 path or more than 2 points
                 un = self.points[1:] - self.points[:-1]
-                un = un[:, ::-1] * _mpone / ((un[:, 0]**2 + un[:, 1]**2)**0.5).reshape((un.shape[0], 1))
+                un2 = un[:, 0]**2 + un[:, 1]**2
+                if not un2.all():
+                    nz = [0]
+                    nz.extend(un2.nonzero()[0] + 1)
+                    self.points = self.points[nz, :]
+                    self.widths = self.widths[nz, :]
+                    self.offsets = self.offsets[nz, :]
+                    un = self.points[1:] - self.points[:-1]
+                    un2 = un[:, 0]**2 + un[:, 1]**2
+                un = un[:, ::-1] * _mpone / (un2**0.5).reshape((un.shape[0], 1))
                 for kk in range(self.n):
                     corner = self.corners[kk]
                     end = self.ends[kk]
