@@ -21,23 +21,23 @@ def unique():
 def tree():
     p1 = gdspy.Polygon(((0, 0), (0, 1), (1, 0)), 0, 0)
     p2 = gdspy.Polygon(((2, 0), (2, 1), (1, 0)), 1, 1)
-    l1 = gdspy.Label('label1', (0, 0), layer=11)
-    l2 = gdspy.Label('label2', (2, 1), layer=12)
-    c1 = gdspy.Cell('tree_' + unique())
+    l1 = gdspy.Label("label1", (0, 0), layer=11)
+    l2 = gdspy.Label("label2", (2, 1), layer=12)
+    c1 = gdspy.Cell("tree_" + unique())
     c1.add(p1)
     c1.add(l1)
-    c2 = gdspy.Cell('tree_' + unique())
+    c2 = gdspy.Cell("tree_" + unique())
     c2.add(l2)
     c2.add(p2)
     c2.add(gdspy.CellReference(c1))
-    c3 = gdspy.Cell('tree_' + unique())
+    c3 = gdspy.Cell("tree_" + unique())
     c3.add(gdspy.CellArray(c2, 3, 2, (3, 3)))
     return c3, c2, c1
 
 
 def test_duplicate():
     gdspy.current_library = gdspy.GdsLibrary()
-    name = 'c_duplicate'
+    name = "c_duplicate"
     gdspy.Cell(name)
     with pytest.raises(ValueError) as e:
         gdspy.Cell(name)
@@ -46,20 +46,20 @@ def test_duplicate():
 
 def test_ignore_duplicate():
     gdspy.current_library = gdspy.GdsLibrary()
-    c1 = gdspy.Cell('c_ignore_duplicate')
+    c1 = gdspy.Cell("c_ignore_duplicate")
     gdspy.Cell(c1.name, True)
 
 
 def test_str():
     gdspy.current_library = gdspy.GdsLibrary()
-    c = gdspy.Cell('c_str')
+    c = gdspy.Cell("c_str")
     assert str(c) == 'Cell ("c_str", 0 polygons, 0 paths, 0 labels, 0 references)'
 
 
 def test_add_element():
     gdspy.current_library = gdspy.GdsLibrary()
     p = gdspy.Polygon(((0, 0), (1, 0), (0, 1)))
-    c = gdspy.Cell('c_add_element')
+    c = gdspy.Cell("c_add_element")
     assert c.add(p) is c
     assert c.add([p, p]) is c
     assert c.polygons == [p, p, p]
@@ -67,8 +67,8 @@ def test_add_element():
 
 def test_add_label():
     gdspy.current_library = gdspy.GdsLibrary()
-    lbl = gdspy.Label('label', (0, 0))
-    c = gdspy.Cell('c_add_label')
+    lbl = gdspy.Label("label", (0, 0))
+    c = gdspy.Cell("c_add_label")
     assert c.add(lbl) is c
     assert c.add([lbl, lbl]) is c
     assert c.labels == [lbl, lbl, lbl]
@@ -76,9 +76,9 @@ def test_add_label():
 
 def test_copy():
     gdspy.current_library = gdspy.GdsLibrary()
-    name = 'c_copy'
+    name = "c_copy"
     p = gdspy.Polygon(((0, 0), (1, 0), (0, 1)))
-    lbl = gdspy.Label('label', (0, 0))
+    lbl = gdspy.Label("label", (0, 0))
     c1 = gdspy.Cell(name)
     c1.add(p)
     c1.add(lbl)
@@ -88,10 +88,10 @@ def test_copy():
     c3 = c1.copy(name, True)
     assert c3.polygons == c1.polygons and c3.polygons is not c1.polygons
     assert c3.labels == c1.labels and c3.labels is not c1.labels
-    cref = gdspy.Cell('c_ref').add(gdspy.Rectangle((-1, -1), (-2, -2)))
+    cref = gdspy.Cell("c_ref").add(gdspy.Rectangle((-1, -1), (-2, -2)))
     c1.add(gdspy.CellReference(cref))
     c1.get_bounding_box()
-    c4 = c1.copy('c_copy_1', False, True)
+    c4 = c1.copy("c_copy_1", False, True)
     assert c4.polygons != c1.polygons
     assert c4.labels != c1.labels
     assert c1._bb_valid
@@ -113,7 +113,7 @@ def test_remove(tree):
 
 def test_area():
     gdspy.current_library = gdspy.GdsLibrary()
-    c = gdspy.Cell('c_area')
+    c = gdspy.Cell("c_area")
     c.add(gdspy.Rectangle((0, 0), (1, 1), layer=0))
     c.add(gdspy.Rectangle((0, 0), (1, 1), layer=1))
     c.add(gdspy.Rectangle((1, 1), (2, 2), layer=1))
@@ -219,7 +219,7 @@ def test_get_polygons2(tree):
 
 def test_get_polygons3():
     gdspy.current_library = gdspy.GdsLibrary()
-    c0 = gdspy.Cell('empty', False)
+    c0 = gdspy.Cell("empty", False)
     assert len(c0.get_polygons()) == 0
     assert len(c0.get_polygons(True)) == 0
     assert len(c0.get_polygons(False, -1)) == 0
