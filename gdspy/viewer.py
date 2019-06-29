@@ -26,6 +26,7 @@ if sys.version_info.major < 3:
     from builtins import str
 
     from future import standard_library
+
     standard_library.install_aliases()
 
 import os
@@ -37,14 +38,29 @@ import tkinter.colorchooser
 
 import gdspy
 
-_stipple = tuple('@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', '{:02d}.xbm'.format(n))
-                 for n in range(10))
-_icon_up = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'up.xbm')
-_icon_down = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'down.xbm')
-_icon_outline = '@' + os.path.join(os.path.dirname(gdspy.__file__), 'data', 'outline.xbm')
+_stipple = tuple(
+    "@" + os.path.join(os.path.dirname(gdspy.__file__), "data", "{:02d}.xbm".format(n))
+    for n in range(10)
+)
+_icon_up = "@" + os.path.join(os.path.dirname(gdspy.__file__), "data", "up.xbm")
+_icon_down = "@" + os.path.join(os.path.dirname(gdspy.__file__), "data", "down.xbm")
+_icon_outline = "@" + os.path.join(
+    os.path.dirname(gdspy.__file__), "data", "outline.xbm"
+)
 _invisible = 9
-_tkinteranchors = [tkinter.NW, tkinter.N, tkinter.NE, None, tkinter.W, tkinter.CENTER, tkinter.E,
-                   None, tkinter.SW, tkinter.S, tkinter.SE]
+_tkinteranchors = [
+    tkinter.NW,
+    tkinter.N,
+    tkinter.NE,
+    None,
+    tkinter.W,
+    tkinter.CENTER,
+    tkinter.E,
+    None,
+    tkinter.SW,
+    tkinter.S,
+    tkinter.SE,
+]
 
 
 class ColorDict(dict):
@@ -55,9 +71,18 @@ class ColorDict(dict):
     def __missing__(self, key):
         if self.default is None:
             layer, datatype = key
-            rgb = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([int(255 * c + 0.5) for c in
-                    colorsys.hsv_to_rgb((layer % 3) / 3.0 + (layer % 6 // 3) / 6.0 + (layer // 6) / 11.0,
-                                        1 - ( (layer + datatype) % 8) / 12.0, 1 - (datatype % 3) / 4.0)])
+            rgb = "#{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(
+                [
+                    int(255 * c + 0.5)
+                    for c in colorsys.hsv_to_rgb(
+                        (layer % 3) / 3.0
+                        + (layer % 6 // 3) / 6.0
+                        + (layer // 6) / 11.0,
+                        1 - ((layer + datatype) % 8) / 12.0,
+                        1 - (datatype % 3) / 4.0,
+                    )
+                ]
+            )
         else:
             rgb = self.default
         self[key] = rgb
@@ -143,8 +168,18 @@ class LayoutViewer(tkinter.Frame):
     ...                    color={(0, 1): '#000000'})
     """
 
-    def __init__(self, library=None, cells=None, hidden_types=[], depth=0, color={}, pattern={},
-                 background='#202020', width=800, height=600):
+    def __init__(
+        self,
+        library=None,
+        cells=None,
+        hidden_types=[],
+        depth=0,
+        color={},
+        pattern={},
+        background="#202020",
+        width=800,
+        height=600,
+    ):
         tkinter.Frame.__init__(self, None)
 
         if library is None:
@@ -156,7 +191,7 @@ class LayoutViewer(tkinter.Frame):
             self.cell_bb = dict([(s, None) for s in self.cells])
         else:
             if isinstance(cells, str) or isinstance(cells, gdspy.Cell):
-                cells = (cells, )
+                cells = (cells,)
             self.cells = {}
             cell_names = []
             self.cell_bb = {}
@@ -172,14 +207,14 @@ class LayoutViewer(tkinter.Frame):
 
         self.hidden_layers = hidden_types
 
-        self.color = ColorDict(color.get('default', None))
+        self.color = ColorDict(color.get("default", None))
         self.color.update(color)
 
-        self.pattern = PatternDict(pattern.get('default', None))
+        self.pattern = PatternDict(pattern.get("default", None))
         self.pattern.update(pattern)
 
         # Setup resizable window
-        self.grid(sticky='nsew')
+        self.grid(sticky="nsew")
         top = self.winfo_toplevel()
         top.rowconfigure(0, weight=1)
         top.columnconfigure(0, weight=1)
@@ -187,29 +222,47 @@ class LayoutViewer(tkinter.Frame):
         self.columnconfigure(0, weight=1)
 
         # Setup canvas
-        self.canvas = tkinter.Canvas(self, width=width, height=height, xscrollincrement=0, yscrollincrement=0)
-        self.canvas.grid(row=0, column=0, sticky='nsew')
+        self.canvas = tkinter.Canvas(
+            self, width=width, height=height, xscrollincrement=0, yscrollincrement=0
+        )
+        self.canvas.grid(row=0, column=0, sticky="nsew")
         self.canvas.configure(bg=background)
         bg = [int(c, 16) for c in (background[1:3], background[3:5], background[5:7])]
-        self.default_outline = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format([(0 if c > 127 else 255) for c in bg])
-        self.default_grey = '#{0[0]:02x}{0[1]:02x}{0[2]:02x}'.format(
-            [((c + 256) // 2 if c < 85 else (c // 2 if c > 171 else (255 if c > 127 else 0))) for c in bg])
+        self.default_outline = "#{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(
+            [(0 if c > 127 else 255) for c in bg]
+        )
+        self.default_grey = "#{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(
+            [
+                (
+                    (c + 256) // 2
+                    if c < 85
+                    else (c // 2 if c > 171 else (255 if c > 127 else 0))
+                )
+                for c in bg
+            ]
+        )
 
         # Setup scrollbars
-        self.xscroll = tkinter.Scrollbar(self, orient=tkinter.HORIZONTAL, command=self.canvas.xview)
-        self.xscroll.grid(row=1, column=0, sticky='ew')
-        self.yscroll = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, command=self.canvas.yview)
-        self.yscroll.grid(row=0, column=1, sticky='ns')
-        self.canvas['xscrollcommand'] = self.xscroll.set
-        self.canvas['yscrollcommand'] = self.yscroll.set
+        self.xscroll = tkinter.Scrollbar(
+            self, orient=tkinter.HORIZONTAL, command=self.canvas.xview
+        )
+        self.xscroll.grid(row=1, column=0, sticky="ew")
+        self.yscroll = tkinter.Scrollbar(
+            self, orient=tkinter.VERTICAL, command=self.canvas.yview
+        )
+        self.yscroll.grid(row=0, column=1, sticky="ns")
+        self.canvas["xscrollcommand"] = self.xscroll.set
+        self.canvas["yscrollcommand"] = self.yscroll.set
 
         # Setup toolbar
         self.frame = tkinter.Frame(self)
         self.frame.columnconfigure(6, weight=1)
-        self.frame.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky='ew')
+        self.frame.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky="ew")
 
         # Setup buttons
-        self.home = tkinter.Button(self.frame, text="Extents", command=self._update_canvas)
+        self.home = tkinter.Button(
+            self.frame, text="Extents", command=self._update_canvas
+        )
         self.zoom_in = tkinter.Button(self.frame, text="In", command=self._zoom_in)
         self.zoom_out = tkinter.Button(self.frame, text="Out", command=self._zoom_out)
         self.cell_menu = tkinter.OptionMenu(self.frame, self.current_cell, *cell_names)
@@ -221,73 +274,106 @@ class LayoutViewer(tkinter.Frame):
             to=128,
             increment=1,
             justify=tkinter.RIGHT,
-            width=3)
-        self.home.grid(row=0, column=0, sticky='w')
-        self.zoom_in.grid(row=0, column=1, sticky='w')
-        self.zoom_out.grid(row=0, column=2, sticky='w')
-        self.cell_menu.grid(row=0, column=3, sticky='w')
-        tkinter.Label(self.frame, text='Ref level:').grid(row=0, column=4, sticky='w')
-        self.depth_spin.grid(row=0, column=5, sticky='w')
+            width=3,
+        )
+        self.home.grid(row=0, column=0, sticky="w")
+        self.zoom_in.grid(row=0, column=1, sticky="w")
+        self.zoom_out.grid(row=0, column=2, sticky="w")
+        self.cell_menu.grid(row=0, column=3, sticky="w")
+        tkinter.Label(self.frame, text="Ref level:").grid(row=0, column=4, sticky="w")
+        self.depth_spin.grid(row=0, column=5, sticky="w")
         self.bind_all("<KeyPress-Home>", self._update_canvas)
         self.bind_all("<KeyPress-A>", self._update_canvas)
         self.bind_all("<KeyPress-a>", self._update_canvas)
 
         # Setup coordinates box
         self.coords = tkinter.Label(self.frame, text="0, 0")
-        self.coords.grid(row=0, column=6, sticky='e')
+        self.coords.grid(row=0, column=6, sticky="e")
 
         # Layers
         self.l_canvas = tkinter.Canvas(self)
-        self.l_canvas.grid(row=0, column=2, rowspan=3, sticky='nsew')
-        self.l_scroll = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, command=self.l_canvas.yview)
-        self.l_scroll.grid(row=0, column=3, rowspan=3, sticky='ns')
-        self.l_canvas['yscrollcommand'] = self.l_scroll.set
+        self.l_canvas.grid(row=0, column=2, rowspan=3, sticky="nsew")
+        self.l_scroll = tkinter.Scrollbar(
+            self, orient=tkinter.VERTICAL, command=self.l_canvas.yview
+        )
+        self.l_scroll.grid(row=0, column=3, rowspan=3, sticky="ns")
+        self.l_canvas["yscrollcommand"] = self.l_scroll.set
 
         # Change current cell
-        self.current_cell.trace_variable('w', self._update_canvas)
+        self.current_cell.trace_variable("w", self._update_canvas)
 
         # Update depth
-        self.depth_spin.bind('<FocusOut>', self._update_depth)
+        self.depth_spin.bind("<FocusOut>", self._update_depth)
 
         # Drag-scroll: button 2
-        self.canvas.bind('<Button-2>', lambda evt: self.canvas.scan_mark(evt.x, evt.y))
-        self.canvas.bind('<Motion>', self._mouse_move)
+        self.canvas.bind("<Button-2>", lambda evt: self.canvas.scan_mark(evt.x, evt.y))
+        self.canvas.bind("<Motion>", self._mouse_move)
 
         # Y scroll: scroll wheel
         self.canvas.bind(
-            '<MouseWheel>', lambda evt: self.canvas.yview(tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Button-4>', lambda evt: self.canvas.yview(tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Button-5>', lambda evt: self.canvas.yview(tkinter.SCROLL, 1, tkinter.UNITS))
+            "<MouseWheel>",
+            lambda evt: self.canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS
+            ),
+        )
+        self.canvas.bind(
+            "<Button-4>",
+            lambda evt: self.canvas.yview(tkinter.SCROLL, -1, tkinter.UNITS),
+        )
+        self.canvas.bind(
+            "<Button-5>",
+            lambda evt: self.canvas.yview(tkinter.SCROLL, 1, tkinter.UNITS),
+        )
 
         self.l_canvas.bind(
-            '<MouseWheel>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-4>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, -1, tkinter.UNITS))
-        self.l_canvas.bind('<Button-5>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, 1, tkinter.UNITS))
+            "<MouseWheel>",
+            lambda evt: self.l_canvas.yview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS
+            ),
+        )
+        self.l_canvas.bind(
+            "<Button-4>",
+            lambda evt: self.l_canvas.yview(tkinter.SCROLL, -1, tkinter.UNITS),
+        )
+        self.l_canvas.bind(
+            "<Button-5>",
+            lambda evt: self.l_canvas.yview(tkinter.SCROLL, 1, tkinter.UNITS),
+        )
 
         # X scroll: shift + scroll wheel
-        self.bind_all('<Shift-MouseWheel>', lambda evt: self.canvas.xview(tkinter.SCROLL, 1
-                                                                          if evt.delta < 0 else -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-4>', lambda evt: self.canvas.xview(tkinter.SCROLL, -1, tkinter.UNITS))
-        self.canvas.bind('<Shift-Button-5>', lambda evt: self.canvas.xview(tkinter.SCROLL, 1, tkinter.UNITS))
+        self.bind_all(
+            "<Shift-MouseWheel>",
+            lambda evt: self.canvas.xview(
+                tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS
+            ),
+        )
+        self.canvas.bind(
+            "<Shift-Button-4>",
+            lambda evt: self.canvas.xview(tkinter.SCROLL, -1, tkinter.UNITS),
+        )
+        self.canvas.bind(
+            "<Shift-Button-5>",
+            lambda evt: self.canvas.xview(tkinter.SCROLL, 1, tkinter.UNITS),
+        )
 
         # Object properties: double button 1
         # Zoom rectangle: drag button 1
         # Measure tool: button 1 (click + click, no drag)
-        self.canvas.bind('<Button-1>', self._zoom_rect_mark)
-        self.canvas.bind('<ButtonRelease-1>', self._mouse_btn_1)
-        self.canvas.bind('<Double-Button-1>', self._properties)
+        self.canvas.bind("<Button-1>", self._zoom_rect_mark)
+        self.canvas.bind("<ButtonRelease-1>", self._mouse_btn_1)
+        self.canvas.bind("<Double-Button-1>", self._properties)
 
         # Zoom: control + scroll wheel
-        self.bind_all('<Control-MouseWheel>', self._zoom)
-        self.canvas.bind('<Control-Button-4>', self._zoom)
-        self.canvas.bind('<Control-Button-5>', self._zoom)
+        self.bind_all("<Control-MouseWheel>", self._zoom)
+        self.canvas.bind("<Control-Button-4>", self._zoom)
+        self.canvas.bind("<Control-Button-5>", self._zoom)
 
         # Update the viewer
         self.shown_cell = None
         self.shown_depth = depth
         self.canvas_margins = None
         self._update_canvas()
-        self.master.title('Gdspy - Layout Viewer')
+        self.master.title("Gdspy - Layout Viewer")
         self.mainloop()
 
     def _update_depth(self, *args):
@@ -303,15 +389,17 @@ class LayoutViewer(tkinter.Frame):
 
     def _update_canvas(self, *args):
         if self.shown_cell is None:
-            width = float(self.canvas.cget('width'))
-            height = float(self.canvas.cget('height'))
+            width = float(self.canvas.cget("width"))
+            height = float(self.canvas.cget("height"))
         else:
             width = float(self.canvas.winfo_width()) - self.canvas_margins[0]
             height = float(self.canvas.winfo_height()) - self.canvas_margins[1]
         self.shown_cell = self.current_cell.get()
         if self.cell_bb[self.current_cell.get()] is None:
             bb = [1e300, 1e300, -1e300, -1e300]
-            pol_dict = self.cells[self.current_cell.get()].get_polygons(by_spec=True, depth=self.shown_depth)
+            pol_dict = self.cells[self.current_cell.get()].get_polygons(
+                by_spec=True, depth=self.shown_depth
+            )
             for pols in pol_dict.values():
                 for pol in pols:
                     bb[0] = min(bb[0], pol[:, 0].min())
@@ -322,7 +410,7 @@ class LayoutViewer(tkinter.Frame):
         else:
             bb = list(self.cell_bb[self.current_cell.get()])
         if bb[2] < bb[0]:
-            tkinter.messagebox.showwarning('Warning', 'The selected cell is empty.')
+            tkinter.messagebox.showwarning("Warning", "The selected cell is empty.")
             bb = [-1, -1, 1, 1]
         self.scale = ((bb[3] - bb[1]) / height, (bb[2] - bb[0]) / width)
         if self.scale[0] > self.scale[1]:
@@ -346,7 +434,10 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.zoom_rect = None
         if self.canvas_margins is None:
             self.update()
-            self.canvas_margins = (int(self.canvas.winfo_width()) - width, int(self.canvas.winfo_height()) - height)
+            self.canvas_margins = (
+                int(self.canvas.winfo_width()) - width,
+                int(self.canvas.winfo_height()) - height,
+            )
 
     def _update_data(self):
         self.canvas.delete(tkinter.ALL)
@@ -354,98 +445,185 @@ class LayoutViewer(tkinter.Frame):
         self.canvas.ruler = None
         self.canvas.x_rl = 0
         self.canvas.y_rl = 0
-        pol_dict = self.cells[self.current_cell.get()].get_polygons(by_spec=True, depth=self.shown_depth)
+        pol_dict = self.cells[self.current_cell.get()].get_polygons(
+            by_spec=True, depth=self.shown_depth
+        )
         lbl_dict = {}
-        for label in self.cells[self.current_cell.get()].get_labels(depth=self.shown_depth):
+        for label in self.cells[self.current_cell.get()].get_labels(
+            depth=self.shown_depth
+        ):
             key = (label.layer, label.texttype)
             if key in lbl_dict:
                 lbl_dict[key].append(label)
             else:
                 lbl_dict[key] = [label]
         layers = list(set(list(pol_dict.keys()) + list(lbl_dict.keys())))
-        layers.sort(reverse=True, key=lambda i: (-1, -1) if not isinstance(i, tuple) else i)
+        layers.sort(
+            reverse=True, key=lambda i: (-1, -1) if not isinstance(i, tuple) else i
+        )
         self.l_canvas_info = []
         pos = 0
         wid = None
         hei = None
-        bg = self.canvas['bg']
+        bg = self.canvas["bg"]
         self.l_canvas.configure(bg=bg)
         for i in layers:
             if i in self.hidden_layers:
-                state = 'hidden'
+                state = "hidden"
                 fg = self.default_grey
             else:
-                state = 'normal'
+                state = "normal"
                 fg = self.default_outline
             if isinstance(i, tuple):
-                lbl = (tkinter.Label(self, bitmap=_icon_outline if self.pattern[i] == _invisible else _stipple[self.pattern[i]],
-                                     bd=0, fg=self.color[i], bg=bg, anchor='c'),
-                       tkinter.Label(self, text='{0[0]}/{0[1]}'.format(i), bd=0, fg=fg, bg=bg, height=1, anchor='c', padx=8),
-                       tkinter.Label(self, bitmap=_icon_up, bd=0, fg=self.default_outline, bg=bg, anchor='c'),
-                       tkinter.Label(self, bitmap=_icon_down, bd=0, fg=self.default_outline, bg=bg, anchor='c'))
-                lbl[0].bind('<Button-1>', self._change_color(lbl[0], i))
-                lbl[0].bind('<Button-2>', self._change_pattern(lbl[0], i))
-                lbl[0].bind('<Button-3>', self._change_pattern(lbl[0], i))
-                lbl[1].bind('<Button-1>', self._change_visibility(lbl[1], i))
-                lbl[1].bind('<Button-2>', self._change_other_visibility(i))
-                lbl[1].bind('<Button-3>', self._change_other_visibility(i))
-                lbl[2].bind('<Button-1>', self._raise(i))
-                lbl[3].bind('<Button-1>', self._lower(i))
+                lbl = (
+                    tkinter.Label(
+                        self,
+                        bitmap=_icon_outline
+                        if self.pattern[i] == _invisible
+                        else _stipple[self.pattern[i]],
+                        bd=0,
+                        fg=self.color[i],
+                        bg=bg,
+                        anchor="c",
+                    ),
+                    tkinter.Label(
+                        self,
+                        text="{0[0]}/{0[1]}".format(i),
+                        bd=0,
+                        fg=fg,
+                        bg=bg,
+                        height=1,
+                        anchor="c",
+                        padx=8,
+                    ),
+                    tkinter.Label(
+                        self,
+                        bitmap=_icon_up,
+                        bd=0,
+                        fg=self.default_outline,
+                        bg=bg,
+                        anchor="c",
+                    ),
+                    tkinter.Label(
+                        self,
+                        bitmap=_icon_down,
+                        bd=0,
+                        fg=self.default_outline,
+                        bg=bg,
+                        anchor="c",
+                    ),
+                )
+                lbl[0].bind("<Button-1>", self._change_color(lbl[0], i))
+                lbl[0].bind("<Button-2>", self._change_pattern(lbl[0], i))
+                lbl[0].bind("<Button-3>", self._change_pattern(lbl[0], i))
+                lbl[1].bind("<Button-1>", self._change_visibility(lbl[1], i))
+                lbl[1].bind("<Button-2>", self._change_other_visibility(i))
+                lbl[1].bind("<Button-3>", self._change_other_visibility(i))
+                lbl[2].bind("<Button-1>", self._raise(i))
+                lbl[3].bind("<Button-1>", self._lower(i))
                 for l in lbl:
-                    l.bind('<MouseWheel>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS))
-                    l.bind('<Button-4>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, -1, tkinter.UNITS))
-                    l.bind('<Button-5>', lambda evt: self.l_canvas.yview(tkinter.SCROLL, 1, tkinter.UNITS))
+                    l.bind(
+                        "<MouseWheel>",
+                        lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1 if evt.delta < 0 else -1, tkinter.UNITS
+                        ),
+                    )
+                    l.bind(
+                        "<Button-4>",
+                        lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, -1, tkinter.UNITS
+                        ),
+                    )
+                    l.bind(
+                        "<Button-5>",
+                        lambda evt: self.l_canvas.yview(
+                            tkinter.SCROLL, 1, tkinter.UNITS
+                        ),
+                    )
                 if wid is None:
-                    lbl[1].configure(text='255/255')
+                    lbl[1].configure(text="255/255")
                     hei = max(lbl[0].winfo_reqheight(), lbl[1].winfo_reqheight())
                     wid = lbl[1].winfo_reqwidth()
-                    lbl[1].configure(text='{0[0]}/{0[1]}'.format(i))
-                ids = (self.l_canvas.create_window(0, pos, window=lbl[0], anchor='sw'),
-                       self.l_canvas.create_window(hei, pos, window=lbl[1], anchor='sw'),
-                       self.l_canvas.create_window(hei + wid, pos, window=lbl[2], anchor='sw'),
-                       self.l_canvas.create_window(2 * hei + wid, pos, window=lbl[3], anchor='sw'))
+                    lbl[1].configure(text="{0[0]}/{0[1]}".format(i))
+                ids = (
+                    self.l_canvas.create_window(0, pos, window=lbl[0], anchor="sw"),
+                    self.l_canvas.create_window(hei, pos, window=lbl[1], anchor="sw"),
+                    self.l_canvas.create_window(
+                        hei + wid, pos, window=lbl[2], anchor="sw"
+                    ),
+                    self.l_canvas.create_window(
+                        2 * hei + wid, pos, window=lbl[3], anchor="sw"
+                    ),
+                )
                 self.l_canvas_info.append((i, ids, lbl))
                 pos -= hei
             if i in pol_dict:
                 if not isinstance(i, tuple):
                     for pol in pol_dict[i]:
-                        self.canvas.create_polygon(*list((numpy.array((1, -1)) * pol / self.scale).flatten()),
-                                                   fill='', outline=self.default_outline,
-                                                   activeoutline=self.default_outline, activewidth=2,
-                                                   tag=('L' + str(i), 'V' + str(pol.shape[0])),
-                                                   state=state, dash=(8, 8))
-                        self.canvas.create_text(pol[:, 0].mean() / self.scale, pol[:, 1].mean() / -self.scale,
-                                                text=i, anchor=tkinter.CENTER, fill=self.default_outline,
-                                                tag=('L' + str(i), 'TEXT'))
+                        self.canvas.create_polygon(
+                            *list((numpy.array((1, -1)) * pol / self.scale).flatten()),
+                            fill="",
+                            outline=self.default_outline,
+                            activeoutline=self.default_outline,
+                            activewidth=2,
+                            tag=("L" + str(i), "V" + str(pol.shape[0])),
+                            state=state,
+                            dash=(8, 8)
+                        )
+                        self.canvas.create_text(
+                            pol[:, 0].mean() / self.scale,
+                            pol[:, 1].mean() / -self.scale,
+                            text=i,
+                            anchor=tkinter.CENTER,
+                            fill=self.default_outline,
+                            tag=("L" + str(i), "TEXT"),
+                        )
                 else:
                     for pol in pol_dict[i]:
-                        self.canvas.create_polygon(*list((numpy.array((1, -1)) * pol / self.scale).flatten()),
-                                                   fill=self.color[i], stipple=_stipple[self.pattern[i]],
-                                                   offset='{},{}'.format(*numpy.random.randint(16, size=2)),
-                                                   outline=self.color[i], activeoutline=self.default_outline,
-                                                   activewidth=2, tag=('L' + str(i), 'V' + str(pol.shape[0])),
-                                                   state=state)
+                        self.canvas.create_polygon(
+                            *list((numpy.array((1, -1)) * pol / self.scale).flatten()),
+                            fill=self.color[i],
+                            stipple=_stipple[self.pattern[i]],
+                            offset="{},{}".format(*numpy.random.randint(16, size=2)),
+                            outline=self.color[i],
+                            activeoutline=self.default_outline,
+                            activewidth=2,
+                            tag=("L" + str(i), "V" + str(pol.shape[0])),
+                            state=state
+                        )
             if i in lbl_dict:
                 for label in lbl_dict[i]:
-                    self.canvas.create_text(label.position[0] / self.scale, label.position[1] / -self.scale,
-                                            text=label.text, anchor=_tkinteranchors[label.anchor],
-                                            fill=self.color[i], activefill=self.default_outline,
-                                            tag=('L' + str(i), 'TEXT'), state=state)
+                    self.canvas.create_text(
+                        label.position[0] / self.scale,
+                        label.position[1] / -self.scale,
+                        text=label.text,
+                        anchor=_tkinteranchors[label.anchor],
+                        fill=self.color[i],
+                        activefill=self.default_outline,
+                        tag=("L" + str(i), "TEXT"),
+                        state=state,
+                    )
         if (wid is None) or (hei is None) or (pos is None):
             pos = -12
             hei = 12
             wid = 12
-        self.l_canvas.configure(width=3 * hei + wid, scrollregion=(0, pos, 3 * hei + wid, 0), yscrollincrement=hei)
+        self.l_canvas.configure(
+            width=3 * hei + wid,
+            scrollregion=(0, pos, 3 * hei + wid, 0),
+            yscrollincrement=hei,
+        )
 
     def _change_color(self, lbl, layer):
         def func(*args):
-            rgb, color = tkinter.colorchooser.askcolor(self.color[layer], title='Select color')
+            rgb, color = tkinter.colorchooser.askcolor(
+                self.color[layer], title="Select color"
+            )
             if color is not None:
                 self.color[layer] = color
                 lbl.configure(fg=color)
-                for i in self.canvas.find_withtag('L' + str(layer)):
+                for i in self.canvas.find_withtag("L" + str(layer)):
                     self.canvas.itemconfigure(i, fill=color)
-                    if layer[0] >= 0 and 'TEXT' not in self.canvas.gettags(i):
+                    if layer[0] >= 0 and "TEXT" not in self.canvas.gettags(i):
                         self.canvas.itemconfigure(i, outline=color)
 
         return func
@@ -454,23 +632,30 @@ class LayoutViewer(tkinter.Frame):
         def func(*args):
             pattern = []
             dlg = tkinter.Toplevel()
-            dlg.title('Select pattern')
+            dlg.title("Select pattern")
             dlg.resizable(False, False)
             for i in range(10):
-                choice = tkinter.Button(dlg, bitmap=_stipple[i],
-                                        command=(lambda x: (lambda: pattern.append(x) or dlg.destroy()))(i))
+                choice = tkinter.Button(
+                    dlg,
+                    bitmap=_stipple[i],
+                    command=(lambda x: (lambda: pattern.append(x) or dlg.destroy()))(i),
+                )
                 choice.grid(row=0, column=i, padx=3, pady=3)
-            choice = tkinter.Button(dlg, text='Cancel', command=dlg.destroy)
-            choice.grid(row=1, column=0, columnspan=10, padx=3, pady=3, sticky='e')
+            choice = tkinter.Button(dlg, text="Cancel", command=dlg.destroy)
+            choice.grid(row=1, column=0, columnspan=10, padx=3, pady=3, sticky="e")
             dlg.focus_set()
             dlg.wait_visibility()
             dlg.grab_set()
             dlg.wait_window(dlg)
             if len(pattern) > 0:
                 self.pattern[layer] = pattern[0]
-                lbl.configure(bitmap=_icon_outline if pattern[0] == _invisible else _stipple[pattern[0]])
-                for i in self.canvas.find_withtag('L' + str(layer)):
-                    if 'TEXT' not in self.canvas.gettags(i):
+                lbl.configure(
+                    bitmap=_icon_outline
+                    if pattern[0] == _invisible
+                    else _stipple[pattern[0]]
+                )
+                for i in self.canvas.find_withtag("L" + str(layer)):
+                    if "TEXT" not in self.canvas.gettags(i):
                         self.canvas.itemconfigure(i, stipple=_stipple[pattern[0]])
 
         return func
@@ -480,13 +665,13 @@ class LayoutViewer(tkinter.Frame):
             if layer in self.hidden_layers:
                 self.hidden_layers.remove(layer)
                 lbl.configure(fg=self.default_outline)
-                for j in self.canvas.find_withtag('L' + str(layer)):
-                    self.canvas.itemconfigure(j, state='normal')
+                for j in self.canvas.find_withtag("L" + str(layer)):
+                    self.canvas.itemconfigure(j, state="normal")
             else:
                 self.hidden_layers.append(layer)
                 lbl.configure(fg=self.default_grey)
-                for j in self.canvas.find_withtag('L' + str(layer)):
-                    self.canvas.itemconfigure(j, state='hidden')
+                for j in self.canvas.find_withtag("L" + str(layer)):
+                    self.canvas.itemconfigure(j, state="hidden")
 
         return func
 
@@ -501,13 +686,13 @@ class LayoutViewer(tkinter.Frame):
                     if unhide and (other in self.hidden_layers):
                         self.hidden_layers.remove(other)
                         lbl[1].configure(fg=self.default_outline)
-                        for j in self.canvas.find_withtag('L' + str(other)):
-                            self.canvas.itemconfigure(j, state='normal')
+                        for j in self.canvas.find_withtag("L" + str(other)):
+                            self.canvas.itemconfigure(j, state="normal")
                     elif not (unhide or (other in self.hidden_layers)):
                         self.hidden_layers.append(other)
                         lbl[1].configure(fg=self.default_grey)
-                        for j in self.canvas.find_withtag('L' + str(other)):
-                            self.canvas.itemconfigure(j, state='hidden')
+                        for j in self.canvas.find_withtag("L" + str(other)):
+                            self.canvas.itemconfigure(j, state="hidden")
 
         return func
 
@@ -517,17 +702,19 @@ class LayoutViewer(tkinter.Frame):
             while self.l_canvas_info[idx][0] != layer:
                 idx += 1
             if idx < len(self.l_canvas_info) - 1:
-                hei = int(self.l_canvas['yscrollincrement'])
+                hei = int(self.l_canvas["yscrollincrement"])
                 under, idu, _ = self.l_canvas_info[idx]
                 above, ida, _ = self.l_canvas_info[idx + 1]
-                self.canvas.tag_raise('L' + str(under), 'L' + str(above))
+                self.canvas.tag_raise("L" + str(under), "L" + str(above))
                 for i in idu:
                     self.l_canvas.move(i, 0, -hei)
                 for i in ida:
                     self.l_canvas.move(i, 0, hei)
                 self.l_canvas.yview_scroll(-1, tkinter.UNITS)
-                self.l_canvas_info[idx], self.l_canvas_info[idx + 1] = \
-                    self.l_canvas_info[idx + 1], self.l_canvas_info[idx]
+                self.l_canvas_info[idx], self.l_canvas_info[idx + 1] = (
+                    self.l_canvas_info[idx + 1],
+                    self.l_canvas_info[idx],
+                )
 
         return func
 
@@ -537,17 +724,19 @@ class LayoutViewer(tkinter.Frame):
             while self.l_canvas_info[idx][0] != layer:
                 idx += 1
             if idx > 0:
-                hei = int(self.l_canvas['yscrollincrement'])
+                hei = int(self.l_canvas["yscrollincrement"])
                 under, idu, _ = self.l_canvas_info[idx - 1]
                 above, ida, _ = self.l_canvas_info[idx]
-                self.canvas.tag_raise('L' + str(under), 'L' + str(above))
+                self.canvas.tag_raise("L" + str(under), "L" + str(above))
                 for i in idu:
                     self.l_canvas.move(i, 0, -hei)
                 for i in ida:
                     self.l_canvas.move(i, 0, hei)
                 self.l_canvas.yview_scroll(1, tkinter.UNITS)
-                self.l_canvas_info[idx], self.l_canvas_info[idx - 1] = \
-                    self.l_canvas_info[idx - 1], self.l_canvas_info[idx]
+                self.l_canvas_info[idx], self.l_canvas_info[idx - 1] = (
+                    self.l_canvas_info[idx - 1],
+                    self.l_canvas_info[idx],
+                )
 
         return func
 
@@ -555,12 +744,20 @@ class LayoutViewer(tkinter.Frame):
         x = self.canvas.canvasx(evt.x)
         y = self.canvas.canvasy(evt.y)
         if self.canvas.ruler is None:
-            self.coords.configure(text='{0:g}, {1:g}'.format(x * self.scale, -y * self.scale))
+            self.coords.configure(
+                text="{0:g}, {1:g}".format(x * self.scale, -y * self.scale)
+            )
         else:
-            self.canvas.coords(self.canvas.ruler, self.canvas.x_rl, self.canvas.y_rl, x, y)
+            self.canvas.coords(
+                self.canvas.ruler, self.canvas.x_rl, self.canvas.y_rl, x, y
+            )
             dx = (x - self.canvas.x_rl) * self.scale
             dy = (self.canvas.y_rl - y) * self.scale
-            self.coords.configure(text='Distance: {0:g} | dx = {1:g} | dy = {2:g}'.format((dx**2 + dy**2)**0.5, dx, dy))
+            self.coords.configure(
+                text="Distance: {0:g} | dx = {1:g} | dy = {2:g}".format(
+                    (dx ** 2 + dy ** 2) ** 0.5, dx, dy
+                )
+            )
         if int(evt.state) & 0x0200:
             if int(evt.state) & 0x0004:
                 self.canvas.scan_dragto(evt.x, evt.y, 10)
@@ -568,10 +765,16 @@ class LayoutViewer(tkinter.Frame):
                 self.canvas.scan_dragto(evt.x, evt.y, 1)
         elif int(evt.state) & 0x0100:
             if self.canvas.zoom_rect is None:
-                self.canvas.zoom_rect = self.canvas.create_rectangle(self.canvas.x_zr, self.canvas.y_zr,
-                                                                     self.canvas.x_zr, self.canvas.y_zr,
-                                                                     outline='#DDD')
-            self.canvas.coords(self.canvas.zoom_rect, self.canvas.x_zr, self.canvas.y_zr, x, y)
+                self.canvas.zoom_rect = self.canvas.create_rectangle(
+                    self.canvas.x_zr,
+                    self.canvas.y_zr,
+                    self.canvas.x_zr,
+                    self.canvas.y_zr,
+                    outline="#DDD",
+                )
+            self.canvas.coords(
+                self.canvas.zoom_rect, self.canvas.x_zr, self.canvas.y_zr, x, y
+            )
 
     def _zoom(self, evt):
         if evt.num == 4:
@@ -590,7 +793,7 @@ class LayoutViewer(tkinter.Frame):
             w = (bb[2] - bb[0]) * 1.2
             h = (bb[3] - bb[1]) * 1.2
             bb = (bb[0] - w, bb[1] - h, bb[2] + w, bb[3] + h)
-            self.canvas['scrollregion'] = bb
+            self.canvas["scrollregion"] = bb
             self.canvas.xview(tkinter.MOVETO, (x0 - bb[0]) / (bb[2] - bb[0]))
             self.canvas.yview(tkinter.MOVETO, (y0 - bb[1]) / (bb[3] - bb[1]))
 
@@ -604,11 +807,17 @@ class LayoutViewer(tkinter.Frame):
         w = (bb[2] - bb[0]) * 1.2
         h = (bb[3] - bb[1]) * 1.2
         bb = (bb[0] - w, bb[1] - h, bb[2] + w, bb[3] + h)
-        self.canvas['scrollregion'] = bb
+        self.canvas["scrollregion"] = bb
         x0 = self.xscroll.get()
-        x0 = 0.5 * (x0[1] + x0[0]) - 0.5 * ((float(self.canvas.winfo_width()) - self.canvas_margins[0]) / (bb[2] - bb[0]))
+        x0 = 0.5 * (x0[1] + x0[0]) - 0.5 * (
+            (float(self.canvas.winfo_width()) - self.canvas_margins[0])
+            / (bb[2] - bb[0])
+        )
         y0 = self.yscroll.get()
-        y0 = 0.5 * (y0[1] + y0[0]) - 0.5 * ((float(self.canvas.winfo_height()) - self.canvas_margins[1]) / (bb[3] - bb[1]))
+        y0 = 0.5 * (y0[1] + y0[0]) - 0.5 * (
+            (float(self.canvas.winfo_height()) - self.canvas_margins[1])
+            / (bb[3] - bb[1])
+        )
         self.canvas.xview(tkinter.MOVETO, x0)
         self.canvas.yview(tkinter.MOVETO, y0)
 
@@ -622,11 +831,17 @@ class LayoutViewer(tkinter.Frame):
         w = (bb[2] - bb[0]) * 1.2
         h = (bb[3] - bb[1]) * 1.2
         bb = (bb[0] - w, bb[1] - h, bb[2] + w, bb[3] + h)
-        self.canvas['scrollregion'] = bb
+        self.canvas["scrollregion"] = bb
         x0 = self.xscroll.get()
-        x0 = 0.5 * (x0[1] + x0[0]) - 0.5 * ((float(self.canvas.winfo_width()) - self.canvas_margins[0]) / (bb[2] - bb[0]))
+        x0 = 0.5 * (x0[1] + x0[0]) - 0.5 * (
+            (float(self.canvas.winfo_width()) - self.canvas_margins[0])
+            / (bb[2] - bb[0])
+        )
         y0 = self.yscroll.get()
-        y0 = 0.5 * (y0[1] + y0[0]) - 0.5 * ((float(self.canvas.winfo_height()) - self.canvas_margins[1]) / (bb[3] - bb[1]))
+        y0 = 0.5 * (y0[1] + y0[0]) - 0.5 * (
+            (float(self.canvas.winfo_height()) - self.canvas_margins[1])
+            / (bb[3] - bb[1])
+        )
         self.canvas.xview(tkinter.MOVETO, x0)
         self.canvas.yview(tkinter.MOVETO, y0)
 
@@ -639,8 +854,15 @@ class LayoutViewer(tkinter.Frame):
             if self.canvas.ruler is None:
                 x0 = self.canvas.canvasx(evt.x)
                 y0 = self.canvas.canvasy(evt.y)
-                self.canvas.ruler = self.canvas.create_line(x0, y0, x0, y0, arrow=tkinter.BOTH,
-                                                            fill=self.default_outline, width=2)
+                self.canvas.ruler = self.canvas.create_line(
+                    x0,
+                    y0,
+                    x0,
+                    y0,
+                    arrow=tkinter.BOTH,
+                    fill=self.default_outline,
+                    width=2,
+                )
                 self.canvas.x_rl = x0
                 self.canvas.y_rl = y0
             else:
@@ -676,7 +898,7 @@ class LayoutViewer(tkinter.Frame):
                     w = (bb[2] - bb[0]) * 1.5
                     h = (bb[3] - bb[1]) * 1.5
                     bb = (bb[0] - w, bb[1] - h, bb[2] + w, bb[3] + h)
-                    self.canvas['scrollregion'] = bb
+                    self.canvas["scrollregion"] = bb
                     self.canvas.xview(tkinter.MOVETO, (x0 - bb[0]) / (bb[2] - bb[0]))
                     self.canvas.yview(tkinter.MOVETO, (y0 - bb[1]) / (bb[3] - bb[1]))
 
@@ -684,10 +906,23 @@ class LayoutViewer(tkinter.Frame):
         if self.canvas.ruler is not None:
             self.canvas.delete(self.canvas.ruler)
             self.canvas.ruler = -1
-        i = self.canvas.find_closest(self.canvas.canvasx(evt.x), self.canvas.canvasy(evt.y))
+        i = self.canvas.find_closest(
+            self.canvas.canvasx(evt.x), self.canvas.canvasy(evt.y)
+        )
         bb = self.canvas.bbox(i)
         if bb is not None:
-            bb = (bb[0] * self.scale, -bb[3] * self.scale, bb[2] * self.scale, -bb[1] * self.scale)
+            bb = (
+                bb[0] * self.scale,
+                -bb[3] * self.scale,
+                bb[2] * self.scale,
+                -bb[1] * self.scale,
+            )
             tags = self.canvas.gettags(i)
-            if 'TEXT' not in tags:
-                tkinter.messagebox.showinfo('Element information', 'Layer/datatpe: {0}\nVertices: {1}\nApproximate bounding box:\n({2[0]:g}, {2[1]:g}) - ({2[2]:g}, {2[3]:g})'.format(tags[0][1:], tags[1][1:], bb), parent=self.canvas)
+            if "TEXT" not in tags:
+                tkinter.messagebox.showinfo(
+                    "Element information",
+                    "Layer/datatpe: {0}\nVertices: {1}\nApproximate bounding box:\n({2[0]:g}, {2[1]:g}) - ({2[2]:g}, {2[3]:g})".format(
+                        tags[0][1:], tags[1][1:], bb
+                    ),
+                    parent=self.canvas,
+                )

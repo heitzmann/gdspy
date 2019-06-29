@@ -14,6 +14,7 @@ import numpy
 
 from gdspy import _func_bezier, _hobby, _zero
 
+
 class Curve(object):
     """
     Generation of curves loosely based on SVG paths.
@@ -68,10 +69,12 @@ class Curve(object):
     >>> curve = gdspy.Curve(3, 4).H(1).q(0.5, 1, 2j).L(2 + 3j, 2, 2)
     >>> pol = gdspy.Polygon(curve.get_points())
     """
-    __slots__ = 'points', 'tol', 'last_c', 'last_q'
+
+    __slots__ = "points", "tol", "last_c", "last_q"
+
     def __init__(self, x, y=0, tolerance=0.01):
         self.last_c = self.last_q = None
-        self.tol = tolerance**2
+        self.tol = tolerance ** 2
         if isinstance(x, complex):
             self.points = [numpy.array((x.real, x.imag))]
         else:
@@ -86,7 +89,7 @@ class Curve(object):
         out : Numpy array[N, 2]
             Vertices of the polygon.
         """
-        delta = (self.points[-1] - self.points[0])**2
+        delta = (self.points[-1] - self.points[0]) ** 2
         if delta[0] + delta[1] < self.tol:
             return numpy.array(self.points[:-1])
         return numpy.array(self.points)
@@ -243,14 +246,20 @@ class Curve(object):
             This curve.
         """
         self.last_c = self.last_q = None
-        if hasattr(radius, '__iter__'):
+        if hasattr(radius, "__iter__"):
             rx, ry = radius
             radius = max(radius)
         else:
             rx = ry = radius
         full_angle = abs(final_angle - initial_angle)
-        number_of_points = max(3, 1 + int(0.5 * full_angle / numpy.arccos(1 - self.tol**0.5 / radius) + 0.5))
-        angles = numpy.linspace(initial_angle - rotation, final_angle - rotation, number_of_points)
+        number_of_points = max(
+            3,
+            1
+            + int(0.5 * full_angle / numpy.arccos(1 - self.tol ** 0.5 / radius) + 0.5),
+        )
+        angles = numpy.linspace(
+            initial_angle - rotation, final_angle - rotation, number_of_points
+        )
         pts = numpy.vstack((rx * numpy.cos(angles), ry * numpy.sin(angles))).T
         if rotation != 0:
             rot = numpy.empty_like(pts)
@@ -299,10 +308,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -349,10 +358,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -403,10 +412,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -460,10 +469,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -506,10 +515,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -555,10 +564,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -606,10 +615,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -660,10 +669,10 @@ class Curve(object):
             fu = [f(u) for u in uu]
             iu = 1
             while iu < len(fu):
-                test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+                test_u = 0.5 * (uu[iu - 1] + uu[iu])
                 test_pt = f(test_u)
-                test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-                if test_err[0]**2 + test_err[1]**2 > self.tol:
+                test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+                if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                     uu.insert(iu, test_u)
                     fu.insert(iu, test_pt)
                 else:
@@ -700,14 +709,14 @@ class Curve(object):
         ctrl = numpy.array(ctrl)
         f = _func_bezier(ctrl)
         uu = numpy.linspace(-1, 1, ctrl.shape[0] + 1)
-        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu)**0.8))
+        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu) ** 0.8))
         fu = [f(u) for u in uu]
         iu = 1
         while iu < len(fu):
-            test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+            test_u = 0.5 * (uu[iu - 1] + uu[iu])
             test_pt = f(test_u)
-            test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-            if test_err[0]**2 + test_err[1]**2 > self.tol:
+            test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+            if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                 uu.insert(iu, test_u)
                 fu.insert(iu, test_pt)
             else:
@@ -745,14 +754,14 @@ class Curve(object):
         ctrl = numpy.array(ctrl)
         f = _func_bezier(ctrl)
         uu = numpy.linspace(-1, 1, ctrl.shape[0] + 1)
-        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu)**0.8))
+        uu = list(0.5 * (1 + numpy.sign(uu) * numpy.abs(uu) ** 0.8))
         fu = [f(u) for u in uu]
         iu = 1
         while iu < len(fu):
-            test_u = 0.5 * (uu[iu - 1] +  uu[iu])
+            test_u = 0.5 * (uu[iu - 1] + uu[iu])
             test_pt = f(test_u)
-            test_err = 0.5 * (fu[iu - 1] +  fu[iu]) - test_pt
-            if test_err[0]**2 + test_err[1]**2 > self.tol:
+            test_err = 0.5 * (fu[iu - 1] + fu[iu]) - test_pt
+            if test_err[0] ** 2 + test_err[1] ** 2 > self.tol:
                 uu.insert(iu, test_u)
                 fu.insert(iu, test_pt)
             else:
@@ -760,7 +769,16 @@ class Curve(object):
         self.points.extend(xy for xy in fu[1:])
         return self
 
-    def I(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
+    def I(
+        self,
+        points,
+        angles=None,
+        curl_start=1,
+        curl_end=1,
+        t_in=1,
+        t_out=1,
+        cycle=False,
+    ):
         """
         Add a smooth interpolating curve through the given points.
 
@@ -817,13 +835,34 @@ class Curve(object):
         pts = numpy.vstack((self.points[-1:], points))
         cta, ctb = _hobby(pts, angles, curl_start, curl_end, t_in, t_out, cycle)
         args = []
-        args.extend(x for i in range(pts.shape[0] - 1) for x in
-                    [cta[i, 0], cta[i, 1], ctb[i, 0], ctb[i, 1], pts[i + 1, 0], pts[i + 1, 1]])
+        args.extend(
+            x
+            for i in range(pts.shape[0] - 1)
+            for x in [
+                cta[i, 0],
+                cta[i, 1],
+                ctb[i, 0],
+                ctb[i, 1],
+                pts[i + 1, 0],
+                pts[i + 1, 1],
+            ]
+        )
         if cycle:
-            args.extend([cta[-1, 0], cta[-1, 1], ctb[-1, 0], ctb[-1, 1], pts[0, 0], pts[0, 1]])
+            args.extend(
+                [cta[-1, 0], cta[-1, 1], ctb[-1, 0], ctb[-1, 1], pts[0, 0], pts[0, 1]]
+            )
         return self.C(*args)
 
-    def i(self, points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
+    def i(
+        self,
+        points,
+        angles=None,
+        curl_start=1,
+        curl_end=1,
+        t_in=1,
+        t_out=1,
+        cycle=False,
+    ):
         """
         Add a smooth interpolating curve through the given points.
 
@@ -881,8 +920,20 @@ class Curve(object):
         pts = numpy.vstack((_zero.reshape((1, 2)), points)) + self.points[-1]
         cta, ctb = _hobby(pts, angles, curl_start, curl_end, t_in, t_out, cycle)
         args = []
-        args.extend(x for i in range(pts.shape[0] - 1) for x in
-                    [cta[i, 0], cta[i, 1], ctb[i, 0], ctb[i, 1], pts[i + 1, 0], pts[i + 1, 1]])
+        args.extend(
+            x
+            for i in range(pts.shape[0] - 1)
+            for x in [
+                cta[i, 0],
+                cta[i, 1],
+                ctb[i, 0],
+                ctb[i, 1],
+                pts[i + 1, 0],
+                pts[i + 1, 1],
+            ]
+        )
         if cycle:
-            args.extend([cta[-1, 0], cta[-1, 1], ctb[-1, 0], ctb[-1, 1], pts[0, 0], pts[0, 1]])
+            args.extend(
+                [cta[-1, 0], cta[-1, 1], ctb[-1, 0], ctb[-1, 1], pts[0, 0], pts[0, 1]]
+            )
         return self.C(*args)
