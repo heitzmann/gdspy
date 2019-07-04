@@ -50,6 +50,7 @@ import itertools
 import numpy
 import copy as libcopy
 import hashlib
+import colorsys
 
 from gdspy import clipper
 
@@ -762,6 +763,22 @@ class PolygonSet(object):
                 data.append(xy[0].tostring())
             data.append(struct.pack(">2H", 4, 0x1100))
         return b"".join(data)
+
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        for p, l, d in zip(self.polygons, self.layers, self.datatypes):
+            out.write(f'<polygon class="l{l}d{d}" points="')
+            out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+            out.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -4035,6 +4052,23 @@ class FlexPath(object):
             data.append(struct.pack(">2H", 4, 0x1100))
         return b"".join(data)
 
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        for (l, d), polygons in self.get_polygons(True).items():
+            for p in polygons:
+                out.write(f'<polygon class="l{l}d{d}" points="')
+                out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                out.write('"/>\n')
+
     def area(self, by_spec=False):
         """
         Calculate the total area of this object.
@@ -5136,6 +5170,23 @@ class RobustPath(object):
                 data.append(points.tostring())
             data.append(struct.pack(">2H", 4, 0x1100))
         return b"".join(data)
+
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        for (l, d), polygons in self.get_polygons(True).items():
+            for p in polygons:
+                out.write(f'<polygon class="l{l}d{d}" points="')
+                out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                out.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -6566,6 +6617,133 @@ class Cell(object):
         self.references = []
         return self
 
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        out.write(f'<g id="{self.name}">\n')
+        for polygon in self.polygons:
+            polygon.to_svg(out, scaling)
+        for path in self.paths:
+            path.to_svg(out, scaling)
+        for label in self.labels:
+            label.to_svg(out, scaling)
+        for reference in self.references:
+            reference.to_svg(out, scaling)
+        out.write("</g>\n")
+
+    def write_svg(self, outfile, scaling=20, style=None, background="#222", pad="5%"):
+        """
+        Export this cell to an SVG file.
+
+        The dimensions actually written on the GDSII file will be the
+        dimensions of the objects created times the ratio
+        unit/precision.  For example, if a circle with radius 1.5 is
+        created and we set `GdsLibrary.unit` to 1.0e-6 (1 um) and
+        `GdsLibrary.precision` to 1.0e-9` (1 nm), the radius of the
+        circle will be 1.5 um and the GDSII file will contain the
+        dimension 1500 nm.
+
+        Parameters
+        ----------
+        outfile : file or string
+            The file (or path) where the GDSII stream will be written.
+            It must be opened for writing operations in binary format.
+        scaling : number
+            Scaling factor for the geometry.
+        style : dict or None
+            Dictionary indexed by (layer, datatype) tuples.  Entries
+            must be dictionaries with CSS key-value pairs for the
+            presentation attributes of the geometry in that layer and
+            datatype.
+        background : string or None
+            String specifying the background color.  If None, no
+            background is inserted.
+        pad : number or string
+            Background margin around the cell bounding box.  It can
+            be specified as a percentage of the width or height,
+            whichever is the largest.
+
+        Examples
+        --------
+        >>> cell = gdspy.Cell('MAIN')
+        >>> cell.add(gdspy.Rectangle((0, 0), (10, 10), layer=1))
+        >>> # Define fill and stroke for layer 1 and datatype 0
+        >>> mystyle = {(1, 0): {'fill': '#CC00FF',
+                                'stroke': 'black'}}
+        >>> cell.write_svg('main.svg', style=mystyle)
+        """
+        bb = self.get_bounding_box()
+        if bb is None:
+            return
+        if isinstance(outfile, basestring):
+            outfile = open(outfile, "w")
+            close = True
+        else:
+            close = False
+        if style is None:
+            style = {}
+        for l in self.get_layers():
+            for d in self.get_datatypes():
+                if (l, d) not in style:
+                    c = "rgb({}, {}, {})".format(
+                        *[
+                            int(255 * c + 0.5)
+                            for c in colorsys.hsv_to_rgb(
+                                (l % 3) / 3.0 + (l % 6 // 3) / 6.0 + (l // 6) / 11.0,
+                                1 - ((l + d) % 8) / 12.0,
+                                1 - (d % 3) / 4.0,
+                            )
+                        ]
+                    )
+                    style[(l, d)] = {"stroke": c, "fill": c, "fill-opacity": "0.5"}
+        bb *= scaling
+        x = bb[0, 0]
+        y = bb[0, 1]
+        w = bb[1, 0] - bb[0, 0]
+        h = bb[1, 1] - bb[0, 1]
+        if background is not None:
+            if isinstance(pad, basestring):
+                if pad[-1] == "%":
+                    pad = max(w, h) * float(pad[:-1]) / 100
+                else:
+                    pad = float(pad)
+            x -= pad
+            y -= pad
+            w += 2 * pad
+            h += 2 * pad
+        outfile.write(
+            f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="{w}" height="{h}" viewBox="{x} {y} {w} {h}" transform="scale(1 -1)">
+<defs>
+<style type="text/css">
+"""
+        )
+        for (l, d), sd in style.items():
+            outfile.write(f".l{l}d{d} {{")
+            outfile.write(" ".join(f"{k}: {v};" for k, v in sd.items()))
+            outfile.write("}\n")
+        outfile.write("</style>\n")
+        for cell in self.get_dependencies(True):
+            cell.to_svg(outfile, scaling)
+        outfile.write("</defs>\n")
+        if background is not None:
+            outfile.write(
+                f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{background}" stroke="none"/>\n'
+            )
+        self.to_svg(outfile, scaling)
+        outfile.write("</svg>")
+        if close:
+            outfile.close()
+
 
 class CellReference(object):
     """
@@ -6685,6 +6863,30 @@ class CellReference(object):
             4,
             0x1100,
         )
+
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        if isinstance(self.ref_cell, Cell):
+            name = self.ref_cell.name
+        else:
+            name = self.ref_cell
+        transform = f"translate({scaling * self.origin[0]} {scaling * self.origin[1]})"
+        if self.rotation is not None:
+            transform += f" rotate({self.rotation})"
+        if self.x_reflection:
+            transform += " scale(1 -1)"
+        if self.magnification is not None:
+            transform += f" scale({self.magnification})"
+        out.write(f'<use transform="{transform}" xlink:href="#{name}"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -7154,6 +7356,35 @@ class CellArray(object):
             4,
             0x1100,
         )
+
+    def to_svg(self, out, scaling):
+        """
+        Return an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        if isinstance(self.ref_cell, Cell):
+            name = self.ref_cell.name
+        else:
+            name = self.ref_cell
+        transform = f"translate({scaling * self.origin[0]} {scaling * self.origin[1]})"
+        if self.rotation is not None:
+            transform += f" rotate({self.rotation})"
+        if self.x_reflection:
+            transform += " scale(1 -1)"
+        mag = "" if self.magnification is None else f" scale({self.magnification})"
+        for ii in range(self.columns):
+            dx = scaling * self.spacing[0] * ii
+            for jj in range(self.rows):
+                dy = scaling * self.spacing[1] * jj
+                out.write(
+                    f'<use transform="{transform} translate({dx} {dy}){mag}" xlink:href="#{name}"/>\n'
+                )
 
     def area(self, by_spec=False):
         """
