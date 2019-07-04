@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="220.0" height="140.0" viewBox="-110.0 -70.0 220.0 140.0">
+<defs>
+<style type="text/css">
+.l1d3 {stroke: rgb(85, 255, 85); fill: rgb(85, 255, 85); fill-opacity: 0.5;}
+.l2d3 {stroke: rgb(106, 106, 255); fill: rgb(106, 106, 255); fill-opacity: 0.5;}
+.l0d7 {stroke: rgb(191, 112, 112); fill: rgb(191, 112, 112); fill-opacity: 0.5;}
+</style>
+</defs><rect x="-110.0" y="-70.0" width="220.0" height="140.0" fill="none" stroke="none"/>
+<g id="layer_and_datatype" transform="scale(1 -1)">
+<polygon class="l1d3" points="-60,-60 -60,60 60,60 60,-60"/>
+<polygon class="l2d3" points="-100,-60 -100,60 -60,60 -60,-60"/>
+<polygon class="l2d3" points="100,-60 100,60 60,60 60,-60"/>
+<polygon class="l0d7" points="50.0,0.0 25.000000000000004,43.301270189221924 -24.999999999999993,43.30127018922194 -50.0,6.123233995736766e-15 -25.00000000000002,-43.30127018922192 25.000000000000004,-43.301270189221924"/>
+</g>
+</svg>

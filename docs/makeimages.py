@@ -23,6 +23,10 @@ color = ColorDict()
 
 
 def draw(cell, name=None, width=600, height=400, margin=20):
+    name = "docs/_static/" + (cell.name if name is None else name) + ".svg"
+    print("Saving", name)
+    cell.write_svg(name, scaling=20, background="none", pad="5%")
+    return
     global color
     (ax, ay), (bx, by) = cell.get_bounding_box()
     ax = min(0, ax)

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="184.0" height="264.0" viewBox="-132.0 -132.0 184.0 264.0">
+<defs>
+<style type="text/css">
+.l0d0 {stroke: rgb(255, 0, 0); fill: rgb(255, 0, 0); fill-opacity: 0.5;}
+</style>
+</defs><rect x="-132.0" y="-132.0" width="184.0" height="264.0" fill="none" stroke="none"/>
+<g id="polygons" transform="scale(1 -1)">
+<polygon class="l0d0" points="0,0 40,40 40,120 -120,120 -120,-120 -80,-80 -80,80 0,80"/>
+</g>
+</svg>

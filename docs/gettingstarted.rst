@@ -40,7 +40,10 @@ Let's create our first GDSII file:
    # Save all created cells in file 'first.gds'.
    gdspy.write_gds('first.gds')
 
-   # Optionally, display all cells using the internal viewer.
+   # Optionally, save an image of the cell as SVG.
+   cell.write_svg('first.svg')
+
+   # Display all cells using the internal viewer.
    gdspy.LayoutViewer()
 
 
