@@ -60,6 +60,10 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Upcoming
+* New `Cell.write_svg` function to export and SVG image of the cell.
+* Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
+
 ### Version 1.4 (May 18, 2019)
 * Revised [documentation](http://gdspy.readthedocs.io/).
 * New `FlexPath` and `RobustPath` classes: more efficient path generation when using the original GDSII path specification.
