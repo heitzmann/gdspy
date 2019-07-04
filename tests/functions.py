@@ -8,6 +8,7 @@
 ######################################################################
 
 import pytest
+import io
 import datetime
 import numpy
 import gdspy
@@ -291,10 +292,16 @@ def test_get_binary_cells(library, tmpdir):
     library.write_gds(out, timestamp=now)
     bincells = gdspy.get_binary_cells(out)
     for name, cell in library.cell_dict.items():
-        bindata = cell.to_gds(library.unit / library.precision, timestamp=now)
+        binfile = io.BytesIO()
+        cell.to_gds(binfile, library.unit / library.precision, timestamp=now)
+        bindata = binfile.getvalue()
         assert bindata == bincells[name]
+        binfile.close()
     with open(out, "rb") as fin:
         bincells = gdspy.get_binary_cells(fin)
     for name, cell in library.cell_dict.items():
-        bindata = cell.to_gds(library.unit / library.precision, timestamp=now)
+        binfile = io.BytesIO()
+        cell.to_gds(binfile, library.unit / library.precision, timestamp=now)
+        bindata = binfile.getvalue()
         assert bindata == bincells[name]
+        binfile.close()

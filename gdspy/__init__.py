@@ -698,29 +698,25 @@ class PolygonSet(object):
         self.polygons = [(points - c0) * s + c0 for points in self.polygons]
         return self
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this object to a series of GDSII elements.
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             elements.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
         """
-        data = []
         for ii in range(len(self.polygons)):
             if len(self.polygons[ii]) > 8190:
                 warnings.warn(
                     "[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.",
                     stacklevel=4,
                 )
-                data.append(
+                outfile.write(
                     struct.pack(
                         ">4Hh2Hh",
                         4,
@@ -739,11 +735,11 @@ class PolygonSet(object):
                 i0 = 0
                 while i0 < xy.shape[0]:
                     i1 = min(i0 + 8190, xy.shape[0])
-                    data.append(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    data.append(xy[i0:i1].tostring())
+                    outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
+                    outfile.write(xy[i0:i1].tostring())
                     i0 = i1
             else:
-                data.append(
+                outfile.write(
                     struct.pack(
                         ">4Hh2Hh2H",
                         4,
@@ -759,26 +755,25 @@ class PolygonSet(object):
                     )
                 )
                 xy = numpy.round(self.polygons[ii] * multiplier).astype(">i4")
-                data.append(xy.tostring())
-                data.append(xy[0].tostring())
-            data.append(struct.pack(">2H", 4, 0x1100))
-        return b"".join(data)
+                outfile.write(xy.tostring())
+                outfile.write(xy[0].tostring())
+            outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
         """
         for p, l, d in zip(self.polygons, self.layers, self.datatypes):
-            out.write(f'<polygon class="l{l}d{d}" points="')
-            out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
-            out.write('"/>\n')
+            outfile.write(f'<polygon class="l{l}d{d}" points="')
+            outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+            outfile.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -3892,7 +3887,7 @@ class FlexPath(object):
             pol.polygons.extend(v)
         return pol.fracture(self.max_points, self.precision)
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this object to a series of GDSII elements.
 
@@ -3903,22 +3898,19 @@ class FlexPath(object):
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             elements.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
         """
         if len(self.points) == 0:
-            return b""
+            return
         if self.gdsii_path:
             sign = 1 if self.width_transform else -1
         else:
-            return self.to_polygonset().to_gds(multiplier)
-        data = []
+            self.to_polygonset().to_gds(outfile, multiplier)
+            return
         un = self.points[1:] - self.points[:-1]
         un = (
             un[:, ::-1]
@@ -3931,7 +3923,7 @@ class FlexPath(object):
                 if callable(self.ends[ii])
                 else FlexPath._pathtype_dict.get(self.ends[ii], 4)
             )
-            data.append(
+            outfile.write(
                 struct.pack(
                     ">4Hh2Hh2Hh2Hl",
                     4,
@@ -3951,7 +3943,7 @@ class FlexPath(object):
                 )
             )
             if pathtype == 4:
-                data.append(
+                outfile.write(
                     struct.pack(
                         ">2Hl2Hl",
                         8,
@@ -4043,31 +4035,30 @@ class FlexPath(object):
                 i0 = 0
                 while i0 < points.shape[0]:
                     i1 = min(i0 + 8191, points.shape[0])
-                    data.append(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    data.append(points[i0:i1].tostring())
+                    outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
+                    outfile.write(points[i0:i1].tostring())
                     i0 = i1
             else:
-                data.append(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
-                data.append(points.tostring())
-            data.append(struct.pack(">2H", 4, 0x1100))
-        return b"".join(data)
+                outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
+                outfile.write(points.tostring())
+            outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
-                out.write(f'<polygon class="l{l}d{d}" points="')
-                out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
-                out.write('"/>\n')
+                outfile.write(f'<polygon class="l{l}d{d}" points="')
+                outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                outfile.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -5082,7 +5073,7 @@ class RobustPath(object):
             pol.polygons.extend(v)
         return pol.fracture(self.max_points, self.precision)
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this object to a series of GDSII elements.
 
@@ -5093,25 +5084,22 @@ class RobustPath(object):
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             elements.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
         """
         if len(self.paths[0]) == 0:
-            return b""
+            return
         if self.gdsii_path:
             sign = 1 if self.width_transform else -1
         else:
-            return self.to_polygonset().to_gds(multiplier)
-        data = []
+            self.to_polygonset().to_gds(outfile, multiplier)
+            return
         for ii in range(self.n):
             pathtype = RobustPath._pathtype_dict.get(self.ends[ii], 4)
-            data.append(
+            outfile.write(
                 struct.pack(
                     ">4Hh2Hh2Hh2Hl",
                     4,
@@ -5131,7 +5119,7 @@ class RobustPath(object):
                 )
             )
             if pathtype == 4:
-                data.append(
+                outfile.write(
                     struct.pack(
                         ">2Hl2Hl",
                         8,
@@ -5162,31 +5150,30 @@ class RobustPath(object):
                 i0 = 0
                 while i0 < points.shape[0]:
                     i1 = min(i0 + 8191, points.shape[0])
-                    data.append(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    data.append(points[i0:i1].tostring())
+                    outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
+                    outfile.write(points[i0:i1].tostring())
                     i0 = i1
             else:
-                data.append(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
-                data.append(points.tostring())
-            data.append(struct.pack(">2H", 4, 0x1100))
-        return b"".join(data)
+                outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
+                outfile.write(points.tostring())
+            outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
-                out.write(f'<polygon class="l{l}d{d}" points="')
-                out.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
-                out.write('"/>\n')
+                outfile.write(f'<polygon class="l{l}d{d}" points="')
+                outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                outfile.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -5891,37 +5878,33 @@ class Label(object):
             self.texttype,
         )
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this label to a GDSII structure.
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             structure.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this label.
         """
-        text = self.text
-        if len(text) % 2 != 0:
-            text = text + "\0"
-        data = struct.pack(
-            ">4Hh2Hh2Hh",
-            4,
-            0x0C00,
-            6,
-            0x0D02,
-            self.layer,
-            6,
-            0x1602,
-            self.texttype,
-            6,
-            0x1701,
-            self.anchor,
+        outfile.write(
+            struct.pack(
+                ">4Hh2Hh2Hh",
+                4,
+                0x0C00,
+                6,
+                0x0D02,
+                self.layer,
+                6,
+                0x1602,
+                self.texttype,
+                6,
+                0x1701,
+                self.anchor,
+            )
         )
         if (
             (self.rotation is not None)
@@ -5946,10 +5929,13 @@ class Label(object):
                 values += struct.pack(">2H", 12, 0x1C05) + _eight_byte_real(
                     self.rotation
                 )
-            data += struct.pack(">3H", 6, 0x1A01, word) + values
-        return (
-            data
-            + struct.pack(
+            outfile.write(struct.pack(">3H", 6, 0x1A01, word))
+            outfile.write(values)
+        text = self.text
+        if len(text) % 2 != 0:
+            text = text + "\0"
+        outfile.write(
+            struct.pack(
                 ">2H2l2H",
                 12,
                 0x1003,
@@ -5958,17 +5944,17 @@ class Label(object):
                 4 + len(text),
                 0x1906,
             )
-            + text.encode("ascii")
-            + struct.pack(">2H", 4, 0x1100)
         )
+        outfile.write(text.encode("ascii"))
+        outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
@@ -5982,7 +5968,7 @@ class Label(object):
             transform += f" scale({self.magnification})"
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
-        out.write(
+        outfile.write(
             f'<text class="l{self.layer}t{self.texttype}" text-anchor="{ta}" dominant-baseline="{da}" transform="{transform}">{self.text}</text>\n'
         )
 
@@ -6060,29 +6046,26 @@ class Cell(object):
             len(self.references),
         )
 
-    def to_gds(self, multiplier, timestamp=None):
+    def to_gds(self, outfile, multiplier, timestamp=None):
         """
         Convert this cell to a GDSII structure.
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             structure.
         timestamp : datetime object
             Sets the GDSII timestamp.  If None, the current time is
             used.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this cell.
         """
         now = datetime.datetime.today() if timestamp is None else timestamp
         name = self.name
         if len(name) % 2 != 0:
             name = name + "\0"
-        data = [
+        outfile.write(
             struct.pack(
                 ">2H12h2H",
                 28,
@@ -6101,15 +6084,18 @@ class Cell(object):
                 now.second,
                 4 + len(name),
                 0x0606,
-            ),
-            name.encode("ascii"),
-        ]
-        data.extend(polygon.to_gds(multiplier) for polygon in self.polygons)
-        data.extend(path.to_gds(multiplier) for path in self.paths)
-        data.extend(label.to_gds(multiplier) for label in self.labels)
-        data.extend(reference.to_gds(multiplier) for reference in self.references)
-        data.append(struct.pack(">2H", 4, 0x0700))
-        return b"".join(data)
+            )
+        )
+        outfile.write(name.encode("ascii"))
+        for polygon in self.polygons:
+            polygon.to_gds(outfile, multiplier)
+        for path in self.paths:
+            path.to_gds(outfile, multiplier)
+        for label in self.labels:
+            label.to_gds(outfile, multiplier)
+        for reference in self.references:
+            reference.to_gds(outfile, multiplier)
+        outfile.write(struct.pack(">2H", 4, 0x0700))
 
     def copy(self, name, exclude_from_current=False, deep_copy=False):
         """
@@ -6680,29 +6666,29 @@ class Cell(object):
         self.references = []
         return self
 
-    def to_svg(self, out, scaling, attributes=""):
+    def to_svg(self, outfile, scaling, attributes=""):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
         attributes : string
             Additional attributes to set for the cell group.
         """
-        out.write(f'<g id="{self.name.replace("#", "_")}" {attributes}>\n')
+        outfile.write(f'<g id="{self.name.replace("#", "_")}" {attributes}>\n')
         for polygon in self.polygons:
-            polygon.to_svg(out, scaling)
+            polygon.to_svg(outfile, scaling)
         for path in self.paths:
-            path.to_svg(out, scaling)
+            path.to_svg(outfile, scaling)
         for label in self.labels:
-            label.to_svg(out, scaling)
+            label.to_svg(outfile, scaling)
         for reference in self.references:
-            reference.to_svg(out, scaling)
-        out.write("</g>\n")
+            reference.to_svg(outfile, scaling)
+        outfile.write("</g>\n")
 
     def write_svg(
         self,
@@ -6905,27 +6891,23 @@ class CellReference(object):
             name, self.origin, self.rotation, self.magnification, self.x_reflection
         )
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this object to a GDSII element.
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             element.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
         """
         name = self.ref_cell.name
         if len(name) % 2 != 0:
             name = name + "\0"
-        data = struct.pack(">4H", 4, 0x0A00, 4 + len(name), 0x1206) + name.encode(
-            "ascii"
-        )
+        outfile.write(struct.pack(">4H", 4, 0x0A00, 4 + len(name), 0x1206))
+        outfile.write(name.encode("ascii"))
         if (
             (self.rotation is not None)
             or (self.magnification is not None)
@@ -6949,24 +6931,27 @@ class CellReference(object):
                 values += struct.pack(">2H", 12, 0x1C05) + _eight_byte_real(
                     self.rotation
                 )
-            data += struct.pack(">3H", 6, 0x1A01, word) + values
-        return data + struct.pack(
-            ">2H2l2H",
-            12,
-            0x1003,
-            int(round(self.origin[0] * multiplier)),
-            int(round(self.origin[1] * multiplier)),
-            4,
-            0x1100,
+            outfile.write(struct.pack(">3H", 6, 0x1A01, word))
+            outfile.write(values)
+        outfile.write(
+            struct.pack(
+                ">2H2l2H",
+                12,
+                0x1003,
+                int(round(self.origin[0] * multiplier)),
+                int(round(self.origin[1] * multiplier)),
+                4,
+                0x1100,
+            )
         )
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
@@ -6982,7 +6967,7 @@ class CellReference(object):
             transform += " scale(1 -1)"
         if self.magnification is not None:
             transform += f" scale({self.magnification})"
-        out.write(
+        outfile.write(
             f'<use transform="{transform}" xlink:href="#{name.replace("#", "_")}"/>\n'
         )
 
@@ -7363,27 +7348,23 @@ class CellArray(object):
             self.x_reflection,
         )
 
-    def to_gds(self, multiplier):
+    def to_gds(self, outfile, multiplier):
         """
         Convert this object to a GDSII element.
 
         Parameters
         ----------
+        outfile : open file
+            Output to write the GDSII.
         multiplier : number
             A number that multiplies all dimensions written in the GDSII
             element.
-
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
         """
         name = self.ref_cell.name
         if len(name) % 2 != 0:
             name = name + "\0"
-        data = struct.pack(">4H", 4, 0x0B00, 4 + len(name), 0x1206) + name.encode(
-            "ascii"
-        )
+        outfile.write(struct.pack(">4H", 4, 0x0B00, 4 + len(name), 0x1206))
+        outfile.write(name.encode("ascii"))
         x2 = self.origin[0] + self.columns * self.spacing[0]
         y2 = self.origin[1]
         x3 = self.origin[0]
@@ -7436,32 +7417,35 @@ class CellArray(object):
                 values += struct.pack(">2H", 12, 0x1C05) + _eight_byte_real(
                     self.rotation
                 )
-            data += struct.pack(">3H", 6, 0x1A01, word) + values
-        return data + struct.pack(
-            ">2H2h2H6l2H",
-            8,
-            0x1302,
-            self.columns,
-            self.rows,
-            28,
-            0x1003,
-            int(round(self.origin[0] * multiplier)),
-            int(round(self.origin[1] * multiplier)),
-            int(round(x2 * multiplier)),
-            int(round(y2 * multiplier)),
-            int(round(x3 * multiplier)),
-            int(round(y3 * multiplier)),
-            4,
-            0x1100,
+            outfile.write(struct.pack(">3H", 6, 0x1A01, word))
+            outfile.write(values)
+        outfile.write(
+            struct.pack(
+                ">2H2h2H6l2H",
+                8,
+                0x1302,
+                self.columns,
+                self.rows,
+                28,
+                0x1003,
+                int(round(self.origin[0] * multiplier)),
+                int(round(self.origin[1] * multiplier)),
+                int(round(x2 * multiplier)),
+                int(round(y2 * multiplier)),
+                int(round(x3 * multiplier)),
+                int(round(y3 * multiplier)),
+                4,
+                0x1100,
+            )
         )
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, outfile, scaling):
         """
         Write an SVG fragment representation of this object.
 
         Parameters
         ----------
-        out : open file
+        outfile : open file
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
@@ -7480,7 +7464,7 @@ class CellArray(object):
             dx = scaling * self.spacing[0] * ii
             for jj in range(self.rows):
                 dy = scaling * self.spacing[1] * jj
-                out.write(
+                outfile.write(
                     f'<use transform="{transform} translate({dx} {dy}){mag}" xlink:href="#{name.replace("#", "_")}"/>\n'
                 )
 
@@ -8036,7 +8020,7 @@ class GdsLibrary(object):
         else:
             cells = [self.cell_dict.get(c, c) for c in cells]
         for cell in cells:
-            outfile.write(cell.to_gds(self.unit / self.precision))
+            cell.to_gds(outfile, self.unit / self.precision)
         if binary_cells is not None:
             for bc in binary_cells:
                 outfile.write(bc)
@@ -8463,7 +8447,7 @@ class GdsWriter(object):
         out : `GdsWriter`
             This object.
         """
-        self._outfile.write(cell.to_gds(self._res, timestamp))
+        cell.to_gds(self._outfile, self._res, timestamp)
         return self
 
     def write_binary_cells(self, binary_cells):
