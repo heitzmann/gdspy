@@ -771,8 +771,8 @@ class PolygonSet(object):
             Scaling factor for the geometry.
         """
         for p, l, d in zip(self.polygons, self.layers, self.datatypes):
-            outfile.write(f'<polygon class="l{l}d{d}" points="')
-            outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+            outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
+            outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
             outfile.write('"/>\n')
 
     def area(self, by_spec=False):
@@ -4056,8 +4056,8 @@ class FlexPath(object):
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
-                outfile.write(f'<polygon class="l{l}d{d}" points="')
-                outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
+                outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
                 outfile.write('"/>\n')
 
     def area(self, by_spec=False):
@@ -5171,8 +5171,8 @@ class RobustPath(object):
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
-                outfile.write(f'<polygon class="l{l}d{d}" points="')
-                outfile.write(" ".join(f"{pt[0]},{pt[1]}" for pt in scaling * p))
+                outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
+                outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
                 outfile.write('"/>\n')
 
     def area(self, by_spec=False):
@@ -5959,17 +5959,21 @@ class Label(object):
         scaling : number
             Scaling factor for the geometry.
         """
-        transform = f"scale(1 -1) translate({scaling * self.position[0]} {-scaling * self.position[1]})"
+        transform = "scale(1 -1) translate({} {})".format(
+            scaling * self.position[0], -scaling * self.position[1]
+        )
         if self.rotation is not None:
-            transform += f" rotate({-self.rotation})"
+            transform += " rotate({})".format(-self.rotation)
         if self.x_reflection:
             transform += " scale(1 -1)"
         if self.magnification is not None:
-            transform += f" scale({self.magnification})"
+            transform += " scale({})".format(self.magnification)
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
         outfile.write(
-            f'<text class="l{self.layer}t{self.texttype}" text-anchor="{ta}" dominant-baseline="{da}" transform="{transform}">{self.text}</text>\n'
+            '<text class="l{}t{}" text-anchor="{}" dominant-baseline="{}" transform="{}">{}</text>\n'.format(
+                self.layer, self.texttype, ta, da, transform, self.text
+            )
         )
 
     def translate(self, dx, dy):
@@ -6679,7 +6683,11 @@ class Cell(object):
         attributes : string
             Additional attributes to set for the cell group.
         """
-        outfile.write(f'<g id="{self.name.replace("#", "_")}" {attributes}>\n')
+        outfile.write('<g id="')
+        outfile.write(self.name.replace("#", "_"))
+        outfile.write('" ')
+        outfile.write(attributes)
+        outfile.write(">\n")
         for polygon in self.polygons:
             polygon.to_svg(outfile, scaling)
         for path in self.paths:
@@ -6772,7 +6780,9 @@ class Cell(object):
             w += 2 * pad
             h += 2 * pad
         outfile.write(
-            f'<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}">\n<defs>\n<style type="text/css">\n'
+            '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{}" height="{}" viewBox="{} {} {} {}">\n<defs>\n<style type="text/css">\n'.format(
+                w, h, x, y, w, h
+            )
         )
         ldkeys, ltkeys = self.get_svg_classes()
         for k in ldkeys:
@@ -6791,8 +6801,8 @@ class Cell(object):
                     ]
                 )
                 style_dict = {"stroke": c, "fill": c, "fill-opacity": "0.5"}
-            outfile.write(f".l{l}d{d} {{")
-            outfile.write(" ".join(f"{k}: {v};" for k, v in style_dict.items()))
+            outfile.write(".l{}d{} {{".format(l, d))
+            outfile.write(" ".join("{}: {};".format(*x) for x in style_dict.items()))
             outfile.write("}\n")
         for k in ltkeys:
             if k in fontstyle:
@@ -6810,8 +6820,8 @@ class Cell(object):
                     ]
                 )
                 style_dict = {"stroke": "none", "fill": c}
-            outfile.write(f".l{l}t{t} {{")
-            outfile.write(" ".join(f"{k}: {v};" for k, v in style_dict.items()))
+            outfile.write(".l{}t{} {{".format(l, t))
+            outfile.write(" ".join("{}: {};".format(*x) for x in style_dict.items()))
             outfile.write("}\n")
         outfile.write("</style>\n")
         for cell in self.get_dependencies(True):
@@ -6819,7 +6829,9 @@ class Cell(object):
         outfile.write("</defs>")
         if background is not None:
             outfile.write(
-                f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{background}" stroke="none"/>\n'
+                '<rect x="{}" y="{}" width="{}" height="{}" fill="{}" stroke="none"/>\n'.format(
+                    x, y, w, h, background
+                )
             )
         self.to_svg(outfile, scaling, 'transform="scale(1 -1)"')
         outfile.write("</svg>")
@@ -6960,16 +6972,20 @@ class CellReference(object):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
-        transform = f"translate({scaling * self.origin[0]} {scaling * self.origin[1]})"
+        transform = "translate({} {})".format(
+            scaling * self.origin[0], scaling * self.origin[1]
+        )
         if self.rotation is not None:
-            transform += f" rotate({self.rotation})"
+            transform += " rotate({})".format(self.rotation)
         if self.x_reflection:
             transform += " scale(1 -1)"
         if self.magnification is not None:
-            transform += f" scale({self.magnification})"
-        outfile.write(
-            f'<use transform="{transform}" xlink:href="#{name.replace("#", "_")}"/>\n'
-        )
+            transform += " scale({})".format(self.magnification)
+        outfile.write('<use transform="')
+        outfile.write(transform)
+        outfile.write('" xlink:href="#')
+        outfile.write(name.replace("#", "_"))
+        outfile.write('"/>\n')
 
     def area(self, by_spec=False):
         """
@@ -7454,19 +7470,29 @@ class CellArray(object):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
-        transform = f"translate({scaling * self.origin[0]} {scaling * self.origin[1]})"
+        transform = "translate({} {})".format(
+            scaling * self.origin[0], scaling * self.origin[1]
+        )
         if self.rotation is not None:
-            transform += f" rotate({self.rotation})"
+            transform += " rotate({})".format(self.rotation)
         if self.x_reflection:
             transform += " scale(1 -1)"
-        mag = "" if self.magnification is None else f" scale({self.magnification})"
+        mag = (
+            ""
+            if self.magnification is None
+            else " scale({})".format(self.magnification)
+        )
         for ii in range(self.columns):
             dx = scaling * self.spacing[0] * ii
             for jj in range(self.rows):
                 dy = scaling * self.spacing[1] * jj
-                outfile.write(
-                    f'<use transform="{transform} translate({dx} {dy}){mag}" xlink:href="#{name.replace("#", "_")}"/>\n'
-                )
+                outfile.write('<use transform="')
+                outfile.write(transform)
+                outfile.write(" translate({} {})".format(dx, dy))
+                outfile.write(mag)
+                outfile.write('" xlink:href="#')
+                outfile.write(name.replace("#", "_"))
+                outfile.write('"/>\n')
 
     def area(self, by_spec=False):
         """

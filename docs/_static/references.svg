@@ -7,16 +7,16 @@
 .l0d0 {stroke: rgb(255, 0, 0); fill: rgb(255, 0, 0); fill-opacity: 0.5;}
 .l0d7 {stroke: rgb(191, 112, 112); fill: rgb(191, 112, 112); fill-opacity: 0.5;}
 </style>
-<g id="DEVICE" >
-<polygon class="l0d0" points="0,0 100,0 100,100 0,100 0,0 40,40 40,60 60,60 60,40 40,40"/>
-<use transform="translate(70.0 20) scale(0.25)" xlink:href="#CONTACT"/>
-<use transform="translate(20 70.0) rotate(90) scale(0.25)" xlink:href="#CONTACT"/>
-</g>
 <g id="CONTACT" >
 <polygon class="l1d3" points="-60,-60 -60,60 60,60 60,-60"/>
 <polygon class="l2d3" points="-100,-60 -100,60 -60,60 -60,-60"/>
 <polygon class="l2d3" points="100,-60 100,60 60,60 60,-60"/>
 <polygon class="l0d7" points="50.0,0.0 25.000000000000004,43.301270189221924 -24.999999999999993,43.30127018922194 -50.0,6.123233995736766e-15 -25.00000000000002,-43.30127018922192 25.000000000000004,-43.301270189221924"/>
+</g>
+<g id="DEVICE" >
+<polygon class="l0d0" points="0,0 100,0 100,100 0,100 0,0 40,40 40,60 60,60 60,40 40,40"/>
+<use transform="translate(70.0 20) scale(0.25)" xlink:href="#CONTACT"/>
+<use transform="translate(20 70.0) rotate(90) scale(0.25)" xlink:href="#CONTACT"/>
 </g>
 </defs><rect x="-17.0" y="-257.0" width="374.0" height="274.0" fill="none" stroke="none"/>
 <g id="MAIN" transform="scale(1 -1)">
