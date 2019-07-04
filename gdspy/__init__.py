@@ -766,7 +766,7 @@ class PolygonSet(object):
 
     def to_svg(self, out, scaling):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -4054,7 +4054,7 @@ class FlexPath(object):
 
     def to_svg(self, out, scaling):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -5173,7 +5173,7 @@ class RobustPath(object):
 
     def to_svg(self, out, scaling):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -5962,6 +5962,30 @@ class Label(object):
             + struct.pack(">2H", 4, 0x1100)
         )
 
+    def to_svg(self, out, scaling):
+        """
+        Write an SVG fragment representation of this object.
+
+        Parameters
+        ----------
+        out : open file
+            Output to write the SVG representation.
+        scaling : number
+            Scaling factor for the geometry.
+        """
+        transform = f"scale(1 -1) translate({scaling * self.position[0]} {-scaling * self.position[1]})"
+        if self.rotation is not None:
+            transform += f" rotate({-self.rotation})"
+        if self.x_reflection:
+            transform += " scale(1 -1)"
+        if self.magnification is not None:
+            transform += f" scale({self.magnification})"
+        ta = ["start", "middle", "end"][self.anchor % 4]
+        da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
+        out.write(
+            f'<text class="l{self.layer}t{self.texttype}" text-anchor="{ta}" dominant-baseline="{da}" transform="{transform}">{self.text}</text>\n'
+        )
+
     def translate(self, dx, dy):
         """
         Translate this label.
@@ -6339,6 +6363,45 @@ class Cell(object):
             datatypes.update(reference.ref_cell.get_datatypes())
         return datatypes
 
+    def get_texttypes(self):
+        """
+        Return the set of texttypes in this cell.
+
+        Returns
+        -------
+        out : set
+            Set of the texttypes used in this cell.
+        """
+        texttypes = set()
+        for reference in self.references:
+            textypes.update(reference.ref_cell.get_textypes())
+        for label in self.labels:
+            textypes.add(label.texttype)
+        return textypes
+
+    def get_svg_classes(self):
+        """
+        Return the set of classes for the SVG representation of this
+        cell.
+
+        Returns
+        -------
+        out0, out1 : sets of 2-tuples
+            Sets of (layer, datatype) and (layer, texttype) used in
+            this cell.
+        """
+        ld = set()
+        lt = set()
+        for element in itertools.chain(self.polygons, self.paths):
+            ld.update(zip(element.layers, element.datatypes))
+        for label in self.labels:
+            lt.add((label.layer, label.texttype))
+        for reference in self.references:
+            ref = reference.ref_cell.get_svg_classes()
+            ld.update(ref[0])
+            lt.update(ref[1])
+        return ld, lt
+
     def get_bounding_box(self):
         """
         Calculate the bounding box for this cell.
@@ -6617,9 +6680,9 @@ class Cell(object):
         self.references = []
         return self
 
-    def to_svg(self, out, scaling):
+    def to_svg(self, out, scaling, attributes=""):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -6627,8 +6690,10 @@ class Cell(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        attributes : string
+            Additional attributes to set for the cell group.
         """
-        out.write(f'<g id="{self.name}">\n')
+        out.write(f'<g id="{self.name.replace("#", "_")}" {attributes}>\n')
         for polygon in self.polygons:
             polygon.to_svg(out, scaling)
         for path in self.paths:
@@ -6639,7 +6704,15 @@ class Cell(object):
             reference.to_svg(out, scaling)
         out.write("</g>\n")
 
-    def write_svg(self, outfile, scaling=20, style=None, background="#222", pad="5%"):
+    def write_svg(
+        self,
+        outfile,
+        scaling=10,
+        style=None,
+        fontstyle=None,
+        background="#222",
+        pad="5%",
+    ):
         """
         Export this cell to an SVG file.
 
@@ -6663,6 +6736,11 @@ class Cell(object):
             must be dictionaries with CSS key-value pairs for the
             presentation attributes of the geometry in that layer and
             datatype.
+        fontstyle : dict or None
+            Dictionary indexed by (layer, texttype) tuples.  Entries
+            must be dictionaries with CSS key-value pairs for the
+            presentation attributes of the labels in that layer and
+            texttype.
         background : string or None
             String specifying the background color.  If None, no
             background is inserted.
@@ -6690,23 +6768,11 @@ class Cell(object):
             close = False
         if style is None:
             style = {}
-        for l in self.get_layers():
-            for d in self.get_datatypes():
-                if (l, d) not in style:
-                    c = "rgb({}, {}, {})".format(
-                        *[
-                            int(255 * c + 0.5)
-                            for c in colorsys.hsv_to_rgb(
-                                (l % 3) / 3.0 + (l % 6 // 3) / 6.0 + (l // 6) / 11.0,
-                                1 - ((l + d) % 8) / 12.0,
-                                1 - (d % 3) / 4.0,
-                            )
-                        ]
-                    )
-                    style[(l, d)] = {"stroke": c, "fill": c, "fill-opacity": "0.5"}
+        if fontstyle is None:
+            fontstyle = {}
         bb *= scaling
         x = bb[0, 0]
-        y = bb[0, 1]
+        y = -bb[1, 1]
         w = bb[1, 0] - bb[0, 0]
         h = bb[1, 1] - bb[0, 1]
         if background is not None:
@@ -6720,26 +6786,56 @@ class Cell(object):
             w += 2 * pad
             h += 2 * pad
         outfile.write(
-            f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="{w}" height="{h}" viewBox="{x} {y} {w} {h}" transform="scale(1 -1)">
-<defs>
-<style type="text/css">
-"""
+            f'<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}">\n<defs>\n<style type="text/css">\n'
         )
-        for (l, d), sd in style.items():
+        ldkeys, ltkeys = self.get_svg_classes()
+        for k in ldkeys:
+            if k in style:
+                style_dict = style[k]
+            else:
+                l, d = k
+                c = "rgb({}, {}, {})".format(
+                    *[
+                        int(255 * c + 0.5)
+                        for c in colorsys.hsv_to_rgb(
+                            (l % 3) / 3.0 + (l % 6 // 3) / 6.0 + (l // 6) / 11.0,
+                            1 - ((l + d) % 8) / 12.0,
+                            1 - (d % 3) / 4.0,
+                        )
+                    ]
+                )
+                style_dict = {"stroke": c, "fill": c, "fill-opacity": "0.5"}
             outfile.write(f".l{l}d{d} {{")
-            outfile.write(" ".join(f"{k}: {v};" for k, v in sd.items()))
+            outfile.write(" ".join(f"{k}: {v};" for k, v in style_dict.items()))
+            outfile.write("}\n")
+        for k in ltkeys:
+            if k in fontstyle:
+                style_dict = fontstyle[k]
+            else:
+                l, t = k
+                c = "rgb({}, {}, {})".format(
+                    *[
+                        int(255 * c + 0.5)
+                        for c in colorsys.hsv_to_rgb(
+                            (l % 3) / 3.0 + (l % 6 // 3) / 6.0 + (l // 6) / 11.0,
+                            1 - ((l + t) % 8) / 12.0,
+                            1 - (t % 3) / 4.0,
+                        )
+                    ]
+                )
+                style_dict = {"stroke": "none", "fill": c}
+            outfile.write(f".l{l}t{t} {{")
+            outfile.write(" ".join(f"{k}: {v};" for k, v in style_dict.items()))
             outfile.write("}\n")
         outfile.write("</style>\n")
         for cell in self.get_dependencies(True):
             cell.to_svg(outfile, scaling)
-        outfile.write("</defs>\n")
+        outfile.write("</defs>")
         if background is not None:
             outfile.write(
                 f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{background}" stroke="none"/>\n'
             )
-        self.to_svg(outfile, scaling)
+        self.to_svg(outfile, scaling, 'transform="scale(1 -1)"')
         outfile.write("</svg>")
         if close:
             outfile.close()
@@ -6866,7 +6962,7 @@ class CellReference(object):
 
     def to_svg(self, out, scaling):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -6886,7 +6982,9 @@ class CellReference(object):
             transform += " scale(1 -1)"
         if self.magnification is not None:
             transform += f" scale({self.magnification})"
-        out.write(f'<use transform="{transform}" xlink:href="#{name}"/>\n')
+        out.write(
+            f'<use transform="{transform}" xlink:href="#{name.replace("#", "_")}"/>\n'
+        )
 
     def area(self, by_spec=False):
         """
@@ -7359,7 +7457,7 @@ class CellArray(object):
 
     def to_svg(self, out, scaling):
         """
-        Return an SVG fragment representation of this object.
+        Write an SVG fragment representation of this object.
 
         Parameters
         ----------
@@ -7383,7 +7481,7 @@ class CellArray(object):
             for jj in range(self.rows):
                 dy = scaling * self.spacing[1] * jj
                 out.write(
-                    f'<use transform="{transform} translate({dx} {dy}){mag}" xlink:href="#{name}"/>\n'
+                    f'<use transform="{transform} translate({dx} {dy}){mag}" xlink:href="#{name.replace("#", "_")}"/>\n'
                 )
 
     def area(self, by_spec=False):
