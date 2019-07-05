@@ -713,7 +713,9 @@ class PolygonSet(object):
         for ii in range(len(self.polygons)):
             if len(self.polygons[ii]) > 8190:
                 warnings.warn(
-                    "[GDSPY] Polygons with more than 8190 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.",
+                    "[GDSPY] Polygons with more than 8190 are not supported by the "
+                    "official GDSII specification.  This GDSII file might not be "
+                    "compatible with all readers.",
                     stacklevel=4,
                 )
                 outfile.write(
@@ -918,7 +920,8 @@ class PolygonSet(object):
                     else:
                         if len(r) != p.shape[0]:
                             raise ValueError(
-                                "[GDSPY] Wrong length in fillet radius list.  Expected lengths are {} or {}; got {}.".format(
+                                "[GDSPY] Wrong length in fillet radius list.  "
+                                "Expected lengths are {} or {}; got {}.".format(
                                     len(self.polygons), total, len(radius)
                                 )
                             )
@@ -927,7 +930,8 @@ class PolygonSet(object):
                 total = sum(p.shape[0] for p in self.polygons)
                 if len(radius) != total:
                     raise ValueError(
-                        "[GDSPY] Wrong length in fillet radius list.  Expected lengths are {} or {}; got {}.".format(
+                        "[GDSPY] Wrong length in fillet radius list.  "
+                        "Expected lengths are {} or {}; got {}.".format(
                             len(self.polygons), total, len(radius)
                         )
                     )
@@ -1238,7 +1242,8 @@ class Round(PolygonSet):
 
         if isinstance(number_of_points, float):
             warnings.warn(
-                "[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.",
+                "[GDSPY] Use of a floating number as number_of_points "
+                "is deprecated in favor of tolerance.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
@@ -1892,7 +1897,8 @@ class Path(PolygonSet):
             self.distance = final_distance
         if isinstance(number_of_points, float):
             warnings.warn(
-                "[GDSPY] Use of a floating number as number_of_points is deprecated in favor of tolerance.",
+                "[GDSPY] Use of a floating number as number_of_points "
+                "is deprecated in favor of tolerance.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
@@ -1955,7 +1961,8 @@ class Path(PolygonSet):
                     rad = numpy.linspace(r0 - widths[jj + 1], old_r0 - widths[jj], pts2)
                     if rad[0] <= 0 or rad[-1] <= 0:
                         warnings.warn(
-                            "[GDSPY] Path arc with width larger than radius created: possible self-intersecting polygon.",
+                            "[GDSPY] Path arc with width larger than radius "
+                            "created: possible self-intersecting polygon.",
                             stacklevel=2,
                         )
                     self.polygons[-1][pts1:, 0] = numpy.cos(ang) * rad + cx
@@ -2589,7 +2596,8 @@ class L1Path(PolygonSet):
         datatype=0,
     ):
         warnings.warn(
-            "[GDSPY] L1Path is deprecated favor of FlexPath and will be removed in a future version of Gdspy.",
+            "[GDSPY] L1Path is deprecated favor of FlexPath and will be "
+            "removed in a future version of Gdspy.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -2836,7 +2844,8 @@ class PolyPath(PolygonSet):
         datatype=0,
     ):
         warnings.warn(
-            "[GDSPY] PolyPath is deprecated favor of FlexPath and will be removed in a future version of Gdspy.",
+            "[GDSPY] PolyPath is deprecated favor of FlexPath and will "
+            "be removed in a future version of Gdspy.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -2915,26 +2924,30 @@ class PolyPath(PolygonSet):
             if corners in [0, 1]:
                 corners = ["miter", "bevel"][corners]
                 warnings.warn(
-                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'.",
+                    "[GDSPY] Argument corners must be one of 'miter' "
+                    "or 'bevel'.",
                     category=DeprecationWarning,
                     stacklevel=2,
                 )
             else:
                 raise ValueError(
-                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'."
+                    "[GDSPY] Argument corners must be one of 'miter' "
+                    "or 'bevel'."
                 )
         bevel = corners == "bevel"
         if ends not in ["flush", "round", "extended"]:
             if ends in [0, 1, 2]:
                 ends = ["flush", "round", "extended"][ends]
                 warnings.warn(
-                    "[GDSPY] Argument ends must be one of 'flush', 'round', or 'extended'.",
+                    "[GDSPY] Argument ends must be one of 'flush', "
+                    "'round', or 'extended'.",
                     category=DeprecationWarning,
                     stacklevel=2,
                 )
             else:
                 raise ValueError(
-                    "[GDSPY] Argument ends must be one of 'flush', 'round', or 'extended'."
+                    "[GDSPY] Argument ends must be one of 'flush', "
+                    "'round', or 'extended'."
                 )
         if ends == "extended":
             v = points[0] - points[1]
@@ -3315,7 +3328,8 @@ class FlexPath(object):
         if self.gdsii_path:
             if any(end == "smooth" or callable(end) for end in self.ends):
                 warnings.warn(
-                    "[GDSPY] Smooth and custom end caps are not supported in `FlexPath` with `gdsii_path == True`.",
+                    "[GDSPY] Smooth and custom end caps are not supported "
+                    "in `FlexPath` with `gdsii_path == True`.",
                     stacklevel=3,
                 )
             if any(
@@ -3323,7 +3337,8 @@ class FlexPath(object):
                 for corner in self.corners
             ):
                 warnings.warn(
-                    "[GDSPY] Corner specification not supported in `FlexPath` with `gdsii_path == True`.",
+                    "[GDSPY] Corner specification not supported in "
+                    "`FlexPath` with `gdsii_path == True`.",
                     stacklevel=3,
                 )
 
@@ -3564,7 +3579,8 @@ class FlexPath(object):
                         u1 = (vn[:-1, 1] * ds[:, 0] - vn[:-1, 0] * ds[:, 1]) / den
                         if any(u0 < -1) or any(u1 > 1):
                             warnings.warn(
-                                "[GDSPY] Possible inconsistency found in `FlexPath` due to sharp corner."
+                                "[GDSPY] Possible inconsistency found in "
+                                "`FlexPath` due to sharp corner."
                             )
                         pts[1:-1] = sb[:-1] + u0.reshape((u0.shape[0], 1)) * vn[:-1]
                         if len(idx) > 0:
@@ -4029,7 +4045,9 @@ class FlexPath(object):
             points = numpy.round(points * multiplier).astype(">i4")
             if points.shape[0] > 8191:
                 warnings.warn(
-                    "[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.",
+                    "[GDSPY] Paths with more than 8191 are not supported "
+                    "by the official GDSII specification.  This GDSII "
+                    "file might not be compatible with all readers.",
                     stacklevel=4,
                 )
                 i0 = 0
@@ -4371,7 +4389,8 @@ class FlexPath(object):
         self._polygon_dict = None
         if self.points.shape[0] < 2:
             raise ValueError(
-                "[GDSPY] Cannot define initial angle for turn on a FlexPath withouth previous segments."
+                "[GDSPY] Cannot define initial angle for turn on a "
+                "FlexPath withouth previous segments."
             )
         v = self.points[-1] - self.points[-2]
         angle = _angle_dic.get(angle, angle)
@@ -4752,7 +4771,8 @@ class RobustPath(object):
         self.width_transform = width_transform
         if self.gdsii_path and any(end == "smooth" for end in self.ends):
             warnings.warn(
-                "[GDSPY] Smooth end caps not supported in `RobustPath` with `gdsii_path == True`.",
+                "[GDSPY] Smooth end caps not supported in `RobustPath` "
+                "with `gdsii_path == True`.",
                 stacklevel=3,
             )
 
@@ -4986,7 +5006,8 @@ class RobustPath(object):
                             else:
                                 path_arm.extend(sub0.points(start, 1, arm))
                                 warnings.warn(
-                                    "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(
+                                    "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  "
+                                    "Please check the resulting polygon.".format(
                                         path_arm[-1][0], path_arm[-1][1]
                                     ),
                                     stacklevel=3,
@@ -4996,7 +5017,8 @@ class RobustPath(object):
                             if u0 <= 1:
                                 path_arm.extend(sub0.points(start, u0, arm))
                                 warnings.warn(
-                                    "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  Please check the resulting polygon.".format(
+                                    "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  "
+                                    "Please check the resulting polygon.".format(
                                         path_arm[-1][0], path_arm[-1][1]
                                     ),
                                     stacklevel=2,
@@ -5144,7 +5166,9 @@ class RobustPath(object):
             points = numpy.vstack(points).astype(">i4")
             if points.shape[0] > 8191:
                 warnings.warn(
-                    "[GDSPY] Paths with more than 8191 are not supported by the official GDSII specification.  This GDSII file might not be compatible with all readers.",
+                    "[GDSPY] Paths with more than 8191 are not supported "
+                    "by the official GDSII specification.  This GDSII "
+                    "file might not be compatible with all readers.",
                     stacklevel=4,
                 )
                 i0 = 0
@@ -5337,7 +5361,8 @@ class RobustPath(object):
         if arg is None or self.gdsii_path:
             if arg is not None:
                 warnings.warn(
-                    "[GDSPY] Argument `width` ignored in RobustPath with `gdsii_path == True`.",
+                    "[GDSPY] Argument `width` ignored in RobustPath with "
+                    "`gdsii_path == True`.",
                     stacklevel=3,
                 )
             return _func_const(self.widths[idx])
@@ -5500,7 +5525,8 @@ class RobustPath(object):
         i = len(self.paths[0]) - 1
         if i < 0:
             raise ValueError(
-                "[GDSPY] Cannot define initial angle for turn on an empty RobustPath."
+                "[GDSPY] Cannot define initial angle for turn on an "
+                "empty RobustPath."
             )
         angle = _angle_dic.get(angle, angle)
         initial_angle = 0
@@ -5971,7 +5997,8 @@ class Label(object):
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
         outfile.write(
-            '<text class="l{}t{}" text-anchor="{}" dominant-baseline="{}" transform="{}">{}</text>\n'.format(
+            '<text class="l{}t{}" text-anchor="{}" dominant-baseline="{}" '
+            'transform="{}">{}</text>\n'.format(
                 self.layer, self.texttype, ta, da, transform, self.text
             )
         )
@@ -6173,7 +6200,9 @@ class Cell(object):
                     self.references.append(e)
                 else:
                     raise ValueError(
-                        "[GDSPY] Only instances of `PolygonSet`, `FlexPath`, `RobustPath`, `Label`, `CellReference`, and `CellArray` can be added to `Cell`."
+                        "[GDSPY] Only instances of `PolygonSet`, `FlexPath`, "
+                        "`RobustPath`, `Label`, `CellReference`, and "
+                        "`CellArray` can be added to `Cell`."
                     )
         self._bb_valid = False
         return self
@@ -6779,8 +6808,12 @@ class Cell(object):
             y -= pad
             w += 2 * pad
             h += 2 * pad
-        outfile.write(
-            '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{}" height="{}" viewBox="{} {} {} {}">\n<defs>\n<style type="text/css">\n'.format(
+        outfile.write('''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="{}" height="{}" viewBox="{} {} {} {}">
+<defs>
+<style type="text/css">
+'''.format(
                 w, h, x, y, w, h
             )
         )
@@ -6879,7 +6912,8 @@ class CellReference(object):
         self.x_reflection = x_reflection
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
-                "[GDSPY] Cell {0} not found; operations on this CellReference may not work.".format(
+                "[GDSPY] Cell {0} not found; operations on this "
+                "CellReference may not work.".format(
                     self.ref_cell
                 ),
                 stacklevel=2,
@@ -7326,7 +7360,8 @@ class CellArray(object):
         self.x_reflection = x_reflection
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
-                "[GDSPY] Cell {0} not found; operations on this CellArray may not work.".format(
+                "[GDSPY] Cell {0} not found; operations on this "
+                "CellArray may not work.".format(
                     self.ref_cell
                 ),
                 stacklevel=2,
@@ -8171,7 +8206,9 @@ class GdsLibrary(object):
                 kwargs["x_reflection"] = (int(record[1][0]) & 0x8000) > 0
                 if (int(record[1][0]) & 0x0006) and record[0] not in emitted_warnings:
                     warnings.warn(
-                        "[GDSPY] Absolute magnification or rotation of references is not supported.  Transformations will be interpreted as relative.",
+                        "[GDSPY] Absolute magnification or rotation of "
+                        "references is not supported.  Transformations "
+                        "will be interpreted as relative.",
                         stacklevel=2,
                     )
                     emitted_warnings.append(record[0])
@@ -8213,7 +8250,8 @@ class GdsLibrary(object):
                     factor = record[1][1] / self.unit
                 else:
                     raise ValueError(
-                        "[GDSPY] units must be one of 'convert', 'import' or 'skip'."
+                        "[GDSPY] units must be one of 'convert', "
+                        "'import' or 'skip'."
                     )
             # LIBNAME
             elif record[0] == 0x02:
