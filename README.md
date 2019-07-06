@@ -62,6 +62,8 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * New `Cell.write_svg` function to export and SVG image of the cell.
+* Iterating over `GdsLibrary` objects yields all its cells.
+* Iterating over `Cell` objects yield all its polygons, paths, labels and references.
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
 
 ### Version 1.4 (May 18, 2019)

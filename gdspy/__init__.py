@@ -81,7 +81,7 @@ _bounding_boxes = {}
 
 def _record_reader(stream):
     """
-    Iterator over complete records from a GDSII stream file.
+    Generator for complete records from a GDSII stream file.
 
     Parameters
     ----------
@@ -144,7 +144,7 @@ def _record_reader(stream):
 
 def _raw_record_reader(stream):
     """
-    Iterator over complete records from a GDSII stream file.
+    Generator for complete records from a GDSII stream file.
 
     Parameters
     ----------
@@ -6077,6 +6077,9 @@ class Cell(object):
             len(self.references),
         )
 
+    def __iter__(self):
+        return itertools.chain(self.polygons, self.paths, self.labels, self.references)
+
     def to_gds(self, outfile, multiplier, timestamp=None):
         """
         Convert this cell to a GDSII structure.
@@ -7960,6 +7963,9 @@ class GdsLibrary(object):
     def __str__(self):
         return "GdsLibrary (" + ", ".join([c for c in self.cell_dict]) + ")"
 
+    def __iter__(self):
+        return iter(self.cell_dict.values())
+
     def add(self, cell, overwrite_duplicate=False):
         """
         Add one or more cells to the library.
@@ -8389,12 +8395,10 @@ class GdsLibrary(object):
         out : list
             List of top level cells.
         """
-        top = list(self.cell_dict.values())
-        for cell in self.cell_dict.values():
-            for dependency in cell.get_dependencies():
-                if dependency in top:
-                    top.remove(dependency)
-        return top
+        top = set(self)
+        for cell in self:
+            top.difference_update(cell.get_dependencies())
+        return list(top)
 
 
 class GdsWriter(object):
