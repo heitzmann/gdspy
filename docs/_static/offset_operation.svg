@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="400.0" height="400.0" viewBox="-200.0 -200.0 400.0 400.0">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="400.0" height="400.0" viewBox="-200.0 -200.0 400.0 400.0">
 <defs>
 <style type="text/css">
 .l1d0 {stroke: rgb(21, 255, 21); fill: rgb(21, 255, 21); fill-opacity: 0.5;}
