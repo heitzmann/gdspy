@@ -2232,7 +2232,11 @@ class Path(PolygonSet):
         self.y = x0[-1, 1]
         self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
 
-        max_points = max(np, max_points // 2)
+        if max_points < 4:
+            max_points = np
+        else:
+            max_points = max_points//2
+            
         i0 = 0
         while i0 < np - 1:
             i1 = min(i0 + max_points, np)
