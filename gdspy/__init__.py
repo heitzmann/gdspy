@@ -2109,8 +2109,8 @@ class Path(PolygonSet):
             be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            `max_points`.  If `max_points` is zero no fracture will
-            occur.
+            `max_points`.  If `max_points` is less than 4, no fracture
+            will occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
