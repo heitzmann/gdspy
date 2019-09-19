@@ -2236,7 +2236,7 @@ class Path(PolygonSet):
             max_points = np
         else:
             max_points = max_points//2
-            
+
         i0 = 0
         while i0 < np - 1:
             i1 = min(i0 + max_points, np)
@@ -4125,6 +4125,10 @@ class FlexPath(object):
         self.points = self.points * scale + c0
         self.widths = self.widths * scale
         self.offsets = self.offsets * scale
+        for i, end in enumerate(self.paths.ends):
+            # CustomPlus created by bgnextn and endextn
+            if isinstance(end, tuple):
+                self.paths.ends[i] = tuple([e * scale for e in end])
         return self
 
     def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
