@@ -60,6 +60,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.4.1 (Sep 20, 2019)
+* Bug fixes (thanks to DerekK88 and Sequencer for the patches).
+
 ### Version 1.4 (May 18, 2019)
 * Revised [documentation](http://gdspy.readthedocs.io/).
 * New `FlexPath` and `RobustPath` classes: more efficient path generation when using the original GDSII path specification.
