@@ -2235,7 +2235,7 @@ class Path(PolygonSet):
         if max_points < 4:
             max_points = np
         else:
-            max_points = max_points//2
+            max_points = max_points // 2
 
         i0 = 0
         while i0 < np - 1:
@@ -3907,11 +3907,16 @@ class FlexPath(object):
             return self.to_polygonset().to_gds(multiplier)
         data = []
         un = self.points[1:] - self.points[:-1]
-        un = (
-            un[:, ::-1]
-            * _mpone
-            / ((un[:, 0] ** 2 + un[:, 1] ** 2) ** 0.5).reshape((un.shape[0], 1))
-        )
+        un2 = un[:, 0] ** 2 + un[:, 1] ** 2
+        if not un2.all():
+            nz = [0]
+            nz.extend(un2.nonzero()[0] + 1)
+            self.points = self.points[nz, :]
+            self.widths = self.widths[nz, :]
+            self.offsets = self.offsets[nz, :]
+            un = self.points[1:] - self.points[:-1]
+            un2 = un[:, 0] ** 2 + un[:, 1] ** 2
+        un = un[:, ::-1] * _mpone / (un2 ** 0.5).reshape((un.shape[0], 1))
         for ii in range(self.n):
             pathtype = (
                 0
