@@ -60,6 +60,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.4.2 (Oct 01, 2019)
+* Bug fix in `FlexPath`.
+
 ### Version 1.4.1 (Sep 20, 2019)
 * Bug fixes (thanks to DerekK88 and Sequencer for the patches).
 

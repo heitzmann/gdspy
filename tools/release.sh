@@ -17,7 +17,7 @@ echo "Release version $CURR_VER [y/n]?"
 read -r GOON
 
 if [ "$GOON" = 'y' ] ; then
-  #git commit -m "Release v$CURR_VER"
-  #git tag -am "Release v$CURR_VER" "v$CURR_VER"
+  git commit -m "Release v$CURR_VER"
+  git tag -am "Release v$CURR_VER" "v$CURR_VER"
   echo "Review the status and 'git push' to finish release"
 fi
