@@ -182,6 +182,48 @@ def test_replace():
     assert r6.ref_cell is c2
 
 
+def test_rename():
+    lib = gdspy.GdsLibrary()
+    main = gdspy.Cell("MAIN", exclude_from_current=True)
+    c1 = gdspy.Cell("C1", exclude_from_current=True)
+    c2 = gdspy.Cell("C2", exclude_from_current=True)
+    c3 = gdspy.Cell("C1", exclude_from_current=True)
+    r1 = gdspy.CellReference(c1)
+    main.add(r1)
+    with pytest.warns(UserWarning):
+        r2 = gdspy.CellArray("C1", 1, 1, (1, 1))
+    main.add(r2)
+    r3 = gdspy.CellReference(c2)
+    main.add(r3)
+    r4 = gdspy.CellReference(c3)
+    c2.add(r4)
+    with pytest.warns(UserWarning):
+        r5 = gdspy.CellReference("C3")
+    c1.add(r5)
+    with pytest.warns(UserWarning):
+        r6 = gdspy.CellReference("C2")
+    main.add(r6)
+    lib.add([main, c1, c2])
+    with pytest.raises(ValueError):
+        lib.rename_cell(c3, 'C3')
+    assert c3.name == 'C1'
+    with pytest.raises(ValueError):
+        lib.rename_cell(c2, "C1")
+    assert c2.name == "C2"
+    lib.rename_cell(c1, "C3")
+    assert c1.name == "C3"
+    assert lib.cell_dict["C3"] is c1
+    lib.rename_cell(c2, "X2", False)
+    assert c2.name == "X2"
+    assert lib.cell_dict["X2"] is c2
+    assert r1.ref_cell is c1
+    assert r2.ref_cell is c1
+    assert r3.ref_cell is c2
+    assert r4.ref_cell is c1
+    assert r5.ref_cell == "C3"
+    assert r6.ref_cell == "C2"
+
+
 @pytest.fixture
 def tree():
     c = [gdspy.Cell("tree_" + unique(), True) for _ in range(8)]

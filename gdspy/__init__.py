@@ -8432,6 +8432,48 @@ class GdsLibrary(object):
             top.difference_update(cell.get_dependencies())
         return list(top)
 
+    def rename_cell(self, cell, name, update_references=True):
+        """
+        Rename an existing cell in the library.
+
+        Parameters
+        ----------
+        cell : `Cell` or string
+            Cell to be renamed.  It must be present in the library.
+        name : string
+            New name for the cell.
+        update_references : bool
+            If True, replace references using the old name with the new
+            cell.
+        """
+        if isinstance(cell, Cell):
+            old_name = cell.name
+            if old_name not in self.cell_dict:
+                raise ValueError(
+                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                    )
+            if self.cell_dict[old_name] is not cell:
+                raise ValueError(
+                        "[GDSPY] Cell named {0} doesn't match library's.".format(old_name)
+                    )
+        else:
+            old_name = cell
+            if old_name not in self.cell_dict:
+                raise ValueError(
+                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                    )
+            cell = self.cell_dict[old_name]
+        if name in self.cell_dict:
+            raise ValueError(
+                    "[GDSPY] Cell named {0} already present in library.  "
+                    "Use `add` to overwrite cells.".format(name)
+                )
+        del self.cell_dict[old_name]
+        self.cell_dict[name] = cell
+        cell.name = name
+        if update_references:
+            self.replace_references(old_name, cell)
+
     def replace_references(self, old_cell, new_cell):
         """
         Replace cells in all references in the library.
