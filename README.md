@@ -61,7 +61,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Upcoming
-* New `Cell.write_svg` function to export and SVG image of the cell.
+* New `Cell.write_svg` function to export an SVG image of the cell.
 * `GdsLibrary.add` can update references when a cell is overwritten.
 * Added `GdsLibrary.remove` to allow cells to be properly removed from libraries.
 * Added `GdsLibrary.rename_cell` to rename cells in libraries.
