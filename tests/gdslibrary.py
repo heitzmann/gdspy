@@ -50,6 +50,138 @@ def test_duplicate():
     assert lib.cell_dict == {name: cl[0], name + "1": cl[1]}
 
 
+def test_add_update():
+    lib = gdspy.GdsLibrary()
+    main = gdspy.Cell("MAIN", exclude_from_current=True)
+    c1 = gdspy.Cell("C1", exclude_from_current=True)
+    c2 = gdspy.Cell("C2", exclude_from_current=True)
+    c3 = gdspy.Cell("C1", exclude_from_current=True)
+    r1 = gdspy.CellReference(c1)
+    main.add(r1)
+    with pytest.warns(UserWarning):
+        r2 = gdspy.CellArray("C1", 1, 1, (1, 1))
+    main.add(r2)
+    r3 = gdspy.CellReference(c2)
+    main.add(r3)
+    r4 = gdspy.CellReference(c3)
+    c2.add(r4)
+    with pytest.warns(UserWarning):
+        r5 = gdspy.CellReference("C3")
+    c1.add(r5)
+    with pytest.warns(UserWarning):
+        r6 = gdspy.CellReference("C2")
+    main.add(r6)
+    lib.add([main, c1, c2])
+    lib.add(c3, True, True)
+    assert r1.ref_cell is c3
+    assert r2.ref_cell is c3
+    assert r3.ref_cell is c2
+    assert r4.ref_cell is c3
+    assert r5.ref_cell == "C3"
+    assert r6.ref_cell == "C2"
+
+
+def test_add_update2():
+    lib = gdspy.GdsLibrary()
+    main = gdspy.Cell("MAIN", exclude_from_current=True)
+    c1 = gdspy.Cell("C1", exclude_from_current=True)
+    c2 = gdspy.Cell("C2", exclude_from_current=True)
+    c3 = gdspy.Cell("C1", exclude_from_current=True)
+    r1 = gdspy.CellReference(c1)
+    main.add(r1)
+    with pytest.warns(UserWarning):
+        r2 = gdspy.CellArray("C1", 1, 1, (1, 1))
+    main.add(r2)
+    r3 = gdspy.CellReference(c2)
+    main.add(r3)
+    r4 = gdspy.CellReference(c3)
+    c2.add(r4)
+    with pytest.warns(UserWarning):
+        r5 = gdspy.CellReference("C3")
+    c1.add(r5)
+    with pytest.warns(UserWarning):
+        r6 = gdspy.CellReference("C2")
+    main.add(r6)
+    lib.add([main, c1, c2])
+    lib.add(c3, True, False)
+    assert r1.ref_cell is c1
+    assert r2.ref_cell == "C1"
+    assert r3.ref_cell is c2
+    assert r4.ref_cell is c3
+    assert r5.ref_cell == "C3"
+    assert r6.ref_cell == "C2"
+
+
+def test_remove():
+    lib = gdspy.GdsLibrary()
+    main = gdspy.Cell("MAIN", exclude_from_current=True)
+    c1 = gdspy.Cell("C1", exclude_from_current=True)
+    c2 = gdspy.Cell("C2", exclude_from_current=True)
+    c3 = gdspy.Cell("C1", exclude_from_current=True)
+    r1 = gdspy.CellReference(c1)
+    main.add(r1)
+    with pytest.warns(UserWarning):
+        r2 = gdspy.CellArray("C1", 1, 1, (1, 1))
+    main.add(r2)
+    r3 = gdspy.CellReference(c2)
+    main.add(r3)
+    r4 = gdspy.CellReference(c3)
+    c2.add(r4)
+    with pytest.warns(UserWarning):
+        r5 = gdspy.CellReference("C3")
+    c1.add(r5)
+    with pytest.warns(UserWarning):
+        r6 = gdspy.CellReference("C2")
+    main.add(r6)
+    lib.add([main, c1, c2])
+    lib.remove("C3")
+    assert len(c1.references) == 0
+    assert len(c2.references) == 1
+    assert c2.references[0] is r4
+    lib.remove(c1)
+    assert "C1" not in lib.cell_dict
+    assert len(main.references) == 2
+    assert main.references[0] is r3
+    assert main.references[1] is r6
+    assert len(c2.references) == 0
+
+
+def test_replace():
+    lib = gdspy.GdsLibrary()
+    main = gdspy.Cell("MAIN", exclude_from_current=True)
+    c1 = gdspy.Cell("C1", exclude_from_current=True)
+    c2 = gdspy.Cell("C2", exclude_from_current=True)
+    c3 = gdspy.Cell("C1", exclude_from_current=True)
+    r1 = gdspy.CellReference(c1)
+    main.add(r1)
+    with pytest.warns(UserWarning):
+        r2 = gdspy.CellArray("C1", 1, 1, (1, 1))
+    main.add(r2)
+    r3 = gdspy.CellReference(c2)
+    main.add(r3)
+    r4 = gdspy.CellReference(c3)
+    c2.add(r4)
+    with pytest.warns(UserWarning):
+        r5 = gdspy.CellReference("C3")
+    c1.add(r5)
+    with pytest.warns(UserWarning):
+        r6 = gdspy.CellReference("C2")
+    main.add(r6)
+    lib.add([main, c1, c2])
+    lib.replace_references(c2, c3)
+    assert r3.ref_cell is c3
+    assert r6.ref_cell is c3
+    lib.replace_references("C3", "C1")
+    assert r5.ref_cell is c1
+    lib.replace_references("C1", c2)
+    assert r1.ref_cell is c2
+    assert r2.ref_cell is c2
+    assert r3.ref_cell is c2
+    assert r4.ref_cell is c2
+    assert r5.ref_cell is c2
+    assert r6.ref_cell is c2
+
+
 @pytest.fixture
 def tree():
     c = [gdspy.Cell("tree_" + unique(), True) for _ in range(8)]

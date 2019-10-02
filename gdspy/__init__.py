@@ -2928,15 +2928,13 @@ class PolyPath(PolygonSet):
             if corners in [0, 1]:
                 corners = ["miter", "bevel"][corners]
                 warnings.warn(
-                    "[GDSPY] Argument corners must be one of 'miter' "
-                    "or 'bevel'.",
+                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'.",
                     category=DeprecationWarning,
                     stacklevel=2,
                 )
             else:
                 raise ValueError(
-                    "[GDSPY] Argument corners must be one of 'miter' "
-                    "or 'bevel'."
+                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'."
                 )
         bevel = corners == "bevel"
         if ends not in ["flush", "round", "extended"]:
@@ -6824,12 +6822,13 @@ class Cell(object):
             y -= pad
             w += 2 * pad
             h += 2 * pad
-        outfile.write('''<?xml version="1.0" encoding="UTF-8"?>
+        outfile.write(
+            """<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
      width="{}" height="{}" viewBox="{} {} {} {}">
 <defs>
 <style type="text/css">
-'''.format(
+""".format(
                 w, h, x, y, w, h
             )
         )
@@ -6929,9 +6928,7 @@ class CellReference(object):
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
                 "[GDSPY] Cell {0} not found; operations on this "
-                "CellReference may not work.".format(
-                    self.ref_cell
-                ),
+                "CellReference may not work.".format(self.ref_cell),
                 stacklevel=2,
             )
 
@@ -7377,9 +7374,7 @@ class CellArray(object):
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
                 "[GDSPY] Cell {0} not found; operations on this "
-                "CellArray may not work.".format(
-                    self.ref_cell
-                ),
+                "CellArray may not work.".format(self.ref_cell),
                 stacklevel=2,
             )
 
@@ -7979,7 +7974,7 @@ class GdsLibrary(object):
     def __iter__(self):
         return iter(self.cell_dict.values())
 
-    def add(self, cell, overwrite_duplicate=False):
+    def add(self, cell, overwrite_duplicate=False, update_references=False):
         """
         Add one or more cells to the library.
 
@@ -7988,44 +7983,69 @@ class GdsLibrary(object):
         cell : `Cell` or iterable
             Cells to be included in the library.
         overwrite_duplicate : bool
-            If True an existing cell with the same name in the library
+            If True, an existing cell with the same name in the library
             will be overwritten.
+        update_references : bool
+            If True, `CellReference` and `CellArray` instances from an
+            overwritten cell are updated to the new one (used only when
+            `overwrite_duplicate` is True).
 
         Returns
         -------
         out : `GdsLibrary`
             This object.
-
-        Notes
-        -----
-        `CellReference` or `CellArray` instances that referred to an
-        overwritten cell are not automatically updated.
         """
         if isinstance(cell, Cell):
+            cell = [cell]
+        for c in cell:
             if (
                 not overwrite_duplicate
-                and cell.name in self.cell_dict
-                and self.cell_dict[cell.name] is not cell
+                and c.name in self.cell_dict
+                and self.cell_dict[c.name] is not c
             ):
                 raise ValueError(
-                    "[GDSPY] Cell named {0} already present in library.".format(
-                        cell.name
-                    )
+                    "[GDSPY] Cell named {0} already present in library.".format(c.name)
                 )
-            self.cell_dict[cell.name] = cell
+            if overwrite_duplicate and update_references and c.name in self.cell_dict:
+                self.replace_references(c.name, c)
+            self.cell_dict[c.name] = c
+        return self
+
+    def remove(self, cell, remove_references=True):
+        """
+        Remove a cell from the library.
+
+        Parameters
+        ----------
+        cell : `Cell` or string
+            Cell to be removed from the library.
+        remove_references : bool
+            If True, `CellReference` and `CellArray` using the removed
+            cell will also be removed.
+
+        Returns
+        -------
+        out : `GdsLibrary`
+            This object.
+        """
+        if isinstance(cell, Cell):
+            name = cell.name
         else:
-            for c in cell:
-                if (
-                    not overwrite_duplicate
-                    and c.name in self.cell_dict
-                    and self.cell_dict[c.name] is not c
-                ):
-                    raise ValueError(
-                        "[GDSPY] Cell named {0} already present in library.".format(
-                            c.name
-                        )
+            name = cell
+        if name in self.cell_dict:
+            del self.cell_dict[name]
+        if remove_references:
+            for c in self.cell_dict.values():
+                c.references = [
+                    ref
+                    for ref in c.references
+                    if name
+                    != (
+                        ref.ref_cell.name
+                        if isinstance(ref.ref_cell, Cell)
+                        else ref.ref_cell
                     )
-                self.cell_dict[c.name] = c
+                ]
         return self
 
     def write_gds(self, outfile, cells=None, timestamp=None, binary_cells=None):
@@ -8269,8 +8289,7 @@ class GdsLibrary(object):
                     factor = record[1][1] / self.unit
                 else:
                     raise ValueError(
-                        "[GDSPY] units must be one of 'convert', "
-                        "'import' or 'skip'."
+                        "[GDSPY] units must be one of 'convert', 'import' or 'skip'."
                     )
             # LIBNAME
             elif record[0] == 0x02:
@@ -8412,6 +8431,42 @@ class GdsLibrary(object):
         for cell in self:
             top.difference_update(cell.get_dependencies())
         return list(top)
+
+    def replace_references(self, old_cell, new_cell):
+        """
+        Replace cells in all references in the library.
+
+        All `CellReference` and `CellArray` using the `old_cell` are
+        updated to reference `new_cell`.  Matching with `old_cell` is
+        by name only.
+
+        Parameters
+        ----------
+        old_cell : `Cell` or string
+            Cell to be replaced.
+        new_cell : `Cell` or string
+            Replacement cell.  If the cell name is passed and it is
+            present in the library, the actual cell is used instead.
+
+        Returns
+        -------
+        out : `GdsLibrary`
+            This object.
+        """
+        if isinstance(old_cell, Cell):
+            old_name = old_cell.name
+        else:
+            old_name = old_cell
+        if not isinstance(new_cell, Cell) and new_cell in self.cell_dict:
+            new_cell = self.cell_dict[new_cell]
+        for cell in self.cell_dict.values():
+            for ref in cell.references:
+                if isinstance(ref.ref_cell, Cell):
+                    if ref.ref_cell.name == old_name:
+                        ref.ref_cell = new_cell
+                elif ref.ref_cell == old_name:
+                    ref.ref_cell = new_cell
+        return self
 
 
 class GdsWriter(object):
