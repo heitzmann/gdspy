@@ -62,6 +62,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcoming
 * New `Cell.write_svg` function to export and SVG image of the cell.
+* `GdsLibrary.add` can update references when a cell is overwritten.
+* Added `GdsLibrary.remove` to allow cells to be properly removed from libraries.
+* Added `GdsLibrary.replace_references` to easily replace referenced cells in libraries.
 * Iterating over `GdsLibrary` objects yields all its cells.
 * Iterating over `Cell` objects yield all its polygons, paths, labels and references.
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
