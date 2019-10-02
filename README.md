@@ -66,6 +66,12 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Iterating over `Cell` objects yield all its polygons, paths, labels and references.
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
 
+### Version 1.4.2 (Oct 01, 2019)
+* Bug fix in `FlexPath`.
+
+### Version 1.4.1 (Sep 20, 2019)
+* Bug fixes (thanks to DerekK88 and Sequencer for the patches).
+
 ### Version 1.4 (May 18, 2019)
 * Revised [documentation](http://gdspy.readthedocs.io/).
 * New `FlexPath` and `RobustPath` classes: more efficient path generation when using the original GDSII path specification.

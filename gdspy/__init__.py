@@ -63,7 +63,7 @@ except ImportError as e:
         stacklevel=2,
     )
 
-__version__ = "1.4"
+__version__ = "1.4.2"
 
 _halfpi = 0.5 * numpy.pi
 _zero = numpy.array((0.0, 0.0))
@@ -2128,8 +2128,8 @@ class Path(PolygonSet):
             be performed.
         max_points : integer
             Elements will be fractured until each polygon has at most
-            `max_points`.  If `max_points` is zero no fracture will
-            occur.
+            `max_points`.  If `max_points` is less than 4, no fracture
+            will occur.
         final_width : number or function
             If set to a number, the paths of this segment will have
             their widths linearly changed from their current value to
@@ -2251,7 +2251,11 @@ class Path(PolygonSet):
         self.y = x0[-1, 1]
         self.direction = numpy.arctan2(-dx[-1, 0], dx[-1, 1])
 
-        max_points = max(np, max_points // 2)
+        if max_points < 4:
+            max_points = np
+        else:
+            max_points = max_points // 2
+
         i0 = 0
         while i0 < np - 1:
             i1 = min(i0 + max_points, np)
@@ -3928,11 +3932,16 @@ class FlexPath(object):
             self.to_polygonset().to_gds(outfile, multiplier)
             return
         un = self.points[1:] - self.points[:-1]
-        un = (
-            un[:, ::-1]
-            * _mpone
-            / ((un[:, 0] ** 2 + un[:, 1] ** 2) ** 0.5).reshape((un.shape[0], 1))
-        )
+        un2 = un[:, 0] ** 2 + un[:, 1] ** 2
+        if not un2.all():
+            nz = [0]
+            nz.extend(un2.nonzero()[0] + 1)
+            self.points = self.points[nz, :]
+            self.widths = self.widths[nz, :]
+            self.offsets = self.offsets[nz, :]
+            un = self.points[1:] - self.points[:-1]
+            un2 = un[:, 0] ** 2 + un[:, 1] ** 2
+        un = un[:, ::-1] * _mpone / (un2 ** 0.5).reshape((un.shape[0], 1))
         for ii in range(self.n):
             pathtype = (
                 0
@@ -4164,6 +4173,10 @@ class FlexPath(object):
         self.points = self.points * scale + c0
         self.widths = self.widths * scale
         self.offsets = self.offsets * scale
+        for i, end in enumerate(self.paths.ends):
+            # CustomPlus created by bgnextn and endextn
+            if isinstance(end, tuple):
+                self.paths.ends[i] = tuple([e * scale for e in end])
         return self
 
     def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
