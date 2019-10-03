@@ -8025,8 +8025,8 @@ class GdsLibrary(object):
 
         Returns
         -------
-        out : `GdsLibrary`
-            This object.
+        out : integer
+            Number of references removed.
         """
         if isinstance(cell, Cell):
             name = cell.name
@@ -8034,8 +8034,10 @@ class GdsLibrary(object):
             name = cell
         if name in self.cell_dict:
             del self.cell_dict[name]
+        removed = 0
         if remove_references:
             for c in self.cell_dict.values():
+                removed += len(c.references)
                 c.references = [
                     ref
                     for ref in c.references
@@ -8046,7 +8048,8 @@ class GdsLibrary(object):
                         else ref.ref_cell
                     )
                 ]
-        return self
+                removed -= len(c.references)
+        return removed
 
     def write_gds(self, outfile, cells=None, timestamp=None, binary_cells=None):
         """
@@ -8441,10 +8444,15 @@ class GdsLibrary(object):
         cell : `Cell` or string
             Cell to be renamed.  It must be present in the library.
         name : string
-            New name for the cell.
+            New name for the cell.  It cannot be present in the library.
         update_references : bool
             If True, replace references using the old name with the new
             cell.
+
+        Returns
+        -------
+        out : integer
+            Number of updated references.
         """
         if isinstance(cell, Cell):
             old_name = cell.name
@@ -8472,7 +8480,8 @@ class GdsLibrary(object):
         self.cell_dict[name] = cell
         cell.name = name
         if update_references:
-            self.replace_references(old_name, cell)
+            return self.replace_references(old_name, cell)
+        return 0
 
     def replace_references(self, old_cell, new_cell):
         """
@@ -8492,8 +8501,8 @@ class GdsLibrary(object):
 
         Returns
         -------
-        out : `GdsLibrary`
-            This object.
+        out : integer
+            Number of replacements.
         """
         if isinstance(old_cell, Cell):
             old_name = old_cell.name
@@ -8501,14 +8510,17 @@ class GdsLibrary(object):
             old_name = old_cell
         if not isinstance(new_cell, Cell) and new_cell in self.cell_dict:
             new_cell = self.cell_dict[new_cell]
+        replacements = 0
         for cell in self.cell_dict.values():
             for ref in cell.references:
                 if isinstance(ref.ref_cell, Cell):
                     if ref.ref_cell.name == old_name:
                         ref.ref_cell = new_cell
+                        replacements += 1
                 elif ref.ref_cell == old_name:
                     ref.ref_cell = new_cell
-        return self
+                    replacements += 1
+        return replacements
 
 
 class GdsWriter(object):

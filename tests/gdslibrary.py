@@ -134,11 +134,11 @@ def test_remove():
         r6 = gdspy.CellReference("C2")
     main.add(r6)
     lib.add([main, c1, c2])
-    lib.remove("C3")
+    assert lib.remove("C3") == 1
     assert len(c1.references) == 0
     assert len(c2.references) == 1
     assert c2.references[0] is r4
-    lib.remove(c1)
+    assert lib.remove(c1) == 3
     assert "C1" not in lib.cell_dict
     assert len(main.references) == 2
     assert main.references[0] is r3
@@ -168,12 +168,12 @@ def test_replace():
         r6 = gdspy.CellReference("C2")
     main.add(r6)
     lib.add([main, c1, c2])
-    lib.replace_references(c2, c3)
+    assert lib.replace_references(c2, c3) == 2
     assert r3.ref_cell is c3
     assert r6.ref_cell is c3
-    lib.replace_references("C3", "C1")
+    assert lib.replace_references("C3", "C1") == 1
     assert r5.ref_cell is c1
-    lib.replace_references("C1", c2)
+    assert lib.replace_references("C1", c2) == 6
     assert r1.ref_cell is c2
     assert r2.ref_cell is c2
     assert r3.ref_cell is c2
@@ -205,15 +205,15 @@ def test_rename():
     main.add(r6)
     lib.add([main, c1, c2])
     with pytest.raises(ValueError):
-        lib.rename_cell(c3, 'C3')
-    assert c3.name == 'C1'
+        lib.rename_cell(c3, "C3")
+    assert c3.name == "C1"
     with pytest.raises(ValueError):
         lib.rename_cell(c2, "C1")
     assert c2.name == "C2"
-    lib.rename_cell(c1, "C3")
+    assert lib.rename_cell(c1, "C3") == 2
     assert c1.name == "C3"
     assert lib.cell_dict["C3"] is c1
-    lib.rename_cell(c2, "X2", False)
+    assert lib.rename_cell(c2, "X2", False) == 0
     assert c2.name == "X2"
     assert lib.cell_dict["X2"] is c2
     assert r1.ref_cell is c1
