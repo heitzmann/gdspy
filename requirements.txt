@@ -1,2 +1,4 @@
 setuptools
 numpy
+future; python_version < "3"
+pytest == 4.6; python_version < "3"
