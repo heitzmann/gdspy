@@ -11,7 +11,6 @@ Classes and functions for the visualization of layouts created with the
 gdspy Python module.
 """
 
-import sys
 import os
 import colorsys
 import numpy

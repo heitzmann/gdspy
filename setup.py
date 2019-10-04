@@ -58,7 +58,7 @@ setup(
         )
     ],
     provides=["gdspy"],
-    install_requires=["numpy"] + (["future"] if sys.version_info.major < 3 else []),
+    install_requires=["numpy"]
     setup_requires=setup_requires,
     tests_require=["pytest"],
     platforms="OS Independent",
