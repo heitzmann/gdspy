@@ -19,9 +19,9 @@ GDSII format references:
 - http://www.buchanan1.net/stream_description.html
 """
 
-import warnings
+__version__ = "1.4.2"
 
-__version__ = "2.0.0"
+import warnings
 
 from gdspy.library import (
     Cell,
@@ -35,7 +35,16 @@ from gdspy.library import (
 from gdspy.curve import Curve
 from gdspy.label import Label
 from gdspy.path import FlexPath, RobustPath
-from gdspy.polygon import PolygonSet, Polygon, Rectangle, Round, Text, Path
+from gdspy.polygon import (
+    PolygonSet,
+    Polygon,
+    Rectangle,
+    Round,
+    Text,
+    Path,
+    PolyPath,
+    L1Path,
+)
 from gdspy.gdsiiformat import gdsii_hash
 from gdspy.operation import slice, offset, boolean, inside, copy
 
@@ -45,5 +54,43 @@ except ImportError as e:
     warnings.warn(
         "[GDSPY] LayoutViewer not available: " + str(e),
         category=ImportWarning,
-        stacklevel=2,
+        stacklevel=1,
     )
+
+
+def fast_boolean(*args, **kwargs):
+    """
+    .. deprecated:: 1.5
+       `fast_boolean` is deprecated in favor of `boolean` and will be
+        removed in a future version of Gdspy.
+    """
+    warnings.warn(
+        "[GDSPY] fast_boolean is deprecated.  Use boolean instead.",
+        category=DeprecationWarning,
+        stacklevel=1,
+    )
+    return boolean(*args, **kwargs)
+
+
+def write_gds(
+    outfile,
+    cells=None,
+    name="library",
+    unit=1.0e-6,
+    precision=1.0e-9,
+    timestamp=None,
+    binary_cells=None,
+):
+    warnings.warn(
+        "[GDSPY] write_gds and the global library is deprecated.  "
+        "Use GdsLibrary.write_gds instead.",
+        category=DeprecationWarning,
+        stacklevel=1,
+    )
+    current_library.name = name
+    current_library.unit = unit
+    current_library.precision = precision
+    current_library.write_gds(outfile, cells, timestamp, binary_cells)
+
+
+current_library = GdsLibrary()

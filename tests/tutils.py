@@ -11,6 +11,8 @@ import os
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 @pytest.fixture
 def target():

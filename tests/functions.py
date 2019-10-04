@@ -13,6 +13,8 @@ import datetime
 import numpy
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def equals(x, y):
     return gdspy.boolean(x, y, "xor") is None

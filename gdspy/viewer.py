@@ -171,7 +171,16 @@ class LayoutViewer(tkinter.Frame):
                 for c in cells:
                     self.cells[c.name] = c
         if len(self.cells) == 0:
-            raise ValueError("[GDSPY] No cells to display in LayoutViewer.")
+            self.cells = dict(gdspy.current_library.cells)
+            if len(self.cells) == 0:
+                raise ValueError("[GDSPY] No cells to display in LayoutViewer.")
+            else:
+                warnings.warn(
+                    "[GDSPY] Use of the global library is deprecated.  "
+                    "Pass LayoutViewer a GdsLibrary instance.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
         cell_names = list(self.cells.keys())
         self.cell_bb = dict([(s, None) for s in self.cells])
 

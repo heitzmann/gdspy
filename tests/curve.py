@@ -12,6 +12,8 @@ import numpy
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def test_hobby1(target):
     cell = gdspy.Cell("test")

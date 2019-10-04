@@ -12,6 +12,8 @@ import numpy
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def broken(p0, v0, p1, v1, p2, w):
     den = v1[1] * v0[0] - v1[0] * v0[1]

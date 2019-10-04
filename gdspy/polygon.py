@@ -1967,3 +1967,584 @@ class Path(PolygonSet):
                 datatype,
             )
         return self
+
+
+_pmone = numpy.array((1.0, -1.0))
+
+
+class L1Path(PolygonSet):
+    """
+    Series of geometric objects that form a path or a collection of
+    parallel paths with Manhattan geometry.
+
+    .. deprecated:: 1.4
+       `L1Path` is deprecated in favor of FlexPath and will be removed
+       in a future version of Gdspy.
+
+    Parameters
+    ----------
+    initial_point : array-like[2]
+        Starting position of the path.
+    direction : '+x', '+y', '-x', '-y'
+        Starting direction of the path.
+    width : number
+        The initial width of each path.
+    length : array-like
+        Lengths of each section to add.
+    turn : array-like
+        Direction to turn before each section.  The sign indicate the
+        turn direction (ccw is positive), and the modulus is a
+        multiplicative factor for the path width after each turn.  Must
+        have 1 element less then `length`.
+    number_of_paths : positive integer
+        Number of parallel paths to create simultaneously.
+    distance : number
+        Distance between the centers of adjacent paths.
+    max_points : integer
+        The paths will be fractured in polygons with at most
+        `max_points` (must be at least 6).  If `max_points` is zero no
+        fracture will occur.
+    layer : integer, list
+        The GDSII layer numbers for the elements of each path.  If the
+        number of layers in the list is less than the number of paths,
+        the list is repeated.
+    datatype : integer, list
+        The GDSII datatype for the elements of each path (between 0 and
+        255).  If the number of datatypes in the list is less than the
+        number of paths, the list is repeated.
+    Attributes
+    ----------
+    x : number
+        Final position of the path in the x direction.
+    y : number
+        Final position of the path in the y direction.
+    direction : '+x', '-x', '+y', '-y' or number
+        Direction or angle (in *radians*) the path points to.  The
+        numerical angle is returned only after a rotation of the object.
+    Examples
+    --------
+    >>> length = [10, 30, 15, 15, 15, 15, 10]
+    >>> turn = [1, -1, -1, 3, -1, 1]
+    >>> l1path = gdspy.L1Path((0, 0), '+x', 2, length, turn)
+    >>> myCell.add(l1path)
+    """
+
+    __slots__ = "layers", "datatypes", "polygons", "direction", "x", "y"
+
+    def __init__(
+        self,
+        initial_point,
+        direction,
+        width,
+        length,
+        turn,
+        number_of_paths=1,
+        distance=0,
+        max_points=199,
+        layer=0,
+        datatype=0,
+    ):
+        warnings.warn(
+            "[GDSPY] L1Path is deprecated favor of FlexPath and will be "
+            "removed in a future version of Gdspy.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        if not isinstance(layer, list):
+            layer = [layer]
+        if not isinstance(datatype, list):
+            datatype = [datatype]
+        layer = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
+        datatype = (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
+        w = width * 0.5
+        points = len(turn) + 1 if max_points == 0 else max_points // 2 - 1
+        paths = [[[], []] for ii in range(number_of_paths)]
+        self.polygons = []
+        self.layers = []
+        self.datatypes = []
+        self.x = initial_point[0]
+        self.y = initial_point[1]
+        if direction == "+x":
+            direction = 0
+            for ii in range(number_of_paths):
+                d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                paths[ii][0].append((initial_point[0], d0 + initial_point[1] - w))
+                paths[ii][1].append((initial_point[0], d0 + initial_point[1] + w))
+        elif direction == "+y":
+            direction = 1
+            for ii in range(number_of_paths):
+                d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                paths[ii][0].append((d0 + initial_point[0] + w, initial_point[1]))
+                paths[ii][1].append((d0 + initial_point[0] - w, initial_point[1]))
+        elif direction == "-x":
+            direction = 2
+            for ii in range(number_of_paths):
+                d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                paths[ii][0].append((initial_point[0], d0 + initial_point[1] + w))
+                paths[ii][1].append((initial_point[0], d0 + initial_point[1] - w))
+        elif direction == "-y":
+            direction = 3
+            for ii in range(number_of_paths):
+                d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                paths[ii][0].append((d0 + initial_point[0] - w, initial_point[1]))
+                paths[ii][1].append((d0 + initial_point[0] + w, initial_point[1]))
+        for jj in range(len(turn)):
+            points -= 1
+            if direction == 0:
+                for ii in range(number_of_paths):
+                    d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                    paths[ii][0].append(
+                        (self.x + length[jj] - (d0 - w) * turn[jj], paths[ii][0][-1][1])
+                    )
+                    paths[ii][1].append(
+                        (self.x + length[jj] - (d0 + w) * turn[jj], paths[ii][1][-1][1])
+                    )
+                self.x += length[jj]
+            elif direction == 1:
+                for ii in range(number_of_paths):
+                    d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                    paths[ii][0].append(
+                        (paths[ii][0][-1][0], self.y + length[jj] - (d0 - w) * turn[jj])
+                    )
+                    paths[ii][1].append(
+                        (paths[ii][1][-1][0], self.y + length[jj] - (d0 + w) * turn[jj])
+                    )
+                self.y += length[jj]
+            elif direction == 2:
+                for ii in range(number_of_paths):
+                    d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                    paths[ii][0].append(
+                        (self.x - length[jj] - (d0 + w) * turn[jj], paths[ii][0][-1][1])
+                    )
+                    paths[ii][1].append(
+                        (self.x - length[jj] - (d0 - w) * turn[jj], paths[ii][1][-1][1])
+                    )
+                self.x -= length[jj]
+            elif direction == 3:
+                for ii in range(number_of_paths):
+                    d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                    paths[ii][0].append(
+                        (paths[ii][0][-1][0], self.y - length[jj] - (d0 + w) * turn[jj])
+                    )
+                    paths[ii][1].append(
+                        (paths[ii][1][-1][0], self.y - length[jj] - (d0 - w) * turn[jj])
+                    )
+                self.y -= length[jj]
+            if points == 0:
+                for p in paths:
+                    if direction % 2 == 0:
+                        min_dist = 1e300
+                        for x1 in [p[0][-2][0], p[1][-2][0]]:
+                            for x2 in [p[0][-1][0], p[1][-1][0]]:
+                                if abs(x1 - x2) < min_dist:
+                                    x0 = 0.5 * (x1 + x2)
+                                    min_dist = abs(x1 - x2)
+                        p0 = (x0, p[0][-1][1])
+                        p1 = (x0, p[1][-1][1])
+                    else:
+                        min_dist = 1e300
+                        for y1 in [p[0][-2][1], p[1][-2][1]]:
+                            for y2 in [p[0][-1][1], p[1][-1][1]]:
+                                if abs(y1 - y2) < min_dist:
+                                    y0 = 0.5 * (y1 + y2)
+                                    min_dist = abs(y1 - y2)
+                        p0 = (p[0][-1][0], y0)
+                        p1 = (p[1][-1][0], y0)
+                    self.polygons.append(
+                        numpy.array(p[0][:-1] + [p0, p1] + p[1][-2::-1])
+                    )
+                    p[0] = [p0, p[0][-1]]
+                    p[1] = [p1, p[1][-1]]
+                self.layers.extend(layer)
+                self.datatypes.extend(datatype)
+                points = max_points // 2 - 2
+            if turn[jj] > 0:
+                direction = (direction + 1) % 4
+            else:
+                direction = (direction - 1) % 4
+        if direction == 0:
+            for ii in range(number_of_paths):
+                d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                paths[ii][0].append((self.x + length[-1], paths[ii][0][-1][1]))
+                paths[ii][1].append((self.x + length[-1], paths[ii][1][-1][1]))
+            self.x += length[-1]
+        elif direction == 1:
+            for ii in range(number_of_paths):
+                d0 = ii * distance - (number_of_paths - 1) * distance * 0.5
+                paths[ii][0].append((paths[ii][0][-1][0], self.y + length[-1]))
+                paths[ii][1].append((paths[ii][1][-1][0], self.y + length[-1]))
+            self.y += length[-1]
+        elif direction == 2:
+            for ii in range(number_of_paths):
+                d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                paths[ii][0].append((self.x - length[-1], paths[ii][0][-1][1]))
+                paths[ii][1].append((self.x - length[-1], paths[ii][1][-1][1]))
+            self.x -= length[-1]
+        elif direction == 3:
+            for ii in range(number_of_paths):
+                d0 = (number_of_paths - 1) * distance * 0.5 - ii * distance
+                paths[ii][0].append((paths[ii][0][-1][0], self.y - length[-1]))
+                paths[ii][1].append((paths[ii][1][-1][0], self.y - length[-1]))
+            self.y -= length[jj]
+        self.direction = ["+x", "+y", "-x", "-y"][direction]
+        self.polygons.extend(numpy.array(p[0] + p[1][::-1]) for p in paths)
+        self.layers.extend(layer)
+        self.datatypes.extend(datatype)
+
+    def __str__(self):
+        return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(
+            self.x,
+            self.y,
+            self.direction,
+            len(self.polygons),
+            sum([len(p) for p in self.polygons]),
+            list(set(self.layers)),
+            list(set(self.datatypes)),
+        )
+
+    def rotate(self, angle, center=(0, 0)):
+        """
+        Rotate this object.
+        Parameters
+        ----------
+        angle : number
+            The angle of rotation (in *radians*).
+        center : array-like[2]
+            Center point for the rotation.
+        Returns
+        -------
+        out : `L1Path`
+            This object.
+        """
+        ca = numpy.cos(angle)
+        sa = numpy.sin(angle) * _mpone
+        c0 = numpy.array(center)
+        if isinstance(self.direction, basestring):
+            self.direction = _directions_dict[self.direction] * numpy.pi
+        self.direction += angle
+        cur = numpy.array((self.x, self.y)) - c0
+        self.x, self.y = cur * ca + cur[::-1] * sa + c0
+        self.polygons = [
+            (points - c0) * ca + (points - c0)[:, ::-1] * sa + c0
+            for points in self.polygons
+        ]
+        return self
+
+
+class PolyPath(PolygonSet):
+    """
+    Series of geometric objects that form a polygonal path or a
+    collection of parallel polygonal paths.
+
+    .. deprecated:: 1.4
+       `PolyPath` is deprecated in favor of FlexPath and will be removed
+       in a future version of Gdspy.
+
+    Parameters
+    ----------
+    points : array-like[N][2]
+        Points along the center of the path.
+    width : number or array-like[N]
+        Width of the path.  If an array is given, width at each
+        endpoint.
+    number_of_paths : positive integer
+        Number of parallel paths to create simultaneously.
+    distance : number or array-like[N]
+        Distance between the centers of adjacent paths.  If an array is
+        given, distance at each endpoint.
+    corners : 'miter' or 'bevel'
+        Type of joins.
+    ends : 'flush', 'round', 'extended'
+        Type of end caps for the paths.
+    max_points : integer
+        The paths will be fractured in polygons with at most
+        `max_points` (must be at least 4).  If `max_points` is zero no
+        fracture will occur.
+    layer : integer, list
+        The GDSII layer numbers for the elements of each path.  If the
+        number of layers in the list is less than the number of paths,
+        the list is repeated.
+    datatype : integer, list
+        The GDSII datatype for the elements of each path (between 0 and
+        255).  If the number of datatypes in the list is less than the
+        number of paths, the list is repeated.
+    Notes
+    -----
+    The bevel join will give strange results if the number of paths is
+    greater than 1.
+    """
+
+    __slots__ = "layers", "datatypes", "polygons"
+
+    def __init__(
+        self,
+        points,
+        width,
+        number_of_paths=1,
+        distance=0,
+        corners="miter",
+        ends="flush",
+        max_points=199,
+        layer=0,
+        datatype=0,
+    ):
+        warnings.warn(
+            "[GDSPY] PolyPath is deprecated favor of FlexPath and will "
+            "be removed in a future version of Gdspy.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        if not isinstance(layer, list):
+            layer = [layer]
+        if not isinstance(datatype, list):
+            datatype = [datatype]
+        if hasattr(width, "__iter__"):
+            width = numpy.array(width) * 0.5
+        else:
+            width = numpy.array([width * 0.5])
+        len_w = len(width)
+        if hasattr(distance, "__iter__"):
+            distance = numpy.array(distance)
+        else:
+            distance = numpy.array([distance])
+        len_d = len(distance)
+        points = numpy.array(points, dtype=float)
+        self.polygons = []
+        self.layers = []
+        self.datatypes = []
+        if points.shape[0] == 2 and number_of_paths == 1:
+            v = points[1] - points[0]
+            v = v / (v[0] ** 2 + v[1] ** 2) ** 0.5
+            w0 = width[0]
+            w1 = width[1 % len_w]
+            if ends == "round":
+                a = numpy.arctan2(v[1], v[0]) + _halfpi
+                self.polygons.append(
+                    Round(
+                        points[0],
+                        w0,
+                        initial_angle=a,
+                        final_angle=a + numpy.pi,
+                        number_of_points=33,
+                    ).polygons[0]
+                )
+                self.polygons.append(
+                    Round(
+                        points[1],
+                        w1,
+                        initial_angle=a - numpy.pi,
+                        final_angle=a,
+                        number_of_points=33,
+                    ).polygons[0]
+                )
+                self.layers.extend(layer[:1] * 2)
+                self.datatypes.extend(datatype[:1] * 2)
+            if ends == "extended":
+                points[0] = points[0] - v * w0
+                points[1] = points[1] + v * w1
+            u = numpy.array((-v[1], v[0]))
+            if w0 == 0:
+                self.polygons.append(
+                    numpy.array((points[0], points[1] - u * w1, points[1] + u * w1))
+                )
+            elif w1 == 0:
+                self.polygons.append(
+                    numpy.array((points[0] + u * w0, points[0] - u * w0, points[1]))
+                )
+            else:
+                self.polygons.append(
+                    numpy.array(
+                        (
+                            points[0] + u * w0,
+                            points[0] - u * w0,
+                            points[1] - u * w1,
+                            points[1] + u * w1,
+                        )
+                    )
+                )
+            self.layers.append(layer[0])
+            self.datatypes.append(datatype[0])
+            return
+        if corners not in ["miter", "bevel"]:
+            if corners in [0, 1]:
+                corners = ["miter", "bevel"][corners]
+                warnings.warn(
+                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
+            else:
+                raise ValueError(
+                    "[GDSPY] Argument corners must be one of 'miter' or 'bevel'."
+                )
+        bevel = corners == "bevel"
+        if ends not in ["flush", "round", "extended"]:
+            if ends in [0, 1, 2]:
+                ends = ["flush", "round", "extended"][ends]
+                warnings.warn(
+                    "[GDSPY] Argument ends must be one of 'flush', "
+                    "'round', or 'extended'.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
+            else:
+                raise ValueError(
+                    "[GDSPY] Argument ends must be one of 'flush', "
+                    "'round', or 'extended'."
+                )
+        if ends == "extended":
+            v = points[0] - points[1]
+            v = v / (v[0] ** 2 + v[1] ** 2) ** 0.5
+            points[0] = points[0] + v * width[0]
+            v = points[-1] - points[-2]
+            v = v / (v[0] ** 2 + v[1] ** 2) ** 0.5
+            points[-1] = points[-1] + v * width[(points.shape[0] - 1) % len_w]
+        elif ends == "round":
+            v0 = points[1] - points[0]
+            angle0 = numpy.arctan2(v0[1], v0[0]) + _halfpi
+            v0 = numpy.array((-v0[1], v0[0])) / (v0[0] ** 2 + v0[1] ** 2) ** 0.5
+            d0 = 0.5 * (number_of_paths - 1) * distance[0]
+            v1 = points[-1] - points[-2]
+            angle1 = numpy.arctan2(v1[1], v1[0]) - _halfpi
+            v1 = numpy.array((-v1[1], v1[0])) / (v1[0] ** 2 + v1[1] ** 2) ** 0.5
+            j1w = (points.shape[0] - 1) % len_w
+            j1d = (points.shape[0] - 1) % len_d
+            d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
+            self.polygons.extend(
+                (
+                    Round(
+                        points[0] + v0 * (ii * distance[0] - d0),
+                        width[0],
+                        initial_angle=angle0,
+                        final_angle=angle0 + numpy.pi,
+                        number_of_points=33,
+                    ).polygons[0]
+                    for ii in range(number_of_paths)
+                )
+            )
+            self.polygons.extend(
+                (
+                    Round(
+                        points[-1] + v1 * (ii * distance[j1d] - d1),
+                        width[j1w],
+                        initial_angle=angle1,
+                        final_angle=angle1 + numpy.pi,
+                        number_of_points=33,
+                    ).polygons[0]
+                )
+                for ii in range(number_of_paths)
+            )
+            self.layers.extend(
+                ((layer * (number_of_paths // len(layer) + 1))[:number_of_paths]) * 2
+            )
+            self.datatypes.extend(
+                ((datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths])
+                * 2
+            )
+        v = points[1] - points[0]
+        v = numpy.array((-v[1], v[0])) / (v[0] ** 2 + v[1] ** 2) ** 0.5
+        d0 = 0.5 * (number_of_paths - 1) * distance[0]
+        d1 = 0.5 * (number_of_paths - 1) * distance[1 % len_d]
+        paths = [
+            [
+                [points[0] + (ii * distance[0] - d0 - width[0]) * v],
+                [points[0] + (ii * distance[0] - d0 + width[0]) * v],
+            ]
+            for ii in range(number_of_paths)
+        ]
+        p1 = [
+            (
+                points[1] + (ii * distance[1 % len_d] - d1 - width[1 % len_w]) * v,
+                points[1] + (ii * distance[1 % len_d] - d1 + width[1 % len_w]) * v,
+            )
+            for ii in range(number_of_paths)
+        ]
+        for jj in range(1, points.shape[0] - 1):
+            j0d = jj % len_d
+            j0w = jj % len_w
+            j1d = (jj + 1) % len_d
+            j1w = (jj + 1) % len_w
+            v = points[jj + 1] - points[jj]
+            v = numpy.array((-v[1], v[0])) / (v[0] ** 2 + v[1] ** 2) ** 0.5
+            d0 = d1
+            d1 = 0.5 * (number_of_paths - 1) * distance[j1d]
+            p0 = p1
+            p1 = []
+            pp = []
+            for ii in range(number_of_paths):
+                pp.append(
+                    (
+                        points[jj] + (ii * distance[j0d] - d0 - width[j0w]) * v,
+                        points[jj] + (ii * distance[j0d] - d0 + width[j0w]) * v,
+                    )
+                )
+                p1.append(
+                    (
+                        points[jj + 1] + (ii * distance[j1d] - d1 - width[j1w]) * v,
+                        points[jj + 1] + (ii * distance[j1d] - d1 + width[j1w]) * v,
+                    )
+                )
+                for kk in (0, 1):
+                    p0m = paths[ii][kk][-1] - p0[ii][kk]
+                    p1p = pp[ii][kk] - p1[ii][kk]
+                    vec = p0m[0] * p1p[1] - p1p[0] * p0m[1]
+                    if abs(vec) > 1e-30:
+                        p = (
+                            _pmone
+                            * (
+                                p0m * p1p[::-1] * p1[ii][kk]
+                                - p1p * p0m[::-1] * p0[ii][kk]
+                                + p0m * p1p * (p0[ii][kk][::-1] - p1[ii][kk][::-1])
+                            )
+                            / vec
+                        )
+                        l0 = (p - pp[ii][kk]) * p1p
+                        l1 = (p - p0[ii][kk]) * p0m
+                        if bevel and l0[0] + l0[1] > 0 and l1[0] + l1[1] < 0:
+                            paths[ii][kk].append(p0[ii][kk])
+                            paths[ii][kk].append(pp[ii][kk])
+                        else:
+                            paths[ii][kk].append(p)
+                if (
+                    max_points > 0
+                    and len(paths[ii][0]) + len(paths[ii][1]) + 3 > max_points
+                ):
+                    diff = paths[ii][0][0] - paths[ii][1][0]
+                    if diff[0] ** 2 + diff[1] ** 2 == 0:
+                        paths[ii][1] = paths[ii][1][1:]
+                    diff = paths[ii][0][-1] - paths[ii][1][-1]
+                    if diff[0] ** 2 + diff[1] ** 2 == 0:
+                        self.polygons.append(
+                            numpy.array(paths[ii][0] + paths[ii][1][-2::-1])
+                        )
+                    else:
+                        self.polygons.append(
+                            numpy.array(paths[ii][0] + paths[ii][1][::-1])
+                        )
+                    paths[ii][0] = paths[ii][0][-1:]
+                    paths[ii][1] = paths[ii][1][-1:]
+                    self.layers.append(layer[ii % len(layer)])
+                    self.datatypes.append(datatype[ii % len(datatype)])
+        for ii in range(number_of_paths):
+            diff = paths[ii][0][0] - paths[ii][1][0]
+            if diff[0] ** 2 + diff[1] ** 2 == 0:
+                paths[ii][1] = paths[ii][1][1:]
+            diff = p1[ii][0] - p1[ii][1]
+            if diff[0] ** 2 + diff[1] ** 2 != 0:
+                paths[ii][0].append(p1[ii][0])
+            paths[ii][1].append(p1[ii][1])
+        self.polygons.extend(numpy.array(pol[0] + pol[1][::-1]) for pol in paths)
+        self.layers.extend(
+            (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
+        )
+        self.datatypes.extend(
+            (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
+        )
+
+    def __str__(self):
+        return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(
+            len(self.polygons),
+            sum([len(p) for p in self.polygons]),
+            list(set(self.layers)),
+            list(set(self.datatypes)),
+        )

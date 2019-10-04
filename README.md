@@ -59,23 +59,26 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Upcoming
+### Upcoming on version 1.5
 * New `Cell.write_svg` function to export an SVG image of the cell.
 * `GdsLibrary.add` can update references when a cell is overwritten.
 * Added `GdsLibrary.remove` to allow cells to be properly removed from libraries.
 * Added `GdsLibrary.rename_cell` to rename cells in libraries.
 * Added `GdsLibrary.replace_references` to easily replace referenced cells in libraries.
+* `GdsLibrary.add` can add dependencies recursively.
 * Iterating over `GdsLibrary` objects yields all its cells.
 * Iterating over `Cell` objects yield all its polygons, paths, labels and references.
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
+* Breaking change: renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
+* Deprecated: `gdspy.current_library`, `gdspy.write_gds`, `gdspy.fast_boolen`, `GdsLibrary.extract`.
 
 #### Version 2.0
 * Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
-* `GdsLibrary.add` can add dependencies recursively.
-* Renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
-* Removed `GdsLibrary.extract`.
+* Deprecated member `GdsLibrary.extract` removed.
 * Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
 * Deprecated function `fast_boolean` removed: use `boolean`.
+* Deprecated function `write_gds` removed: use `GdsLibrary.write_gds`.
+* Deprecated attribute `current_library` removed.
 
 ### Version 1.4.2 (Oct 01, 2019)
 * Bug fix in `FlexPath`.

@@ -9,6 +9,8 @@
 
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def test_writer_gds(tmpdir):
     lib = gdspy.GdsLibrary()

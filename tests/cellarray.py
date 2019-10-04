@@ -11,6 +11,8 @@ import pytest
 import gdspy
 import numpy
 
+gdspy.library.use_current_library = False
+
 
 def test_noreference():
     name = "ca_noreference"

@@ -12,6 +12,8 @@ import numpy
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def test_polygonset(target):
     ps = gdspy.PolygonSet(

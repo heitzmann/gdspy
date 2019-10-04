@@ -12,6 +12,8 @@ import gdspy
 import numpy
 import uuid
 
+gdspy.library.use_current_library = False
+
 
 def unique():
     return str(uuid.uuid4())
