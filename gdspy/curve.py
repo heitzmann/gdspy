@@ -6,13 +6,35 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
-"""
-Curve class.
-"""
+
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+
+import sys
+
+if sys.version_info.major < 3:
+    from builtins import zip
+    from builtins import open
+    from builtins import int
+    from builtins import round
+    from builtins import range
+    from builtins import super
+
+    from future import standard_library
+
+    standard_library.install_aliases()
+else:
+    # Python 3 doesn't have basestring, as unicode is type string
+    # Python 2 doesn't equate unicode to string, but both are basestring
+    # Now isinstance(s, basestring) will be True for any python version
+    basestring = str
 
 import numpy
+from gdspy.path import _func_bezier, _hobby
 
-from gdspy import _func_bezier, _hobby, _zero
+_zero = numpy.array((0.0, 0.0))
 
 
 class Curve(object):

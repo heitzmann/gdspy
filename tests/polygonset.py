@@ -12,6 +12,8 @@ import numpy
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def test_polygonset(target):
     ps = gdspy.PolygonSet(
@@ -30,7 +32,7 @@ def test_polygonset(target):
     assert bb.shape == (2, 2)
     assert numpy.max(numpy.abs(bb - numpy.array(((10, 0), (12, 2))))) == 0
     assert gdspy.PolygonSet([]).get_bounding_box() == None
-    cell = gdspy.Cell("test", True).add(ps)
+    cell = gdspy.Cell("test").add(ps)
     assertsame(cell, target["PolygonSet"])
 
 
@@ -38,7 +40,7 @@ def test_translate():
     ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
     ps.translate(-1, -2)
     tgt = gdspy.PolygonSet([[(-1, -2), (0, -2), (0, 0), (-1, 0)]])
-    assertsame(gdspy.Cell("test", True).add(ps), gdspy.Cell("TGT", True).add(tgt))
+    assertsame(gdspy.Cell("test").add(ps), gdspy.Cell("TGT").add(tgt))
 
 
 def test_rotation():
@@ -50,38 +52,38 @@ def test_rotation():
     tgt = gdspy.PolygonSet(
         [[(1 - x, 0.5), (1, 0), (2, 2 * x), (1 - l * numpy.cos(a), l * numpy.sin(a))]]
     )
-    assertsame(gdspy.Cell("test", True).add(ps), gdspy.Cell("TGT", True).add(tgt))
+    assertsame(gdspy.Cell("test").add(ps), gdspy.Cell("TGT").add(tgt))
 
 
 def test_mirror():
     ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
     ps.mirror((-1, 1), (1, -1))
     tgt = gdspy.PolygonSet([[(0, 0), (-2, 0), (-2, -1), (0, -1)]])
-    assertsame(gdspy.Cell("test", True).add(ps), gdspy.Cell("TGT", True).add(tgt))
+    assertsame(gdspy.Cell("test").add(ps), gdspy.Cell("TGT").add(tgt))
 
 
 def test_scale():
     ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
-    cell = gdspy.Cell("test", True).add(ps)
+    cell = gdspy.Cell("test").add(ps)
     ps.scale(0.5)
     tgt = gdspy.PolygonSet([[(0, 0), (0.5, 0), (0.5, 1), (0, 1)]])
-    assertsame(cell, gdspy.Cell("TGT", True).add(tgt))
+    assertsame(cell, gdspy.Cell("TGT").add(tgt))
     ps = gdspy.PolygonSet([[(0, 0), (1, 0), (1, 2), (0, 2)]])
-    cell = gdspy.Cell("test", True).add(ps)
+    cell = gdspy.Cell("test").add(ps)
     ps.scale(0.2, 2, center=(1, 2))
     tgt = gdspy.PolygonSet([[(0.8, -2), (1, -2), (1, 2), (0.8, 2)]])
-    assertsame(cell, gdspy.Cell("TGT", True).add(tgt))
+    assertsame(cell, gdspy.Cell("TGT").add(tgt))
 
 
 def test_togds(tmpdir):
     ps = gdspy.PolygonSet([[(10 + i * 1e-3, i ** 2 * 1e-6) for i in range(8191)]])
-    cell = gdspy.Cell("LARGE", True).add(ps)
+    cell = gdspy.Cell("LARGE").add(ps)
     fname = str(tmpdir.join("large.gds"))
     lib = gdspy.GdsLibrary(unit=1, precision=1e-7).add(cell)
     with pytest.warns(UserWarning):
         lib.write_gds(fname)
     lib = gdspy.GdsLibrary(infile=fname)
-    assertsame(lib.cell_dict["LARGE"], cell)
+    assertsame(lib.cells["LARGE"], cell)
 
 
 def test_fracture():
@@ -93,7 +95,7 @@ def test_fracture():
     )
     ps2.fracture(5)
     assert all(len(p) <= 5 for p in ps2.polygons)
-    assertsame(gdspy.Cell("1", True).add(ps1), gdspy.Cell("2", True).add(ps2))
+    assertsame(gdspy.Cell("1").add(ps1), gdspy.Cell("2").add(ps2))
 
     def spiral(u):
         r = 4 - 3 * u
@@ -120,7 +122,7 @@ def test_fracture():
     )
     pt2.fracture(199, precision=1e-6)
     assert all(len(p) <= 199 for p in pt2.polygons)
-    assertsame(gdspy.Cell("3", True).add(pt1), gdspy.Cell("4", True).add(pt2))
+    assertsame(gdspy.Cell("3").add(pt1), gdspy.Cell("4").add(pt2))
 
 
 def test_fillet(target):

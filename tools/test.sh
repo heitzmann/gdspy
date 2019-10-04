@@ -1,25 +1,19 @@
 #!/bin/sh
 
-VERSION=$1
-if [ "$(command -v "virtualenv$VERSION")" ]; then
-  ENV=~/gdspy-env-$VERSION
+ENV=~/gdspy-env
 
-  [ ! -d "$ENV" ] && "virtualenv$VERSION" --system-site-packages "$ENV"
-  [ -d "$ENV/lib/python$VERSION/site-packages/gdspy" ] && rm -r "$ENV/lib/python$VERSION/site-packages/gdspy"
+[ ! -d "$ENV" ] && virtualenv --system-site-packages "$ENV"
+[ -d "$ENV/lib/python/site-packages/gdspy" ] && rm -r "$ENV/lib/python/site-packages/gdspy"
 
-  . "$ENV/bin/activate"
+. "$ENV/bin/activate"
 
-  python setup.py build && python setup.py install
+python setup.py build && python setup.py install
 
-  echo
-  echo "Testing $VERSION"
-  cd docs/_static || exit
-  for i in *.py; do
-    python "$i"
-  done
-  cd - || exit
+echo
+cd docs/_static || exit
+for i in *.py; do
+  python "$i"
+done
+cd - || exit
 
-  deactivate
-else
-  echo "Usage: $0 version"
-fi
+deactivate

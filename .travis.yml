@@ -1,22 +1,20 @@
 language: python
 
 python:
-  - "2.7"
   - "3.5"
   - "3.6"
+  - "3.7"
 
 # From: https://docs.travis-ci.com/user/languages/python/#running-python-tests-on-multiple-operating-systems
 matrix:
   include:
-    - python: "3.7"
-      dist: xenial
     - os: osx
-      osx_image: xcode10.2
+      osx_image: xcode11
       language: shell
-      before_install: |
-          python3 -m venv venv
-          source venv/bin/activate
-          python --version
+      before_install:
+        - python3 -m venv venv
+        - source venv/bin/activate
+        - python --version
 
 install:
   - pip install --upgrade pip
