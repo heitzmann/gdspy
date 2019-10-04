@@ -48,7 +48,7 @@ def test_flexpath_warnings():
 
 
 def test_flexpath1(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     fp = gdspy.FlexPath([(0, 0), (1, 1)], 0.1, layer=[1], gdsii_path=True)
     cell.add(fp)
     fp = gdspy.FlexPath(
@@ -77,7 +77,7 @@ def test_flexpath1(target):
 
 
 def test_flexpath2(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     fp = gdspy.FlexPath(
         [(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)],
         0.05,
@@ -91,11 +91,10 @@ def test_flexpath2(target):
     )
     cell.add(fp)
     assertsame(target["FlexPath2"], cell)
-    cell = gdspy.Cell("test2", True)
 
 
 def test_flexpath3(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     pts = numpy.array(
         [
             (0, 0),
@@ -132,7 +131,7 @@ def test_flexpath3(target):
 
 
 def test_flexpath4(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     fp = gdspy.FlexPath(
         [(0, 0)],
         [0.1, 0.2, 0.1],
@@ -238,7 +237,7 @@ def test_flexpath4(target):
 def test_flexpath_gdsiipath():
     cells = []
     for gdsii_path in [True, False]:
-        cells.append(gdspy.Cell(str(gdsii_path), True))
+        cells.append(gdspy.Cell(str(gdsii_path)))
         fp = gdspy.FlexPath(
             [(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)],
             0.05,
@@ -321,10 +320,9 @@ def test_flexpath_togds(tmpdir):
     cell.add(fp)
     fname = str(tmpdir.join("test.gds"))
     with pytest.warns(UserWarning):
-        gdspy.write_gds(fname, unit=1, precision=1e-7)
+        gdspy.GdsLibrary(unit=1, precision=1e-7).add(cell).write_gds(fname)
     lib = gdspy.GdsLibrary(infile=fname, rename={"flexpath": "file"})
-    assertsame(lib.cell_dict["file"], cell, tolerance=1e-3)
-    gdspy.current_library = gdspy.GdsLibrary()
+    assertsame(lib.cells["file"], cell, tolerance=1e-3)
 
 
 def test_flexpath_duplicates():

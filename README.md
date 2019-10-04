@@ -21,9 +21,8 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 
 ### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 2.7, 3.5, 3.6, and 3.7)
+* [Python](http://www.python.org/) (tested with versions 3.5, 3.6, and 3.7)
 * [Numpy](http://numpy.scipy.org/)
-* [Python-future](http://python-future.org/) (only for Python 2)
 * C compiler (needed only if built from source)
 * Tkinter (optional: needed for the `LayoutViewer` GUI)
 * [Sphinx](http://sphinx-doc.org/) (optional: to build the documentation)
@@ -69,6 +68,14 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Iterating over `GdsLibrary` objects yields all its cells.
 * Iterating over `Cell` objects yield all its polygons, paths, labels and references.
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
+
+#### Version 2.0
+* Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
+* `GdsLibrary.add` can add dependencies recursively.
+* Renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
+* Removed `GdsLibrary.extract`.
+* Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
+* Deprecated function `fast_boolean` removed: use `boolean`.
 
 ### Version 1.4.2 (Oct 01, 2019)
 * Bug fix in `FlexPath`.

@@ -29,7 +29,7 @@ def test_noreference():
 def test_empty():
     name = "cr_empty"
     c = gdspy.Cell(name)
-    ref = gdspy.CellReference(name, (1, -1), 90, 2, True)
+    ref = gdspy.CellReference(c, (1, -1), 90, 2, True)
     ref.translate(-1, 1)
     assert ref.area() == 0
     assert ref.area(True) == dict()
@@ -42,7 +42,7 @@ def test_empty():
 def test_notempty():
     name = "cr_notempty"
     c = gdspy.Cell(name)
-    ref = gdspy.CellReference(name, (1, -1), 90, 2, True)
+    ref = gdspy.CellReference(c, (1, -1), 90, 2, True)
     ref.translate(-1, 1)
     c.add(gdspy.Rectangle((0, 0), (1, 2), 2, 3))
     assert ref.area() == 8

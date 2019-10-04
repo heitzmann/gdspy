@@ -74,6 +74,7 @@ def grating(period, number_of_teeth, fill_frac, width, position, direction, lda=
 
 if __name__ == '__main__':
     # Examples
+    lib = gdspy.GdsLibrary()
 
     # Negative resist example
     width = 0.45
@@ -109,6 +110,7 @@ if __name__ == '__main__':
     c.add(gdspy.CellArray(taper, len(ring_gaps), 1, (input_gap, 0), (0, 0)))
     c.add(gdspy.CellArray(grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)))
 
+    lib.add(c)
 
     # Positive resist example
     width = 0.45
@@ -157,7 +159,8 @@ if __name__ == '__main__':
     c.add(gdspy.CellArray(taper, len(ring_gaps), 1, (input_gap, 0), (0, 0)))
     c.add(gdspy.CellArray(grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)))
 
+    lib.add(c)
 
     # Save to a gds file and check out the output
-    gdspy.write_gds('photonics.gds')
-    gdspy.LayoutViewer()
+    lib.write_gds('photonics.gds')
+    gdspy.LayoutViewer(lib)

@@ -6,14 +6,11 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
-"""
-Curve class.
-"""
 
 import numpy
+from gdspy.path import _func_bezier, _hobby
 
-from gdspy import _func_bezier, _hobby, _zero
-
+_zero = numpy.array((0.0, 0.0))
 
 class Curve(object):
     """
@@ -873,7 +870,7 @@ class Curve(object):
         Parameters
         ----------
         points : array-like[N][2]
-            Vertices in the interpolating curve (relative to teh current
+            Vertices in the interpolating curve (relative to the current
             endpoint).
         angles : array-like[N + 1] or None
             Tangent angles at each point (in *radians*).  Any angles

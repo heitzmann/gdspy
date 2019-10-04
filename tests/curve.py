@@ -14,7 +14,7 @@ import gdspy
 
 
 def test_hobby1(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     c = gdspy.Curve(0, 0, tolerance=1e-3)
     c.i([(1, 0), (1, 1), (0, 1)])
     cell.add(gdspy.Polygon(c.get_points(), layer=1))
@@ -88,7 +88,7 @@ def test_hobby1(target):
 
 
 def test_hobby2(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     c = gdspy.Curve(0, 0, tolerance=1e-3)
     c.i([(1, 2), (2, 1), (3, 2), (4, 0)])
     cell.add(gdspy.Polygon(c.get_points(), layer=1))
@@ -121,7 +121,7 @@ def test_hobby2(target):
 
 
 def test_hobby3(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     c = gdspy.Curve(0, 0, tolerance=1e-3)
     c.i([(1, 2), (2, 1), (3, 2), (4, 0)])
     cell.add(gdspy.Polygon(c.get_points(), layer=1))
@@ -144,7 +144,7 @@ def test_hobby3(target):
 
 
 def test_hobby4(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     c = gdspy.Curve(0, 3, tolerance=1e-3)
     c.i([(1, 2), (2, 1), (3, 2), (4, 0)], cycle=True)
     cell.add(gdspy.Polygon(c.get_points(), layer=10))
