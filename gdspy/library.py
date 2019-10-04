@@ -17,13 +17,19 @@ import copy as libcopy
 from gdspy.polygon import PolygonSet, Polygon
 from gdspy.path import FlexPath, RobustPath
 from gdspy.label import Label
-from gdspy.gdsiiformat import _record_reader, _raw_record_reader, _eight_byte_real, _eight_byte_real_to_float
+from gdspy.gdsiiformat import (
+    _record_reader,
+    _raw_record_reader,
+    _eight_byte_real,
+    _eight_byte_real_to_float,
+)
 
 _one = numpy.array((1.0, 1.0))
 _mpone = numpy.array((-1.0, 1.0))
 _pmone_int = numpy.array((1, -1))
 
 _bounding_boxes = {}
+
 
 class Cell(object):
     """
@@ -1951,7 +1957,13 @@ class GdsLibrary(object):
     def __iter__(self):
         return iter(self.cells.values())
 
-    def add(self, cell, include_dependencies=True, overwrite_duplicate=False, update_references=True):
+    def add(
+        self,
+        cell,
+        include_dependencies=True,
+        overwrite_duplicate=False,
+        update_references=True,
+    ):
         """
         Add one or more cells to the library.
 
@@ -1992,7 +2004,12 @@ class GdsLibrary(object):
                 raise ValueError(
                     "[GDSPY] Cell named {0} already present in library.".format(c.name)
                 )
-            if overwrite_duplicate and update_references and c.name in self.cells and self.cells[c.name] is not c:
+            if (
+                overwrite_duplicate
+                and update_references
+                and c.name in self.cells
+                and self.cells[c.name] is not c
+            ):
                 self.replace_references(c.name, c)
             self.cells[c.name] = c
         return self
@@ -2412,24 +2429,24 @@ class GdsLibrary(object):
             old_name = cell.name
             if old_name not in self.cells:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                )
             if self.cells[old_name] is not cell:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} doesn't match library's.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} doesn't match library's.".format(old_name)
+                )
         else:
             old_name = cell
             if old_name not in self.cells:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                )
             cell = self.cells[old_name]
         if name in self.cells:
             raise ValueError(
-                    "[GDSPY] Cell named {0} already present in library.  "
-                    "Use `add` to overwrite cells.".format(name)
-                )
+                "[GDSPY] Cell named {0} already present in library.  "
+                "Use `add` to overwrite cells.".format(name)
+            )
         del self.cells[old_name]
         self.cells[name] = cell
         cell.name = name

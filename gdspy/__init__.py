@@ -23,7 +23,15 @@ import warnings
 
 __version__ = "2.0.0"
 
-from gdspy.library import Cell, CellReference, CellArray, GdsLibrary, GdsWriter, get_gds_units, get_binary_cells
+from gdspy.library import (
+    Cell,
+    CellReference,
+    CellArray,
+    GdsLibrary,
+    GdsWriter,
+    get_gds_units,
+    get_binary_cells,
+)
 from gdspy.curve import Curve
 from gdspy.label import Label
 from gdspy.path import FlexPath, RobustPath

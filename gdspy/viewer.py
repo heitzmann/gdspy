@@ -172,7 +172,7 @@ class LayoutViewer(tkinter.Frame):
                 for c in cells:
                     self.cells[c.name] = c
         if len(self.cells) == 0:
-            raise ValueError( "[GDSPY] No cells to display in LayoutViewer.")
+            raise ValueError("[GDSPY] No cells to display in LayoutViewer.")
         cell_names = list(self.cells.keys())
         self.cell_bb = dict([(s, None) for s in self.cells])
 

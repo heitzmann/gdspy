@@ -19,6 +19,7 @@ _directions_list = ["+x", "+y", "-x", "-y"]
 _halfpi = 0.5 * numpy.pi
 _mpone = numpy.array((-1.0, 1.0))
 
+
 class PolygonSet(object):
     """
     Set of polygonal objects.

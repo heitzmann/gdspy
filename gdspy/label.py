@@ -12,6 +12,7 @@ import struct
 
 from gdspy.gdsiiformat import _eight_byte_real
 
+
 class Label(object):
     """
     Text that can be used to label parts of the geometry or display
@@ -274,6 +275,3 @@ class Label(object):
         self.position = numpy.array((dx + self.position[0], dy + self.position[1]))
 
         return self
-
-
-

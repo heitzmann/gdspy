@@ -39,12 +39,7 @@ def test_writer_gds(tmpdir):
     )
     assert lib1.name == "lib"
     assert len(lib1.cells) == 4
-    assert set(lib1.cells.keys()) == {
-        "1",
-        "gw_rw_gds_2",
-        "gw_rw_gds_3",
-        "gw_rw_gds_4",
-    }
+    assert set(lib1.cells.keys()) == {"1", "gw_rw_gds_2", "gw_rw_gds_3", "gw_rw_gds_4"}
     c = lib1.cells["1"]
     assert len(c.polygons) == len(c.labels) == 1
     assert c.polygons[0].area() == 12.0

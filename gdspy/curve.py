@@ -12,6 +12,7 @@ from gdspy.path import _func_bezier, _hobby
 
 _zero = numpy.array((0.0, 0.0))
 
+
 class Curve(object):
     """
     Generation of curves loosely based on SVG paths.

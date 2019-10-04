@@ -14,6 +14,7 @@ from gdspy.polygon import PolygonSet
 from gdspy.path import FlexPath, RobustPath
 from gdspy.library import CellReference, CellArray
 
+
 def _gather_polys(args):
     """
     Gather polygons from different argument types into a list.

@@ -11,6 +11,7 @@ import struct
 import numpy
 import hashlib
 
+
 def _record_reader(stream):
     """
     Generator for complete records from a GDSII stream file.

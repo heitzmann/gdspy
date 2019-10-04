@@ -23,7 +23,7 @@ def test_add():
     c3 = gdspy.Cell("gl_add_3")
     r1 = gdspy.CellReference(c1)
     with pytest.warns(UserWarning):
-        r2 = gdspy.CellReference('gl_add_2')
+        r2 = gdspy.CellReference("gl_add_2")
     c3.add([r1, r2])
     lib.add(c1)
     lib.add((c2, c3))
@@ -45,10 +45,7 @@ def test_duplicate():
     lib.add(c, overwrite_duplicate=True)
     assert lib.cells == {name: c}
 
-    cl = [
-        gdspy.Cell(name),
-        gdspy.Cell(name + "1"),
-    ]
+    cl = [gdspy.Cell(name), gdspy.Cell(name + "1")]
     with pytest.raises(ValueError) as e:
         lib.add(cl)
     assert name in str(e.value)
@@ -110,7 +107,12 @@ def test_add_update2():
         r6 = gdspy.CellReference("C2")
     main.add(r6)
     lib.add([main, c1, c2], include_dependencies=False)
-    lib.add(c3, include_dependencies=False, overwrite_duplicate=True, update_references=False)
+    lib.add(
+        c3,
+        include_dependencies=False,
+        overwrite_duplicate=True,
+        update_references=False,
+    )
     assert r1.ref_cell is c1
     assert r2.ref_cell == "C1"
     assert r3.ref_cell is c2
@@ -296,12 +298,7 @@ def test_rw_gds(tmpdir):
     )
     assert lib1.name == "lib"
     assert len(lib1.cells) == 4
-    assert set(lib1.cells.keys()) == {
-        "1",
-        "gl_rw_gds_2",
-        "gl_rw_gds_3",
-        "gl_rw_gds_4",
-    }
+    assert set(lib1.cells.keys()) == {"1", "gl_rw_gds_2", "gl_rw_gds_3", "gl_rw_gds_4"}
     c = lib1.cells["1"]
     assert len(c.polygons) == len(c.labels) == 1
     assert c.polygons[0].area() == 12.0

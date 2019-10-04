@@ -24,6 +24,7 @@ _one = numpy.array((1.0, 1.0))
 _mpone = numpy.array((-1.0, 1.0))
 _pmone = numpy.array((1.0, -1.0))
 
+
 def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle=False):
     """
     Calculate control points for a smooth interpolating curve.
