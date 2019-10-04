@@ -6654,9 +6654,10 @@ class Cell(object):
         """
         dependencies = set()
         for reference in self.references:
-            if recursive:
-                dependencies.update(reference.ref_cell.get_dependencies(True))
-            dependencies.add(reference.ref_cell)
+            if isinstance(reference.ref_cell, Cell):
+                if recursive:
+                    dependencies.update(reference.ref_cell.get_dependencies(True))
+                dependencies.add(reference.ref_cell)
         return dependencies
 
     def flatten(self, single_layer=None, single_datatype=None, single_texttype=None):
@@ -8006,7 +8007,12 @@ class GdsLibrary(object):
                 raise ValueError(
                     "[GDSPY] Cell named {0} already present in library.".format(c.name)
                 )
-            if overwrite_duplicate and update_references and c.name in self.cell_dict:
+            if (
+                overwrite_duplicate
+                and update_references
+                and c.name in self.cell_dict
+                and self.cell_dict[c.name] is not c
+            ):
                 self.replace_references(c.name, c)
             self.cell_dict[c.name] = c
         return self
@@ -8458,24 +8464,24 @@ class GdsLibrary(object):
             old_name = cell.name
             if old_name not in self.cell_dict:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                )
             if self.cell_dict[old_name] is not cell:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} doesn't match library's.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} doesn't match library's.".format(old_name)
+                )
         else:
             old_name = cell
             if old_name not in self.cell_dict:
                 raise ValueError(
-                        "[GDSPY] Cell named {0} not present in library.".format(old_name)
-                    )
+                    "[GDSPY] Cell named {0} not present in library.".format(old_name)
+                )
             cell = self.cell_dict[old_name]
         if name in self.cell_dict:
             raise ValueError(
-                    "[GDSPY] Cell named {0} already present in library.  "
-                    "Use `add` to overwrite cells.".format(name)
-                )
+                "[GDSPY] Cell named {0} already present in library.  "
+                "Use `add` to overwrite cells.".format(name)
+            )
         del self.cell_dict[old_name]
         self.cell_dict[name] = cell
         cell.name = name
