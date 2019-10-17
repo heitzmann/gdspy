@@ -37,6 +37,7 @@ else:
 
 import os
 import colorsys
+import warnings
 import numpy
 import tkinter
 import tkinter.messagebox
