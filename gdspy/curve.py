@@ -34,8 +34,6 @@ else:
 import numpy
 from gdspy.path import _func_bezier, _hobby
 
-_zero = numpy.array((0.0, 0.0))
-
 
 class Curve(object):
     """
@@ -939,7 +937,7 @@ class Curve(object):
            `DOI: 10.1007/BF02187690
            <https://doi.org/10.1007/BF02187690>`_
         """
-        pts = numpy.vstack((_zero.reshape((1, 2)), points)) + self.points[-1]
+        pts = numpy.vstack((numpy.array(((0.0, 0.0),)), points)) + self.points[-1]
         cta, ctb = _hobby(pts, angles, curl_start, curl_end, t_in, t_out, cycle)
         args = []
         args.extend(

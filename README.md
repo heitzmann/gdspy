@@ -57,6 +57,16 @@ The source files can be found in the `docs` directory.
 
 Help support gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
+
+## Changes planned for version 2.0
+* Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
+* Deprecated member `GdsLibrary.extract` removed.
+* Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
+* Deprecated function `fast_boolean` removed: use `boolean`.
+* Deprecated function `write_gds` removed: use `GdsLibrary.write_gds`.
+* Deprecated attribute `current_library` removed.
+
+
 ## History of changes
 
 ### Upcoming on version 1.5
@@ -72,13 +82,8 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Breaking change: renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
 * Deprecated: `gdspy.current_library`, `gdspy.write_gds`, `gdspy.fast_boolen`, `GdsLibrary.extract`.
 
-#### Version 2.0
-* Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
-* Deprecated member `GdsLibrary.extract` removed.
-* Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
-* Deprecated function `fast_boolean` removed: use `boolean`.
-* Deprecated function `write_gds` removed: use `GdsLibrary.write_gds`.
-* Deprecated attribute `current_library` removed.
+### Version 1.4.3 (Nov 11, 2019)
+* Bug fix for `FlexPath` and `RobustPath` references.
 
 ### Version 1.4.2 (Oct 01, 2019)
 * Bug fix in `FlexPath`.

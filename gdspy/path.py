@@ -43,7 +43,6 @@ from gdspy.polygon import PolygonSet
 _halfpi = 0.5 * numpy.pi
 _angle_dict = {"l": _halfpi, "r": -_halfpi, "ll": numpy.pi, "rr": -numpy.pi}
 
-_zero = numpy.array((0.0, 0.0))
 _one = numpy.array((1.0, 1.0))
 _mpone = numpy.array((-1.0, 1.0))
 _pmone = numpy.array((1.0, -1.0))
@@ -308,12 +307,12 @@ def _func_rotate(f, cos, sin, center=0, nargs=1):
 
 def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, nargs=1):
     if translation is None:
-        translation = _zero
+        translation = numpy.array((0.0, 0.0))
     if array_trans is None:
-        array_trans = _zero
+        array_trans = numpy.array((0.0, 0.0))
     if rotation is None:
-        cos = _one
-        sin = _zero
+        cos = numpy.array((1.0, 1.0))
+        sin = numpy.array((0.0, 0.0))
     else:
         cos = numpy.cos(rotation) * _one
         sin = numpy.sin(rotation) * _mpone
@@ -1457,12 +1456,12 @@ class FlexPath(object):
         """
         self._polygon_dict = None
         if translation is None:
-            translation = _zero
+            translation = numpy.array((0.0, 0.0))
         if array_trans is None:
-            array_trans = _zero
+            array_trans = numpy.array((0.0, 0.0))
         if rotation is None:
-            cos = _one
-            sin = _zero
+            cos = numpy.array((1.0, 1.0))
+            sin = numpy.array((0.0, 0.0))
         else:
             cos = numpy.cos(rotation) * _one
             sin = numpy.sin(rotation) * _mpone

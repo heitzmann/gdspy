@@ -19,7 +19,7 @@ GDSII format references:
 - http://www.buchanan1.net/stream_description.html
 """
 
-__version__ = "1.4.2"
+__version__ = "1.4.3"
 
 import warnings
 

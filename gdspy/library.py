@@ -48,9 +48,7 @@ from gdspy.gdsiiformat import (
     _eight_byte_real_to_float,
 )
 
-_one = numpy.array((1.0, 1.0))
 _mpone = numpy.array((-1.0, 1.0))
-_pmone_int = numpy.array((1, -1))
 
 _bounding_boxes = {}
 
@@ -1118,9 +1116,9 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if by_spec:
@@ -1172,9 +1170,9 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         polygonsets = self.ref_cell.get_polygonsets(depth=depth)
@@ -1243,9 +1241,9 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         labels = self.ref_cell.get_labels(depth=depth)
@@ -1624,11 +1622,11 @@ class CellArray(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
@@ -1694,9 +1692,9 @@ class CellArray(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         polygonsets = self.ref_cell.get_polygonsets(depth=depth)
@@ -1781,11 +1779,11 @@ class CellArray(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.magnification is not None:
-            mag = self.magnification * _one
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         cell_labels = self.ref_cell.get_labels(depth=depth)
         labels = []
         for ii in range(self.columns):
