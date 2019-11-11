@@ -65,11 +65,9 @@ except ImportError as e:
 __version__ = "1.4.2"
 
 _halfpi = 0.5 * numpy.pi
-_zero = numpy.array((0.0, 0.0))
 _one = numpy.array((1.0, 1.0))
 _mpone = numpy.array((-1.0, 1.0))
 _pmone = numpy.array((1.0, -1.0))
-_pmone_int = numpy.array((1, -1))
 
 _directions_dict = {"+x": 0, "+y": 0.5, "-x": 1, "-y": -0.5}
 _directions_list = ["+x", "+y", "-x", "-y"]
@@ -480,12 +478,12 @@ def _func_rotate(f, cos, sin, center=0, nargs=1):
 
 def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, nargs=1):
     if translation is None:
-        translation = _zero
+        translation = numpy.array((0.0, 0.0))
     if array_trans is None:
-        array_trans = _zero
+        array_trans = numpy.array((0.0, 0.0))
     if rotation is None:
-        cos = _one
-        sin = _zero
+        cos = numpy.array((1.0, 1.0))
+        sin = numpy.array((0.0, 0.0))
     else:
         cos = numpy.cos(rotation) * _one
         sin = numpy.sin(rotation) * _mpone
@@ -4166,12 +4164,12 @@ class FlexPath(object):
         """
         self._polygon_dict = None
         if translation is None:
-            translation = _zero
+            translation = numpy.array((0.0, 0.0))
         if array_trans is None:
-            array_trans = _zero
+            array_trans = numpy.array((0.0, 0.0))
         if rotation is None:
-            cos = _one
-            sin = _zero
+            cos = numpy.array((1.0, 1.0))
+            sin = numpy.array((0.0, 0.0))
         else:
             cos = numpy.cos(rotation) * _one
             sin = numpy.sin(rotation) * _mpone
@@ -6762,7 +6760,7 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
             mag = self.magnification * _one
         if self.origin is not None:
@@ -6816,7 +6814,7 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
             mag = self.magnification * _one
         if self.origin is not None:
@@ -6887,7 +6885,7 @@ class CellReference(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
             mag = self.magnification * _one
         if self.origin is not None:
@@ -7235,7 +7233,7 @@ class CellArray(object):
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if by_spec:
             cell_polygons = self.ref_cell.get_polygons(True, depth)
             polygons = {}
@@ -7301,7 +7299,7 @@ class CellArray(object):
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         if self.magnification is not None:
             mag = self.magnification * _one
         if self.origin is not None:
@@ -7392,7 +7390,7 @@ class CellArray(object):
         if self.origin is not None:
             orgn = numpy.array(self.origin)
         if self.x_reflection:
-            xrefl = _pmone_int
+            xrefl = numpy.array((1, -1))
         cell_labels = self.ref_cell.get_labels(depth=depth)
         labels = []
         for ii in range(self.columns):
