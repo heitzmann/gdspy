@@ -62,7 +62,7 @@ except ImportError as e:
         stacklevel=2,
     )
 
-__version__ = "1.4.2"
+__version__ = "1.4.3"
 
 _halfpi = 0.5 * numpy.pi
 _one = numpy.array((1.0, 1.0))

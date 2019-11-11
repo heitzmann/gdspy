@@ -60,6 +60,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.4.3 (Nov 11, 2019)
+* Bug fix for `FlexPath` and `RobustPath` references.
+
 ### Version 1.4.2 (Oct 01, 2019)
 * Bug fix in `FlexPath`.
 
