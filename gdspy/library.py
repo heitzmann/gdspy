@@ -35,6 +35,7 @@ import numpy
 import datetime
 import struct
 import itertools
+import colorsys
 import warnings
 import copy as libcopy
 
@@ -1992,6 +1993,37 @@ class GdsLibrary(object):
 
     def __iter__(self):
         return iter(self.cells.values())
+
+    def new_cell(self, name, overwrite_duplicate=False, update_references=True):
+        """
+        Create a new cell and add it to this library.
+
+        Parameters
+        ----------
+        name : string
+            Name of the cell.
+        overwrite_duplicate : bool
+            If True, an existing cell with the same name in the library
+            will be overwritten.
+        update_references : bool
+            If True, `CellReference` and `CellArray` instances from an
+            overwritten cell are updated to the new one (used only when
+            `overwrite_duplicate` is True).
+
+        Returns
+        -------
+        out : `Cell`
+            The created cell.
+
+        Notes
+        -----
+        This is equivalent to:
+        >>> cell = gdspy.Cell(name)
+        >>> lib.add(cell, False, overwrite_duplicate, update_references)
+        """
+        cell = Cell(name)
+        self.add(cell, False, overwrite_duplicate, update_references)
+        return cell
 
     def add(
         self,
