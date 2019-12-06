@@ -122,12 +122,12 @@ if __name__ == "__main__":
     wg_gap = 20.0
     ring_gaps = [0.06 + 0.02 * i for i in range(8)]
 
-    ring = gdspy.Cell("NRing")
+    ring = lib.new_cell("NRing")
     ring.add(
         gdspy.Round((ring_radius, 0), ring_radius, ring_radius - width, tolerance=0.001)
     )
 
-    grat = gdspy.Cell("NGrat")
+    grat = lib.new_cell("NGrat")
     grat.add(
         grating(
             0.626,
@@ -144,10 +144,10 @@ if __name__ == "__main__":
         )
     )
 
-    taper = gdspy.Cell("NTaper")
+    taper = lib.new_cell("NTaper")
     taper.add(gdspy.Path(0.12, (0, 0)).segment(taper_len, "+y", final_width=width))
 
-    c = gdspy.Cell("Negative")
+    c = lib.new_cell("Negative")
     for i, gap in enumerate(ring_gaps):
         path = gdspy.FlexPath(
             [(input_gap * i, taper_len)],
@@ -167,8 +167,6 @@ if __name__ == "__main__":
             grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)
         )
     )
-
-    lib.add(c)
 
     # Positive resist example
     width = 0.45
@@ -198,7 +196,8 @@ if __name__ == "__main__":
         small_margin, (0, 0), number_of_paths=2, distance=small_margin + width
     )
     p.segment(21.5, "+y", final_distance=small_margin + 19)
-    grat = gdspy.Cell("PGrat").add(p)
+    grat = lib.new_cell("PGrat")
+    grat.add(p)
     grat.add(
         grating(
             0.626,
@@ -218,9 +217,10 @@ if __name__ == "__main__":
     p.segment(
         taper_len, "+y", final_width=small_margin, final_distance=small_margin + width
     )
-    taper = gdspy.Cell("PTaper").add(p)
+    taper = lib.new_cell("PTaper")
+    taper.add(p)
 
-    c = gdspy.Cell("Positive")
+    c = lib.new_cell("Positive")
     for i, gap in enumerate(ring_gaps):
         path = gdspy.FlexPath(
             [(input_gap * i, taper_len + bus_len)],
@@ -251,8 +251,6 @@ if __name__ == "__main__":
             grat, len(ring_gaps), 1, (input_gap, 0), (io_gap, 900 + taper_len)
         )
     )
-
-    lib.add(c)
 
     # Save to a gds file and check out the output
     lib.write_gds("photonics.gds")

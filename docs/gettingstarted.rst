@@ -513,17 +513,9 @@ If `precision` is set to 10⁻¹² m, the same range is reduced by 1000 times: [
 Saving a GDSII File
 ===================
 
-To save a GDSII file, the easiest way is to use :func:`gdspy.write_gds`, as in the :ref:`First GDSII`.
-That function accepts arguments `unit` and `precision` to change the default values, as explained in the section above.
+To save a GDSII file, simply use the :meth:`gdspy.GdsLibrary.write_gds` method, as in the :ref:`First GDSII`. 
 
-In reality, it calls the :meth:`gdspy.GdsLibrary.write_gds` method from a global :class:`gdspy.GdsLibrary` instance: :attr:`gdspy.current_library`.
-This instance automatically holds all cells created by gdspy unless specifically told not to with the argument `exclude_from_current` set to True in :class:`gdspy.Cell`.
-
-That means that after saving a file, if a new GDSII library is to be started from scratch using the global instance, it is important to reinitialize it with:
-
-.. code-block:: python
-
-   gdspy.current_library = gdspy.GdsLibrary()
+An SVG image from a specific cell can also be exported through :meth:`gdspy.Cell.write_svg`, which was also demonstrated in :ref:`First GDSII`.
 
 
 Loading a GDSII File
@@ -536,13 +528,13 @@ To load an existing GDSII file (or to work simultaneously with multiple librarie
    # Load a GDSII file into a new library
    gdsii = gdspy.GdsLibrary(infile='filename.gds')
 
-   # Use the current global library to load the file
-   gdspy.current_library.read_gds('filename.gds')
+   # Use a previously-created library to load the file contents into
+   existing_library.read_gds('filename.gds')
 
 In either case, care must be taken to merge the units from the library and the file, which is controlled by the argument `units` in :meth:`gdspy.GdsLibrary.read_gds` (keyword argument in :class:`gdspy.GdsLibrary`).
 
 Access to the cells in the loaded library is provided through the dictionary :attr:`gdspy.GdsLibrary.cell_dict` (cells indexed by name).
-The method :meth:`gdspy.GdsLibrary.top_level` can be used to find the top-level cells in the library (cells on the top of the hierarchy, i.e., cell that are not referenced by any other cells) and :meth:`gdspy.GdsLibrary.extract` can be used to import a given cell and all of its dependencies into :attr:`gdspy.current_library`.
+The method :meth:`gdspy.GdsLibrary.top_level` can be used to find the top-level cells in the library (cells on the top of the hierarchy, i.e., cell that are not referenced by any other cells).
 
 
 ********

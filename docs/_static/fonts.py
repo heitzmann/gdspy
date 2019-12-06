@@ -64,6 +64,7 @@ if __name__ == "__main__":
     fp = FontProperties(family="serif", style="italic")
     text = gdspy.PolygonSet(render_text("Text rendering", 10, font_prop=fp), layer=1)
     lib = gdspy.GdsLibrary()
-    lib.add(gdspy.Cell("TXT").add(text))
+    cell = lib.new_cell("TXT")
+    cell.add(text)
     lib.write_gds("fonts.gds")
     gdspy.LayoutViewer(lib)
