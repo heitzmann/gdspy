@@ -269,73 +269,8 @@ def _func_linear(c0, c1):
     return lambda u: c0 * (1 - u) + c1 * u
 
 
-def _func_multadd(f, m=None, a=None, nargs=1):
-    if nargs == 1:
-        if m is None:
-            return lambda u: f(u) + a
-        if a is None:
-            return lambda u: f(u) * m
-        return lambda u: f(u) * m + a
-    elif nargs == 2:
-        if m is None:
-            return lambda u, h: f(u, h) + a
-        if a is None:
-            return lambda u, h: f(u, h) * m
-        return lambda u, h: f(u, h) * m + a
-    if m is None:
-        return lambda *args: f(*args) + a
-    if a is None:
-        return lambda *args: f(*args) * m
-    return lambda *args: f(*args) * m + a
-
-
-def _func_rotate(f, cos, sin, center=0, nargs=1):
-    if nargs == 1:
-
-        def _f(u):
-            x = f(u) - center
-            return x * cos + x[::-1] * sin + center
-
-    elif nargs == 2:
-
-        def _f(u, h):
-            x = f(u, h) - center
-            return x * cos + x[::-1] * sin + center
-
-    return _f
-
-
-def _func_trafo(f, translation, rotation, scale, x_reflection, array_trans, nargs=1):
-    if translation is None:
-        translation = numpy.array((0.0, 0.0))
-    if array_trans is None:
-        array_trans = numpy.array((0.0, 0.0))
-    if rotation is None:
-        cos = numpy.array((1.0, 1.0))
-        sin = numpy.array((0.0, 0.0))
-    else:
-        cos = numpy.cos(rotation) * _one
-        sin = numpy.sin(rotation) * _mpone
-    if scale is not None:
-        cos = cos * scale
-        sin = sin * scale
-        array_trans = array_trans / scale
-    if x_reflection:
-        cos[1] = -cos[1]
-        sin[0] = -sin[0]
-    if nargs == 1:
-
-        def _f(u):
-            x = f(u) + array_trans
-            return x * cos + x[::-1] * sin + translation
-
-    elif nargs == 2:
-
-        def _f(u, h):
-            x = f(u, h) + array_trans
-            return x * cos + x[::-1] * sin + translation
-
-    return _f
+def _func_offset(f, a):
+    return lambda u: f(u) + a
 
 
 def _func_bezier(ctrl, nargs=1):
@@ -363,7 +298,7 @@ class _SubPath(object):
     Single path component.
     """
 
-    __slots__ = "x", "dx", "off", "wid", "h", "err", "max_evals"
+    __slots__ = "x", "dx", "off", "wid", "h", "err", "max_evals", "transform"
 
     def __init__(self, x, dx, off, wid, tolerance, max_evals):
         self.x = x
@@ -373,28 +308,49 @@ class _SubPath(object):
         self.err = tolerance ** 2
         self.h = 0.5 / max_evals
         self.max_evals = max_evals
+        self.transform = numpy.eye(3)
 
     def __str__(self):
         return "SubPath ({} - {})".format(self(0, 1e-6, 0), self(1, 1e-6, 0))
 
-    def __call__(self, u, arm):
+    def __call__(self, u, arm, transform=True):
         v = self.dx(u, self.h)[::-1] * _pmone
         v /= (v[0] ** 2 + v[1] ** 2) ** 0.5
         x = self.x(u) + self.off(u) * v
-        if arm == 0:
-            return x
-        u0 = max(0, u - self.h)
-        u1 = min(1, u + self.h)
-        w = (self(u1, 0) - self(u0, 0))[::-1] * _pmone
-        w /= (w[0] ** 2 + w[1] ** 2) ** 0.5
-        if arm < 0:
-            return x - 0.5 * self.wid(u) * w
-        return x + 0.5 * self.wid(u) * w
+        if arm != 0:
+            u0 = max(0, u - self.h)
+            v = self.dx(u0, self.h)[::-1] * _pmone
+            v /= (v[0] ** 2 + v[1] ** 2) ** 0.5
+            x0 = self.x(u0) + self.off(u0) * v
+            u1 = min(1, u + self.h)
+            v = self.dx(u1, self.h)[::-1] * _pmone
+            v /= (v[0] ** 2 + v[1] ** 2) ** 0.5
+            x1 = self.x(u1) + self.off(u1) * v
+            w = (x1 - x0)[::-1] * _pmone
+            w /= (w[0] ** 2 + w[1] ** 2) ** 0.5
+            if arm < 0:
+                x -= 0.5 * self.wid(u) * w
+            else:
+                x += 0.5 * self.wid(u) * w
+        if transform:
+            cx = self.transform[0]
+            cy = self.transform[1]
+            return numpy.array(
+                (
+                    cx[0] * x[0] + cx[1] * x[1] + cx[2],
+                    cy[0] * x[0] + cy[1] * x[1] + cy[2],
+                )
+            )
+        return x
 
-    def grad(self, u, arm):
+    def grad(self, u, arm, transform=True):
         u0 = max(0, u - self.h)
         u1 = min(1, u + self.h)
-        return (self(u1, arm) - self(u0, arm)) / (u1 - u0)
+        return (self(u1, arm, transform) - self(u0, arm, transform)) / (u1 - u0)
+
+    def width(self, u):
+        d = self(u, -1) - self(u, 1)
+        return (d[0] ** 2 + d[1] ** 2) ** 0.5
 
     def points(self, u0, u1, arm):
         u = [u0, u1]
@@ -415,6 +371,32 @@ class _SubPath(object):
                     f += 0.3
             i += 1
         return pts
+
+    def translate(self, offset):
+        self.transform = numpy.matmul(
+            numpy.array(
+                ((1.0, 0.0, offset[0]), (0.0, 1.0, offset[1]), (0.0, 0.0, 1.0))
+            ),
+            self.transform,
+        )
+        return self
+
+    def scale(self, sx, sy=None):
+        if sy is None:
+            sy = sx
+        self.transform = numpy.matmul(
+            numpy.array(((sx, 0.0, 0.0), (0.0, sy, 0.0), (0.0, 0.0, 1.0))),
+            self.transform,
+        )
+        return self
+
+    def rotate(self, angle):
+        c = numpy.cos(angle)
+        s = numpy.sin(angle)
+        self.transform = numpy.matmul(
+            numpy.array(((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0))), self.transform,
+        )
+        return self
 
 
 class FlexPath(object):
@@ -2129,7 +2111,7 @@ class RobustPath(object):
         if u == 0 and i == len(self.paths[0]):
             i -= 1
             u = 1
-        return numpy.array([p[i].wid(u) for p in self.paths])
+        return numpy.array([p[i].width(u) for p in self.paths])
 
     def get_polygons(self, by_spec=False):
         """
@@ -2187,7 +2169,7 @@ class RobustPath(object):
                         else:
                             p = path[i](u, 0)
                             v = -arm * path[i].grad(u, 0)
-                            r = 0.5 * path[i].wid(u)
+                            r = 0.5 * path[i].width(u)
                             if end == "round":
                                 np = max(
                                     5,
@@ -2562,7 +2544,7 @@ class RobustPath(object):
         self.x = self.x + offset
         for path in self.paths:
             for sub in path:
-                sub.x = _func_multadd(sub.x, None, offset)
+                sub.translate(offset)
         return self
 
     def rotate(self, angle, center=(0, 0)):
@@ -2589,8 +2571,9 @@ class RobustPath(object):
         self.x = x * ca + x[::-1] * sa + c0
         for path in self.paths:
             for sub in path:
-                sub.x = _func_rotate(sub.x, ca, sa, c0)
-                sub.dx = _func_rotate(sub.dx, ca, sa, nargs=2)
+                sub.translate(-c0)
+                sub.rotate(angle)
+                sub.translate(c0)
         return self
 
     def scale(self, scale, center=(0, 0)):
@@ -2616,10 +2599,8 @@ class RobustPath(object):
         self.offsets = [off * scale for off in self.offsets]
         for path in self.paths:
             for sub in path:
-                sub.x = _func_multadd(sub.x, scale, c0)
-                sub.dx = _func_multadd(sub.dx, scale, None, nargs=2)
-                sub.wid = _func_multadd(sub.wid, abs(scale), None)
-                sub.off = _func_multadd(sub.off, scale, None)
+                sub.scale(scale)
+                sub.translate(c0)
         return self
 
     def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
@@ -2651,20 +2632,37 @@ class RobustPath(object):
         False, the widths are not scaled.
         """
         self._polygon_dict = None
-        for ii in range(self.n):
-            for sub in self.paths[ii]:
-                sub.x = _func_trafo(
-                    sub.x, translation, rotation, scale, x_reflection, array_trans
-                )
-                sub.dx = _func_trafo(
-                    sub.dx, None, rotation, scale, x_reflection, None, nargs=2
-                )
-                if self.width_transform or not self.gdsii_path:
-                    sub.wid = _func_multadd(sub.wid, scale, None)
-                sub.off = _func_multadd(sub.off, scale, None)
-            self.x[ii] = self.paths[-1].x(1)
-            self.widths[ii] = self.paths[-1].wid(1)
-            self.offsets[ii] = self.offsets[-1].off(1)
+        if array_trans is not None:
+            self.x = self.x + array_trans
+            for path in self.paths:
+                for sub in path:
+                    sub.translate(array_trans)
+        if x_reflection:
+            self.x = numpy.array((self.x[0], -self.x[1]))
+            self.widths = [wid * -1 for wid in self.widths]
+            self.offsets = [off * -1 for off in self.offsets]
+            for path in self.paths:
+                for sub in path:
+                    sub.scale(1, -1)
+        if scale is not None:
+            self.x = self.x * scale
+            self.widths = [wid * scale for wid in self.widths]
+            self.offsets = [off * scale for off in self.offsets]
+            for path in self.paths:
+                for sub in path:
+                    sub.scale(scale)
+        if rotation is not None:
+            ca = numpy.cos(rotation)
+            sa = numpy.sin(rotation) * _mpone
+            self.x = self.x * ca + self.x[::-1] * sa
+            for path in self.paths:
+                for sub in path:
+                    sub.rotate(rotation)
+        if translation is not None:
+            self.x = self.x + translation
+            for path in self.paths:
+                for sub in path:
+                    sub.translate(translation)
         return self
 
     def _parse_offset(self, arg, idx):
@@ -2675,7 +2673,7 @@ class RobustPath(object):
                 return arg[idx]
             return _func_linear(self.offsets[idx], arg[idx])
         elif callable(arg):
-            return _func_multadd(arg, None, self.offsets[idx])
+            return _func_offset(arg, self.offsets[idx])
         return _func_linear(self.offsets[idx], self.offsets[idx] + arg)
 
     def _parse_width(self, arg, idx):
@@ -2734,7 +2732,7 @@ class RobustPath(object):
         x = (numpy.array(end_point) + self.x) if relative else numpy.array(end_point)
         f = _func_linear(self.x, x)
         df = _func_const(x - self.x, 2)
-        self.x = x
+        self.x = numpy.array(x)
         for i in range(self.n):
             off = self._parse_offset(offset, i)
             wid = self._parse_width(width, i)
@@ -2852,7 +2850,7 @@ class RobustPath(object):
         angle = _angle_dict.get(angle, angle)
         initial_angle = 0
         for p in self.paths:
-            v = p[i].grad(1, 0)
+            v = p[i].grad(1, 0, False)
             initial_angle += numpy.arctan2(v[1], v[0])
         initial_angle = initial_angle / len(self.paths) + (
             _halfpi if angle < 0 else -_halfpi
@@ -2909,7 +2907,7 @@ class RobustPath(object):
             This object.
         """
         self._polygon_dict = None
-        f = _func_multadd(curve_function, None, self.x) if relative else curve_function
+        f = _func_offset(curve_function, self.x) if relative else curve_function
         if curve_derivative is None:
 
             def df(u, h):
