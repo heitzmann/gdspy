@@ -37,7 +37,6 @@ import warnings
 import numpy
 
 from gdspy import clipper
-from gdspy.path import _func_bezier
 
 _directions_dict = {"+x": 0, "+y": 0.5, "-x": 1, "-y": -0.5}
 _directions_list = ["+x", "+y", "-x", "-y"]
@@ -2573,3 +2572,6 @@ class PolyPath(PolygonSet):
             list(set(self.layers)),
             list(set(self.datatypes)),
         )
+
+
+from gdspy.path import _func_bezier
