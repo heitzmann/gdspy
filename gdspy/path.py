@@ -2413,17 +2413,78 @@ class RobustPath(object):
                     )
                 )
             points = []
-            for path in self.paths[ii]:
-                new_points = numpy.round(numpy.array(path.points(0, 1, 0)) * multiplier)
-                if (
-                    len(points) > 0
-                    and new_points[0, 0] == points[-1][-1, 0]
-                    and new_points[0, 1] == points[-1][-1, 1]
-                ):
-                    points.append(new_points[1:])
+            start = 0
+            tol = self.tolerance ** 2
+            for sub0, sub1 in zip(self.paths[ii][:-1], self.paths[ii][1:]):
+                p0 = sub0(1, 0)
+                v0 = sub0.grad(1, 0)
+                p1 = sub1(0, 0)
+                v1 = sub1.grad(0, 0)
+                den = v1[1] * v0[0] - v1[0] * v0[1]
+                lim = 1e-12 * (v0[0] ** 2 + v0[1] ** 2) * (v1[0] ** 2 + v1[1] ** 2)
+                dx = p1[0] - p0[0]
+                dy = p1[1] - p0[1]
+                if den ** 2 < lim or dx ** 2 + dy ** 2 <= tol:
+                    u0 = u1 = 0
+                    px = 0.5 * (p0 + p1)
                 else:
-                    points.append(new_points)
-            points = numpy.vstack(points).astype(">i4")
+                    u0 = (v1[1] * dx - v1[0] * dy) / den
+                    u1 = (v0[1] * dx - v0[0] * dy) / den
+                    px = 0.5 * (p0 + v0 * u0 + p1 + v1 * u1)
+                u0 = 1 + u0
+                if u0 < 1 and u1 > 0:
+                    delta = sub0(u0, 0) - sub1(u1, 0)
+                    err = delta[0] ** 2 + delta[1] ** 2
+                    iters = 0
+                    step = 0.5
+                    while err > tol:
+                        iters += 1
+                        if iters > self.max_evals:
+                            warnings.warn("[GDSPY] Intersection not found.")
+                            break
+                        du = delta * sub0.grad(u0, 0)
+                        new_u0 = min(1, max(0, u0 - step * (du[0] + du[1])))
+                        du = delta * sub1.grad(u1, 0)
+                        new_u1 = min(1, max(0, u1 + step * (du[0] + du[1])))
+                        new_delta = sub0(new_u0, 0) - sub1(new_u1, 0)
+                        new_err = new_delta[0] ** 2 + new_delta[1] ** 2
+                        if new_err >= err:
+                            step /= 2
+                            continue
+                        u0 = new_u0
+                        u1 = new_u1
+                        delta = new_delta
+                        err = new_err
+                    px = 0.5 * (sub0(u0, 0) + sub1(u1, 0))
+                if u1 >= 0:
+                    if u0 <= 1:
+                        points.extend(sub0.points(start, u0, 0)[:-1])
+                    else:
+                        points.extend(sub0.points(start, 1, 0))
+                        warnings.warn(
+                            "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  "
+                            "Please check the resulting polygon.".format(
+                                points[-1][0], points[-1][1]
+                            ),
+                            stacklevel=3,
+                        )
+                    start = u1
+                else:
+                    if u0 <= 1:
+                        points.extend(sub0.points(start, u0, 0))
+                        warnings.warn(
+                            "[GDSPY] RobustPath join at ({}, {}) cannot be ensured.  "
+                            "Please check the resulting polygon.".format(
+                                points[-1][0], points[-1][1]
+                            ),
+                            stacklevel=2,
+                        )
+                    else:
+                        points.extend(sub0.points(start, 1, 0))
+                        points.append(px)
+                    start = 0
+            points.extend(self.paths[ii][-1].points(start, 1, 0))
+            points = (numpy.array(points) * multiplier).astype(">i4")
             if points.shape[0] > 8191:
                 warnings.warn(
                     "[GDSPY] Paths with more than 8191 are not supported "
