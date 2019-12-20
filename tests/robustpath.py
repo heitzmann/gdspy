@@ -280,6 +280,7 @@ def test_robustpath_togds(tmpdir):
     rp.segment((1, 1))
     rp.segment((2, 3), 0)
     cell.add(rp)
+
     rp = gdspy.RobustPath(
         (2, 0),
         [0.1, 0.2],
@@ -289,8 +290,9 @@ def test_robustpath_togds(tmpdir):
         datatype=[1, 1],
         gdsii_path=True,
     )
-    rp.segment((3, 1))
+    rp.segment((3, -1))
     cell.add(rp)
+
     rp = gdspy.RobustPath(
         (0, 0),
         0.1,
@@ -300,13 +302,12 @@ def test_robustpath_togds(tmpdir):
         max_evals=1e6,
         gdsii_path=True,
     )
-    rp.segment((10, 0))
-    rp.turn(20, "ll")
-    rp.turn(20, "rr")
-    rp.turn(20, "ll")
+    rp.segment((1, 0))
+    rp.turn(2, "ll")
+    rp.turn(1, "rr")
+    rp.turn(2, "l")
     cell.add(rp)
     fname = str(tmpdir.join("test.gds"))
-    with pytest.warns(UserWarning):
-        gdspy.GdsLibrary(unit=1, precision=1e-7).add(cell).write_gds(fname)
+    gdspy.GdsLibrary(unit=1, precision=1e-7).add(cell).write_gds(fname)
     lib = gdspy.GdsLibrary(infile=fname, rename={"robustpath": "file"})
     assertsame(lib.cells["file"], cell, tolerance=1e-3)
