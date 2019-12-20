@@ -1,77 +1,13 @@
 import gdspy
 import numpy
-import colorsys
-from PIL import Image, ImageDraw, ImageFont
 
 
-class ColorDict(dict):
-    def __missing__(self, key):
-        layer, datatype = key
-        rgb = tuple(
-            int(255 * c + 0.5)
-            for c in colorsys.hsv_to_rgb(
-                (layer % 3) / 3.0 + (layer % 6 // 3) / 6.0 + (layer // 6) / 11.0,
-                1 - ((layer + datatype) % 8) / 12.0,
-                1 - (datatype % 3) / 4.0,
-            )
-        )
-        self[key] = rgb
-        return rgb
-
-
-color = ColorDict()
-
-
-def draw(cell, name=None, width=600, height=400, margin=20):
-    global color
-    (ax, ay), (bx, by) = cell.get_bounding_box()
-    ax = min(0, ax)
-    ay = min(0, ay)
-    bx = max(1, bx)
-    by = max(1, by)
-    sx = 3 * width - 2 * margin
-    sy = 3 * height - 2 * margin
-    bx -= ax
-    by -= ay
-    if bx * sy > by * sx:
-        scale = sx / bx
-        sy = int(sx * by / bx + 0.5)
-    else:
-        scale = sy / by
-        sx = int(sy * bx / by + 0.5)
-    ox = margin
-    oy = sy + margin
-    width = int((sx + 2 * margin) / 3 + 0.5)
-    height = int((sy + 2 * margin) / 3 + 0.5)
-    img = Image.new("RGBA", (3 * width, 3 * height), (0, 0, 0, 0))
-    for key, polys in cell.get_polygons(by_spec=True).items():
-        lc = color[key]
-        fc = color[key] + (128,)
-        for p in polys:
-            p[:, 0] = ox + scale * (p[:, 0] - ax)
-            p[:, 1] = oy - scale * (p[:, 1] - ay)
-            pts = list(p.flatten())
-            tmp = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            dr = ImageDraw.Draw(tmp)
-            dr.polygon(pts, fill=fc, outline=lc)
-            img = Image.alpha_composite(img, tmp)
-    z = ox - scale * ax, oy + scale * ay
-    p = ox + scale * (1 - ax), oy - scale * (1 - ay)
-    # n = ox + scale * (-1 - ax), oy - scale * (-1 - ay)
-    dr = ImageDraw.Draw(img)
-    dr.line([z[0], z[1], p[0], z[1]], fill=(0, 0, 0, 255), width=3)
-    dr.line([z[0], z[1], z[0], p[1]], fill=(0, 0, 0, 255), width=3)
-    labels = cell.get_labels()
-    if len(labels) > 0:
-        font = ImageFont.truetype("/user/share/fonts/TTF/DejaVuSans.ttf", 72)
-        for l in labels:
-            x = ox + scale * (l.position[0] - ax)
-            y = oy - scale * (l.position[1] - ay)
-            dr.text((x, y), l.text, font=font, fill=color[(l.layer, l.texttype)])
-    img = img.resize((width, height), Image.ANTIALIAS)
-    name = "docs/_static/" + (cell.name if name is None else name) + ".png"
-    print("Saving", name)
-    img.save(name)
+def draw(cell, name=None):
+    bb = cell.get_bounding_box()
+    scaling = 400 / (1.1 * (bb[1, 0] - bb[0, 0]))
+    name = "docs/_static/" + (name or cell.name) + ".svg"
+    print(f"Saving {name} (scaling {scaling})")
+    cell.write_svg(name, scaling=scaling, background="none", pad="5%")
 
 
 if __name__ == "__main__":

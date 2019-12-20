@@ -11,9 +11,11 @@ import gdspy
 import numpy
 
 
+lib = gdspy.GdsLibrary("TESTLIB", unit=1, precision=1e-7)
+
 ### PolygonSet
 
-cell = gdspy.Cell("PolygonSet")
+cell = lib.new_cell("PolygonSet")
 
 p = gdspy.PolygonSet(
     [
@@ -26,7 +28,7 @@ p = gdspy.PolygonSet(
 )
 cell.add(p)
 
-cell = gdspy.Cell("PolygonSet_fillet")
+cell = lib.new_cell("PolygonSet_fillet")
 
 orig = gdspy.PolygonSet(
     [
@@ -93,7 +95,7 @@ def pointy(p0, v0, p1, v1):
     return [p0, 0.5 * (p0 + p1) + 0.5 * (v0 - v1) * r, p1]
 
 
-cell = gdspy.Cell("FlexPath1")
+cell = lib.new_cell("FlexPath1")
 
 fp = gdspy.FlexPath([(0, 0), (1, 1)], 0.1, layer=[1], gdsii_path=True)
 cell.add(fp)
@@ -120,7 +122,7 @@ fp = gdspy.FlexPath(
 )
 cell.add(fp)
 
-cell = gdspy.Cell("FlexPath2")
+cell = lib.new_cell("FlexPath2")
 
 fp = gdspy.FlexPath(
     [(0, 0), (0.5, 0), (1, 0), (1, 1), (0, 1), (-1, -2), (-2, 0)],
@@ -135,7 +137,7 @@ fp = gdspy.FlexPath(
 )
 cell.add(fp)
 
-cell = gdspy.Cell("FlexPath3")
+cell = lib.new_cell("FlexPath3")
 
 pts = numpy.array(
     [
@@ -170,7 +172,7 @@ fp = gdspy.FlexPath(
 )
 cell.add(fp)
 
-cell = gdspy.Cell("FlexPath4")
+cell = lib.new_cell("FlexPath4")
 
 fp = gdspy.FlexPath(
     [(0, 0)],
@@ -272,10 +274,24 @@ fp.smooth(
 )
 cell.add(fp)
 
+cell = lib.new_cell("FlexPath5")
+
+fp = gdspy.FlexPath([(0, 0)], [2, 1, 1], 5)
+fp.segment((15, 20))
+fp.scale(0.7)
+fp.turn(10, "r")
+fp.transform((10, 0), -1.5, 1.5, x_reflection=True)
+fp.segment((10, -10), relative=True)
+fp.rotate(-0.7)
+fp.translate(50, 30)
+fp.segment((-10, 0))
+
+cell.add(fp)
+
 
 ### RobustPath
 
-cell = gdspy.Cell("RobustPath1")
+cell = lib.new_cell("RobustPath1")
 
 rp = gdspy.RobustPath((0, 0), 0.1, layer=[1], gdsii_path=True)
 rp.segment((1, 1))
@@ -306,7 +322,7 @@ rp = gdspy.RobustPath(
 rp.segment((4, 1))
 cell.add(rp)
 
-cell = gdspy.Cell("RobustPath2")
+cell = lib.new_cell("RobustPath2")
 
 rp = gdspy.RobustPath((0, 0), [0.1, 0.2, 0.1], 0.15, layer=[1, 2, 3])
 rp.segment((1, 0))
@@ -390,7 +406,7 @@ rp.smooth(
 )
 cell.add(rp)
 
-cell = gdspy.Cell("RobustPath3")
+cell = lib.new_cell("RobustPath3")
 
 rp = gdspy.RobustPath((0, 0), 0.1)
 rp.parametric(
@@ -406,10 +422,24 @@ rp.parametric(
 )
 cell.add(rp)
 
+cell = lib.new_cell("RobustPath4")
+
+rp = gdspy.FlexPath([(0, 0)], [2, 1, 1], 5)
+rp.segment((15, 20))
+rp.scale(0.7)
+rp.turn(10, "r")
+rp.transform((10, 0), -1.5, 1.5, x_reflection=True)
+rp.segment((10, -10), relative=True)
+rp.rotate(-0.7)
+rp.translate(50, 30)
+rp.segment((-10, 0))
+
+cell.add(rp)
+
 
 ### Curve
 
-cell = gdspy.Cell("Hobby1")
+cell = lib.new_cell("Hobby1")
 
 c = gdspy.Curve(0, 0, tolerance=1e-3)
 c.i([(1, 0), (1, 1), (0, 1)])
@@ -475,7 +505,7 @@ c.i(
 )
 cell.add(gdspy.Polygon(c.get_points(), layer=18))
 
-cell = gdspy.Cell("Hobby2")
+cell = lib.new_cell("Hobby2")
 
 c = gdspy.Curve(0, 0, tolerance=1e-3)
 c.i([(1, 2), (2, 1), (3, 2), (4, 0)])
@@ -506,7 +536,7 @@ c.i(
 )
 cell.add(gdspy.Polygon(c.get_points(), layer=6))
 
-cell = gdspy.Cell("Hobby3")
+cell = lib.new_cell("Hobby3")
 
 c = gdspy.Curve(0, 0, tolerance=1e-3)
 c.i([(1, 2), (2, 1), (3, 2), (4, 0)])
@@ -527,7 +557,7 @@ c = gdspy.Curve(0, 0, tolerance=1e-3)
 c.i([(1, 2), (2, 1), (3, 2), (4, 0)], t_in=[1, 1, 2, 1, 1], t_out=[1, 2, 1, 1, 1])
 cell.add(gdspy.Polygon(c.get_points(), layer=6))
 
-cell = gdspy.Cell("Hobby4")
+cell = lib.new_cell("Hobby4")
 
 c = gdspy.Curve(0, 3, tolerance=1e-3)
 c.i([(1, 2), (2, 1), (3, 2), (4, 0)], cycle=True)
@@ -570,5 +600,5 @@ cell.add(gdspy.Polygon(c.get_points(), layer=14))
 
 ### END
 
-gdspy.write_gds("tests/test.gds", unit=1, precision=1e-7)
-gdspy.LayoutViewer(cells=[cell])
+lib.write_gds("tests/test.gds")
+gdspy.LayoutViewer(lib)

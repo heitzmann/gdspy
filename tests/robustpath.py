@@ -12,6 +12,8 @@ import numpy
 import pytest
 import gdspy
 
+gdspy.library.use_current_library = False
+
 
 def test_robustpath_warnings():
     with pytest.warns(UserWarning):
@@ -91,7 +93,7 @@ def test_robustpath_width():
 
 
 def test_robustpath1(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     rp = gdspy.RobustPath((0, 0), 0.1, layer=[1], gdsii_path=True)
     rp.segment((1, 1))
     cell.add(rp)
@@ -124,7 +126,7 @@ def test_robustpath1(target):
 
 
 def test_robustpath2(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     rp = gdspy.RobustPath((0, 0), [0.1, 0.2, 0.1], 0.15, layer=[1, 2, 3])
     assert len(rp) == 0
     rp.segment((1, 0))
@@ -212,7 +214,7 @@ def test_robustpath2(target):
 
 
 def test_robustpath3(target):
-    cell = gdspy.Cell("test", True)
+    cell = gdspy.Cell("test")
     rp = gdspy.RobustPath((0, 0), 0.1)
     rp.parametric(
         lambda u: numpy.array(
@@ -234,7 +236,7 @@ def test_robustpath3(target):
 def test_robustpath_gdsiipath():
     cells = []
     for gdsii_path in [True, False]:
-        cells.append(gdspy.Cell(str(gdsii_path), True))
+        cells.append(gdspy.Cell(str(gdsii_path)))
         rp = gdspy.RobustPath(
             (0, 0),
             0.05,
@@ -278,6 +280,7 @@ def test_robustpath_togds(tmpdir):
     rp.segment((1, 1))
     rp.segment((2, 3), 0)
     cell.add(rp)
+
     rp = gdspy.RobustPath(
         (2, 0),
         [0.1, 0.2],
@@ -287,8 +290,9 @@ def test_robustpath_togds(tmpdir):
         datatype=[1, 1],
         gdsii_path=True,
     )
-    rp.segment((3, 1))
+    rp.segment((3, -1))
     cell.add(rp)
+
     rp = gdspy.RobustPath(
         (0, 0),
         0.1,
@@ -298,14 +302,42 @@ def test_robustpath_togds(tmpdir):
         max_evals=1e6,
         gdsii_path=True,
     )
-    rp.segment((10, 0))
-    rp.turn(20, "ll")
-    rp.turn(20, "rr")
-    rp.turn(20, "ll")
+    rp.segment((1, 0))
+    rp.turn(2, "ll")
+    rp.turn(1, "rr")
+    rp.turn(2, "l")
     cell.add(rp)
     fname = str(tmpdir.join("test.gds"))
-    with pytest.warns(UserWarning):
-        gdspy.write_gds(fname, unit=1, precision=1e-7)
+    gdspy.GdsLibrary(unit=1, precision=1e-7).add(cell).write_gds(fname)
     lib = gdspy.GdsLibrary(infile=fname, rename={"robustpath": "file"})
-    assertsame(lib.cell_dict["file"], cell, tolerance=1e-3)
-    gdspy.current_library = gdspy.GdsLibrary()
+    assertsame(lib.cells["file"], cell, tolerance=1e-3)
+
+
+def test_robustpath_transform(target):
+    rp = gdspy.FlexPath([(0, 0)], [2, 1, 1], 5)
+    rp.segment((15, 20))
+    rp.scale(0.7)
+    rp.turn(10, "r")
+    rp.transform((10, 0), -1.5, 1.5, x_reflection=True)
+    rp.segment((10, -10), relative=True)
+    rp.rotate(-0.7)
+    rp.translate(50, 30)
+    rp.segment((-10, 0))
+    assertsame(target["RobustPath4"], gdspy.Cell("FP5").add(rp))
+
+    rp = gdspy.RobustPath((0, 0), [2, 1, 1], 5)
+    rp.segment((15, 20))
+    rp.turn(10, "r")
+    rp.segment((10, -10), relative=True)
+    poly = rp.to_polygonset()
+    rp.rotate(-0.7)
+    rp.scale(0.7)
+    rp.translate(50, 30)
+    rp.transform((10, 0), numpy.pi/4, 1.5, True)
+    poly.rotate(-0.7)
+    poly.scale(0.7)
+    poly.translate(50, 30)
+    c0 = gdspy.Cell("POLY")
+    c0.add(poly)
+    ref = gdspy.CellReference(c0, (10, 0), 45, 1.5, True)
+    assertsame(gdspy.Cell("RP").add(rp), gdspy.Cell("REF").add(ref), tolerance=1e-2)

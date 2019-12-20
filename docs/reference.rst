@@ -225,9 +225,3 @@ get_gds_units
 =============
 
 .. autofunction:: gdspy.get_gds_units
-
-
-current_library
-===============
-
-.. autodata:: gdspy.current_library

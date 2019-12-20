@@ -19,18 +19,25 @@ from __future__ import absolute_import
 import sys
 
 if sys.version_info.major < 3:
-    from builtins import super
-    from builtins import range
-    from builtins import dict
+    from builtins import zip
+    from builtins import open
     from builtins import int
-    from builtins import str
+    from builtins import round
+    from builtins import range
+    from builtins import super
 
     from future import standard_library
 
     standard_library.install_aliases()
+else:
+    # Python 3 doesn't have basestring, as unicode is type string
+    # Python 2 doesn't equate unicode to string, but both are basestring
+    # Now isinstance(s, basestring) will be True for any python version
+    basestring = str
 
 import os
 import colorsys
+import warnings
 import numpy
 import tkinter
 import tkinter.messagebox
@@ -130,11 +137,10 @@ class LayoutViewer(tkinter.Frame):
     Parameters
     ----------
     library : ``GdsLibrary``
-        GDSII library to display.  If ``None``, the current library is
-        used.
-    cells : Cell, string or array-like
-        The array of cells to be included in the view. If ``None``, all
-        cells listed in the current library are used.
+        GDSII library to display.
+    cells : Cell or iterable
+        The array of cells to be included in the view in addition to the
+        library cells.
     hidden_types : array-like
         The array of tuples (layer, datatype) to start in hidden state.
     depth : integer
@@ -182,24 +188,28 @@ class LayoutViewer(tkinter.Frame):
     ):
         tkinter.Frame.__init__(self, None)
 
-        if library is None:
-            library = gdspy.current_library
+        self.cells = {} if library is None else dict(library.cells)
+        if cells is not None:
+            if isinstance(cells, gdspy.Cell):
+                self.cells[cells.name] = cells
+            else:
+                for c in cells:
+                    self.cells[c.name] = c
+        if len(self.cells) == 0:
+            self.cells = dict(gdspy.current_library.cells)
+            if len(self.cells) == 0:
+                raise ValueError("[GDSPY] No cells to display in LayoutViewer.")
+            else:
+                warnings.warn(
+                    "[GDSPY] Use of the global library is deprecated.  "
+                    "Pass LayoutViewer a GdsLibrary instance.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
+        cell_names = list(self.cells.keys())
+        self.cell_bb = dict([(s, None) for s in self.cells])
+
         self.current_cell = tkinter.StringVar()
-        if cells is None:
-            self.cells = library.cell_dict
-            cell_names = list(library.cell_dict.keys())
-            self.cell_bb = dict([(s, None) for s in self.cells])
-        else:
-            if isinstance(cells, str) or isinstance(cells, gdspy.Cell):
-                cells = (cells,)
-            self.cells = {}
-            cell_names = []
-            self.cell_bb = {}
-            for c in cells:
-                cell = library.cell_dict.get(c, c)
-                self.cells[cell.name] = cell
-                cell_names.append(cell.name)
-                self.cell_bb[cell.name] = None
         self.current_cell.set(cell_names[0])
 
         self.depth = tkinter.IntVar()

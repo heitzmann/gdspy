@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="418.1818181818182" height="600.0" viewBox="-300.0 -300.0 418.1818181818182 600.0">
+<defs>
+<style type="text/css">
+.l0d0 {stroke: rgb(255, 0, 0); fill: rgb(255, 0, 0); fill-opacity: 0.5;}
+</style>
+</defs><rect x="-300.0" y="-300.0" width="418.1818181818182" height="600.0" fill="none" stroke="none"/>
+<g id="polygons" transform="scale(1 -1)">
+<polygon class="l0d0" points="0.0,0.0 90.9090909090909,90.9090909090909 90.9090909090909,272.72727272727275 -272.72727272727275,272.72727272727275 -272.72727272727275,-272.72727272727275 -181.8181818181818,-181.8181818181818 -181.8181818181818,181.8181818181818 0.0,181.8181818181818"/>
+</g>
+</svg>

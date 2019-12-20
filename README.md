@@ -21,9 +21,8 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 
 ### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 2.7, 3.5, 3.6, and 3.7)
+* [Python](http://www.python.org/) (tested with versions 3.5, 3.6, and 3.7)
 * [Numpy](http://numpy.scipy.org/)
-* [Python-future](http://python-future.org/) (only for Python 2)
 * C compiler (needed only if built from source)
 * Tkinter (optional: needed for the `LayoutViewer` GUI)
 * [Sphinx](http://sphinx-doc.org/) (optional: to build the documentation)
@@ -58,7 +57,32 @@ The source files can be found in the `docs` directory.
 
 Help support gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
+
+## Changes planned for version 2.0
+* Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
+* Deprecated member `GdsLibrary.extract` removed.
+* Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
+* Deprecated function `fast_boolean` removed: use `boolean`.
+* Deprecated function `write_gds` removed: use `GdsLibrary.write_gds`.
+* Deprecated attribute `current_library` removed.
+
+
 ## History of changes
+
+### Upcoming on version 1.5
+* New `Cell.write_svg` function to export an SVG image of the cell.
+* New `GdsLibrary.new_cell` function to quickly create and add cells to a library.
+* `GdsLibrary.add` can update references when a cell is overwritten.
+* Added `GdsLibrary.remove` to allow cells to be properly removed from libraries.
+* Added `GdsLibrary.rename_cell` to rename cells in libraries.
+* Added `GdsLibrary.replace_references` to easily replace referenced cells in libraries.
+* `GdsLibrary.add` can add dependencies recursively.
+* Iterating over `GdsLibrary` objects yields all its cells.
+* Iterating over `Cell` objects yield all its polygons, paths, labels and references.
+* Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
+* Breaking change: renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
+* Deprecated: `gdspy.current_library`, `gdspy.write_gds`, `gdspy.fast_boolen`, `GdsLibrary.extract`.
+* Bug fixes and better tests for `FlexPath` and `RobustPath`.
 
 ### Version 1.4.3 (Nov 11, 2019)
 * Bug fix for `FlexPath` and `RobustPath` references.

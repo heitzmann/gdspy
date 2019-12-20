@@ -4,6 +4,7 @@ python:
   - "2.7"
   - "3.5"
   - "3.6"
+  - "3.7"
 
 # From: https://docs.travis-ci.com/user/languages/python/#running-python-tests-on-multiple-operating-systems
 matrix:

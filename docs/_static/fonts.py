@@ -31,15 +31,29 @@ def render_text(text, size=None, position=(0, 0), font_prop=None, tolerance=0.1)
                 if poly[:, 0].min() < xmax:
                     i = len(polys) - 1
                     while i >= 0:
-                        if gdspy.inside(poly[:1], [polys[i]], precision=0.1 * tolerance)[0]:
+                        if gdspy.inside(
+                            poly[:1], [polys[i]], precision=0.1 * tolerance
+                        )[0]:
                             p = polys.pop(i)
-                            poly = gdspy.boolean([p], [poly], 'xor', precision=0.1 * tolerance,
-                                                 max_points=0).polygons[0]
+                            poly = gdspy.boolean(
+                                [p],
+                                [poly],
+                                "xor",
+                                precision=0.1 * tolerance,
+                                max_points=0,
+                            ).polygons[0]
                             break
-                        elif gdspy.inside(polys[i][:1], [poly], precision=0.1 * tolerance)[0]:
+                        elif gdspy.inside(
+                            polys[i][:1], [poly], precision=0.1 * tolerance
+                        )[0]:
                             p = polys.pop(i)
-                            poly = gdspy.boolean([p], [poly], 'xor', precision=0.1 * tolerance,
-                                                 max_points=0).polygons[0]
+                            poly = gdspy.boolean(
+                                [p],
+                                [poly],
+                                "xor",
+                                precision=0.1 * tolerance,
+                                max_points=0,
+                            ).polygons[0]
                         i -= 1
                 xmax = max(xmax, poly[:, 0].max())
                 polys.append(poly)
@@ -47,8 +61,10 @@ def render_text(text, size=None, position=(0, 0), font_prop=None, tolerance=0.1)
 
 
 if __name__ == "__main__":
-    fp = FontProperties(family='serif', style='italic')
-    text = gdspy.PolygonSet(render_text('Text rendering', 10, font_prop=fp), layer=1)
-    gdspy.Cell('TXT').add(text)
-    gdspy.write_gds('fonts.gds')
-    gdspy.LayoutViewer()
+    fp = FontProperties(family="serif", style="italic")
+    text = gdspy.PolygonSet(render_text("Text rendering", 10, font_prop=fp), layer=1)
+    lib = gdspy.GdsLibrary()
+    cell = lib.new_cell("TXT")
+    cell.add(text)
+    lib.write_gds("fonts.gds")
+    gdspy.LayoutViewer(lib)
