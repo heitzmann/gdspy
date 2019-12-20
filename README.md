@@ -82,6 +82,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Breaking change to `*.to_gds` functions in order to improve write efficiency (this should not be a problem for most users, since `gdspy.write_gds` and `Cell.write_gds` remain the same).
 * Breaking change: renamed `GdsLibrary.cell_dict` to `GdsLibrary.cells`.
 * Deprecated: `gdspy.current_library`, `gdspy.write_gds`, `gdspy.fast_boolen`, `GdsLibrary.extract`.
+* Bug fixes and better tests for `FlexPath` and `RobustPath`.
 
 ### Version 1.4.3 (Nov 11, 2019)
 * Bug fix for `FlexPath` and `RobustPath` references.
