@@ -21,7 +21,7 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 
 ### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 3.5, 3.6, and 3.7)
+* [Python](http://www.python.org/) (tested with versions 2.7, 3.5, 3.6, 3.7, and 3.8)
 * [Numpy](http://numpy.scipy.org/)
 * C compiler (needed only if built from source)
 * Tkinter (optional: needed for the `LayoutViewer` GUI)
