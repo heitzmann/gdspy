@@ -338,3 +338,16 @@ def test_flexpath_duplicates():
     )
     fp2 = gdspy.FlexPath([(1.1, 2), (1, 1.0), (0.0, 1.0)], 0.1)
     assertsame(gdspy.Cell("DUPS").add(fp1), gdspy.Cell("SNGL").add(fp2))
+
+
+def test_flexpath_transform(target):
+    fp = gdspy.FlexPath([(0, 0)], [2, 1, 1], 5)
+    fp.segment((15, 20))
+    fp.scale(0.7)
+    fp.turn(10, "r")
+    fp.transform((10, 0), -1.5, 1.5, x_reflection=True)
+    fp.segment((10, -10), relative=True)
+    fp.rotate(-0.7)
+    fp.translate(50, 30)
+    fp.segment((-10, 0))
+    assertsame(target["FlexPath5"], gdspy.Cell("FP5").add(fp))

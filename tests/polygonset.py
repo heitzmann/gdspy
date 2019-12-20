@@ -185,4 +185,4 @@ def test_fillet(target):
     p.datatypes = [0, 1]
     p.fillet([0.8, [10.0, 10.0, 20.0, 20.0]], max_points=199, precision=1e-6)
     cell.add(p)
-    assertsame(cell, target["PolygonSet_fillet"])
+    assertsame(cell, target["PolygonSet_fillet"], tolerance=1e-3)
