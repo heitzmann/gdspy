@@ -8,7 +8,7 @@ if [ "$LAST_VER" = "v$CURR_VER" ]; then
     exit 1
 fi
 
-if ! grep "### Version $CURR_VER" README.md > /dev/null 2>&1; then
+if ! grep "### Version $CURR_VER (" README.md > /dev/null 2>&1; then
     echo "Version $CURR_VER not found in the release notes of README.md"
     exit 1
 fi
