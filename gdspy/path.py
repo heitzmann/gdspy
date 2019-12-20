@@ -1402,10 +1402,10 @@ class FlexPath(object):
         self.points = self.points * scale + c0
         self.widths = self.widths * scale
         self.offsets = self.offsets * scale
-        for i, end in enumerate(self.paths.ends):
+        for i, end in enumerate(self.ends):
             # CustomPlus created by bgnextn and endextn
             if isinstance(end, tuple):
-                self.paths.ends[i] = tuple([e * scale for e in end])
+                self.ends[i] = tuple([e * scale for e in end])
         return self
 
     def transform(self, translation, rotation, scale, x_reflection, array_trans=None):
