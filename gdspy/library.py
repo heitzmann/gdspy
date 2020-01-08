@@ -2345,7 +2345,7 @@ class GdsLibrary(object):
                     name = rename[record[1]]
                 else:
                     name = rename_template.format(name=record[1])
-                cell = Cell(name)
+                cell = Cell(name, exclude_from_current = True)
                 self.cells[name] = cell
             # STRING
             elif record[0] == 0x19:
