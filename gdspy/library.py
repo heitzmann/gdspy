@@ -87,7 +87,7 @@ class Cell(object):
         List of cell references.
     """
 
-    __slots__ = "name", "polygons", "paths", "labels", "references", "_bb_valid"
+    __slots__ = "name", "polygons", "paths", "labels", "references", "_bb_valid", "attr_table"
 
     def __init__(self, name, exclude_from_current=False):
         self.name = name
@@ -95,6 +95,7 @@ class Cell(object):
         self.paths = []
         self.labels = []
         self.references = []
+        self.attr_table = []
         self._bb_valid = False
         if use_current_library and not exclude_from_current:
             import gdspy
@@ -197,6 +198,9 @@ class Cell(object):
             new_cell.labels = list(self.labels)
             new_cell.references = list(self.references)
         return new_cell
+
+    def add_attr(self, key, value):
+        self.attr_table.append((key, value))
 
     def add(self, element):
         """
@@ -2268,6 +2272,7 @@ class GdsLibrary(object):
         kwargs = {}
         create_element = None
         factor = 1
+        key = -1
         cell = None
         for record in _record_reader(infile):
             # LAYER
@@ -2384,6 +2389,11 @@ class GdsLibrary(object):
             # ENDEXTN
             elif record[0] == 0x31:
                 kwargs["endextn"] = factor * record[1][0]
+            # PROPATTR
+            elif record[0] == 0x2B:
+                key = record[1][0]
+            elif record[0] == 0x2C:
+                cell.add_attr(key, record[1])
             # ENDLIB
             elif record[0] == 0x04:
                 for ref in self._references:
