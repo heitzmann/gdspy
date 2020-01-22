@@ -2269,6 +2269,8 @@ class GdsLibrary(object):
         create_element = None
         factor = 1
         cell = None
+        properties = {}
+        attr = -1
         for record in _record_reader(infile):
             # LAYER
             if record[0] == 0x0D:
@@ -2293,7 +2295,11 @@ class GdsLibrary(object):
             # ENDEL
             elif record[0] == 0x11:
                 if create_element is not None:
-                    cell.add(create_element(**kwargs))
+                    el = create_element(**kwargs)
+                    if len(properties) > 0:
+                        el.properties = properties
+                        properties = {}
+                    cell.add(el)
                     create_element = None
                 kwargs = {}
             # BOUNDARY
@@ -2398,6 +2404,12 @@ class GdsLibrary(object):
                 for ref in self._references:
                     if ref.ref_cell in self.cells:
                         ref.ref_cell = self.cells[ref.ref_cell]
+            # PROPATTR
+            elif record[0] == 0x2B:
+                attr = record[1][0]
+            # PROPVALUE
+            elif record[0] == 0x2C:
+                properties[attr] = record[1]
             # Not supported
             elif (
                 record[0] not in emitted_warnings

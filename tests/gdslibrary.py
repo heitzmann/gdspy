@@ -351,3 +351,16 @@ def test_rw_gds(tmpdir):
         lib2.read_gds(fin)
     assert lib2.name == "lib2"
     assert len(lib2.cells) == 4
+
+
+def test_properties(tmpdir):
+    lib = gdspy.GdsLibrary()
+    cell = lib.new_cell("POLY")
+    rect = gdspy.Rectangle((0, 0), (2, 1))
+    rect.properties[1] = "test1"
+    rect.properties[126] = "test_126"
+    cell.add(rect)
+    fname = str(tmpdir.join("test_properties.gds"))
+    lib.write_gds(fname)
+    lib1 = gdspy.GdsLibrary(infile=fname)
+    assert(rect.properties == lib1.cells["POLY"].polygons[0].properties)
