@@ -2273,8 +2273,8 @@ class GdsLibrary(object):
             # LAYER
             if record[0] == 0x0D:
                 kwargs["layer"] = layers.get(record[1][0], record[1][0])
-            # DATATYPE
-            elif record[0] == 0x0E:
+            # DATATYPE or BOXTYPE
+            elif record[0] == 0x0E or record[0] == 0x2E:
                 kwargs["datatype"] = datatypes.get(record[1][0], record[1][0])
             # TEXTTYPE
             elif record[0] == 0x16:
@@ -2302,6 +2302,15 @@ class GdsLibrary(object):
             # PATH
             elif record[0] == 0x09:
                 create_element = self._create_path
+            # BOX
+            elif record[0] == 0x2D:
+                create_element = self._create_path
+                if record[0] not in emitted_warnings:
+                    warnings.warn(
+                        "[GDSPY] GDSII elements of type BOX are imported as paths.",
+                        stacklevel=2,
+                    )
+                    emitted_warnings.append(record[0])
             # TEXT
             elif record[0] == 0x0C:
                 create_element = self._create_label
