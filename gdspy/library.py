@@ -2304,10 +2304,10 @@ class GdsLibrary(object):
                 create_element = self._create_path
             # BOX
             elif record[0] == 0x2D:
-                create_element = self._create_path
+                create_element = self._create_polygon
                 if record[0] not in emitted_warnings:
                     warnings.warn(
-                        "[GDSPY] GDSII elements of type BOX are imported as paths.",
+                        "[GDSPY] GDSII elements of type BOX are imported as polygons.",
                         stacklevel=2,
                     )
                     emitted_warnings.append(record[0])
