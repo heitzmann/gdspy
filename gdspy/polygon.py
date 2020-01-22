@@ -2036,6 +2036,7 @@ class L1Path(PolygonSet):
         The GDSII datatype for the elements of each path (between 0 and
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
+
     Attributes
     ----------
     x : number
@@ -2045,6 +2046,7 @@ class L1Path(PolygonSet):
     direction : '+x', '-x', '+y', '-y' or number
         Direction or angle (in *radians*) the path points to.  The
         numerical angle is returned only after a rotation of the object.
+
     Examples
     --------
     >>> length = [10, 30, 15, 15, 15, 15, 10]
