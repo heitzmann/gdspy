@@ -82,6 +82,8 @@ class Label(object):
         The GDSII layer number for these elements.
     texttype : integer
         The GDSII text type for the label (between 0 and 63).
+    properties : {integer: string} dictionary
+        Properties for these elements.
 
     Examples
     --------
@@ -125,6 +127,7 @@ class Label(object):
         "rotation",
         "magnification",
         "x_reflection",
+        "properties",
     )
 
     def __init__(
@@ -152,6 +155,7 @@ class Label(object):
         self.magnification = magnification
         self.x_reflection = x_reflection
         self.texttype = texttype
+        self.properties = {}
 
     def __repr__(self):
         return 'Label("{0}", ({1[0]}, {1[1]}), {2}, {3}, {4}, {5}, {6})'.format(
@@ -243,6 +247,23 @@ class Label(object):
             )
         )
         outfile.write(text.encode("ascii"))
+        if len(self.properties) > 0:
+            size = 0
+            for attr, value in self.properties.items():
+                if len(value) % 2 != 0:
+                    value = value + "\0"
+                outfile.write(
+                    struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                )
+                outfile.write(value.encode("ascii"))
+                size += len(value) + 2
+            if size > 128:
+                warnings.warn(
+                    "[GDSPY] Properties with size larger than 128 bytes are not "
+                    "officially supported by the GDSII specification.  This file "
+                    "might not be compatible with all readers.",
+                    stacklevel=4,
+                )
         outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):
