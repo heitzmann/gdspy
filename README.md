@@ -69,7 +69,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Version 1.5.1 (Feb 01, 2020)
+### Version 1.5.2 (Feb 01, 2020)
 * Added support for importing GDSII files containing BOX elements.
 * Bug fix in `GdsLibrary.extract` (thanks collineps for finding the problem).
 
