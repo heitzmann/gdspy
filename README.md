@@ -69,8 +69,9 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Upcomming
+### Version 1.5.1 (Feb 01, 2020)
 * Added support for importing GDSII files containing BOX elements.
+* Bug fix in `GdsLibrary.extract` (thanks collineps for finding the problem).
 
 ### Version 1.5 (Dec 20, 2019)
 * New `Cell.write_svg` function to export an SVG image of the cell.

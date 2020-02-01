@@ -2604,7 +2604,7 @@ class GdsLibrary(object):
         )
         import gdspy
 
-        cell = self.cell_dict.get(cell, cell)
+        cell = self.cells.get(cell, cell)
         gdspy.current_library.add(
             cell, include_dependencies=True, overwrite_duplicate=overwrite_duplicate
         )
