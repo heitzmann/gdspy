@@ -467,6 +467,11 @@ class FlexPath(object):
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
 
+    Attributes
+    ----------
+    properties : {integer: string} dictionary
+        Properties for these elements.
+
     Notes
     -----
     The value of `tolerance` should not be smaller than `precision`,
@@ -489,6 +494,7 @@ class FlexPath(object):
         "gdsii_path",
         "width_transform",
         "bend_radius",
+        "properties",
         "_polygon_dict",
     )
 
@@ -558,6 +564,7 @@ class FlexPath(object):
         self.max_points = max_points
         self.gdsii_path = gdsii_path
         self.width_transform = width_transform
+        self.properties = {}
         if self.gdsii_path:
             if any(end == "smooth" or callable(end) for end in self.ends):
                 warnings.warn(
@@ -1134,6 +1141,8 @@ class FlexPath(object):
             pol.layers.extend([k[0]] * len(v))
             pol.datatypes.extend([k[1]] * len(v))
             pol.polygons.extend(v)
+        if self.properties is not None and len(self.properties) > 0:
+            pol.properties.update(self.properties)
         return pol.fracture(self.max_points, self.precision)
 
     def to_gds(self, outfile, multiplier):
@@ -1297,6 +1306,23 @@ class FlexPath(object):
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
                 outfile.write(points.tostring())
+            if self.properties is not None and len(self.properties) > 0:
+                size = 0
+                for attr, value in self.properties.items():
+                    if len(value) % 2 != 0:
+                        value = value + "\0"
+                    outfile.write(
+                        struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                    )
+                    outfile.write(value.encode("ascii"))
+                    size += len(value) + 2
+                if size > 128:
+                    warnings.warn(
+                        "[GDSPY] Properties with size larger than 128 bytes are not "
+                        "officially supported by the GDSII specification.  This file "
+                        "might not be compatible with all readers.",
+                        stacklevel=4,
+                    )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):
@@ -1931,6 +1957,11 @@ class RobustPath(object):
         255).  If the number of datatypes in the list is less than the
         number of paths, the list is repeated.
 
+    Attributes
+    ----------
+    properties : {integer: string} dictionary
+        Properties for these elements.
+
     Notes
     -----
     The value of `tolerance` should not be smaller than `precision`,
@@ -1953,6 +1984,7 @@ class RobustPath(object):
         "max_evals",
         "gdsii_path",
         "width_transform",
+        "properties",
         "_polygon_dict",
     )
 
@@ -2011,6 +2043,7 @@ class RobustPath(object):
         self.max_evals = max_evals
         self.gdsii_path = gdsii_path
         self.width_transform = width_transform
+        self.properties = {}
         if self.gdsii_path and any(end == "smooth" for end in self.ends):
             warnings.warn(
                 "[GDSPY] Smooth end caps not supported in `RobustPath` "
@@ -2335,6 +2368,8 @@ class RobustPath(object):
             pol.layers.extend([k[0]] * len(v))
             pol.datatypes.extend([k[1]] * len(v))
             pol.polygons.extend(v)
+        if self.properties is not None and len(self.properties) > 0:
+            pol.properties.update(self.properties)
         return pol.fracture(self.max_points, self.precision)
 
     def to_gds(self, outfile, multiplier):
@@ -2483,6 +2518,23 @@ class RobustPath(object):
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
                 outfile.write(points.tostring())
+            if self.properties is not None and len(self.properties) > 0:
+                size = 0
+                for attr, value in self.properties.items():
+                    if len(value) % 2 != 0:
+                        value = value + "\0"
+                    outfile.write(
+                        struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                    )
+                    outfile.write(value.encode("ascii"))
+                    size += len(value) + 2
+                if size > 128:
+                    warnings.warn(
+                        "[GDSPY] Properties with size larger than 128 bytes are not "
+                        "officially supported by the GDSII specification.  This file "
+                        "might not be compatible with all readers.",
+                        stacklevel=4,
+                    )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):

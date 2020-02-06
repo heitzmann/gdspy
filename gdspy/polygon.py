@@ -65,6 +65,8 @@ class PolygonSet(object):
         The GDSII layer number for each element.
     datatypes : list of integer
         The GDSII datatype for each element (between 0 and 255).
+    properties : {integer: string} dictionary
+        Properties for these elements.
 
     Notes
     -----
@@ -75,12 +77,13 @@ class PolygonSet(object):
     vertices per polygon.
     """
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(self, polygons, layer=0, datatype=0):
         self.polygons = [numpy.array(p) for p in polygons]
         self.layers = [layer] * len(self.polygons)
         self.datatypes = [datatype] * len(self.polygons)
+        self.properties = {}
 
     def __str__(self):
         return (
@@ -228,6 +231,23 @@ class PolygonSet(object):
                 xy = numpy.round(self.polygons[ii] * multiplier).astype(">i4")
                 outfile.write(xy.tostring())
                 outfile.write(xy[0].tostring())
+            if self.properties is not None and len(self.properties) > 0:
+                size = 0
+                for attr, value in self.properties.items():
+                    if len(value) % 2 != 0:
+                        value = value + "\0"
+                    outfile.write(
+                        struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                    )
+                    outfile.write(value.encode("ascii"))
+                    size += len(value) + 2
+                if size > 128:
+                    warnings.warn(
+                        "[GDSPY] Properties with size larger than 128 bytes are not "
+                        "officially supported by the GDSII specification.  This file "
+                        "might not be compatible with all readers.",
+                        stacklevel=4,
+                    )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):
@@ -545,12 +565,13 @@ class Polygon(PolygonSet):
     >>> myCell.add(triangle)
     """
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(self, points, layer=0, datatype=0):
         self.layers = [layer]
         self.datatypes = [datatype]
         self.polygons = [numpy.array(points)]
+        self.properties = {}
 
     def __str__(self):
         return "Polygon ({} vertices, layer {}, datatype {})".format(
@@ -579,7 +600,7 @@ class Rectangle(PolygonSet):
     >>> myCell.add(rectangle)
     """
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(self, point1, point2, layer=0, datatype=0):
         self.layers = [layer]
@@ -594,6 +615,7 @@ class Rectangle(PolygonSet):
                 ]
             )
         ]
+        self.properties = {}
 
     def __str__(self):
         return (
@@ -662,7 +684,7 @@ class Round(PolygonSet):
     ...                       final_angle=0)
     """
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(
         self,
@@ -741,6 +763,7 @@ class Round(PolygonSet):
         self.layers = [layer] * pieces
         self.datatypes = [datatype] * pieces
         self.polygons = [numpy.zeros((number_of_points, 2)) for _ in range(pieces)]
+        self.properties = {}
         if final_angle == initial_angle and pieces > 1:
             final_angle += 2 * numpy.pi
         angles = numpy.linspace(initial_angle, final_angle, pieces + 1)
@@ -922,7 +945,7 @@ class Text(PolygonSet):
     }
     # fmt: on
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(
         self, text, size, position=(0, 0), horizontal=True, angle=0, layer=0, datatype=0
@@ -968,6 +991,7 @@ class Text(PolygonSet):
                     posY -= 11
         self.layers = [layer] * len(self.polygons)
         self.datatypes = [datatype] * len(self.polygons)
+        self.properties = {}
 
     def __str__(self):
         return ("Text ({} polygons, {} vertices, layers {}, datatypes {})").format(
@@ -1011,6 +1035,8 @@ class Path(PolygonSet):
     length : number
         Length of the central path axis.  If only one path is created,
         this is the real length of the path.
+    properties : {integer: string} dictionary
+        Properties for this path.
     """
 
     __slots__ = (
@@ -1024,6 +1050,7 @@ class Path(PolygonSet):
         "direction",
         "distance",
         "length",
+        "properties",
     )
 
     def __init__(self, width, initial_point=(0, 0), number_of_paths=1, distance=0):
@@ -1037,6 +1064,7 @@ class Path(PolygonSet):
         self.polygons = []
         self.layers = []
         self.datatypes = []
+        self.properties = {}
 
     def __str__(self):
         if self.n > 1:
@@ -2046,6 +2074,8 @@ class L1Path(PolygonSet):
     direction : '+x', '-x', '+y', '-y' or number
         Direction or angle (in *radians*) the path points to.  The
         numerical angle is returned only after a rotation of the object.
+    properties : {integer: string} dictionary
+        Properties for this path.
 
     Examples
     --------
@@ -2055,7 +2085,7 @@ class L1Path(PolygonSet):
     >>> myCell.add(l1path)
     """
 
-    __slots__ = "layers", "datatypes", "polygons", "direction", "x", "y"
+    __slots__ = "layers", "datatypes", "polygons", "direction", "x", "y", "properties"
 
     def __init__(
         self,
@@ -2088,6 +2118,7 @@ class L1Path(PolygonSet):
         self.polygons = []
         self.layers = []
         self.datatypes = []
+        self.properties = {}
         self.x = initial_point[0]
         self.y = initial_point[1]
         if direction == "+x":
@@ -2300,7 +2331,7 @@ class PolyPath(PolygonSet):
     greater than 1.
     """
 
-    __slots__ = "layers", "datatypes", "polygons"
+    __slots__ = "layers", "datatypes", "polygons", "properties"
 
     def __init__(
         self,
@@ -2338,6 +2369,7 @@ class PolyPath(PolygonSet):
         self.polygons = []
         self.layers = []
         self.datatypes = []
+        self.properties = {}
         if points.shape[0] == 2 and number_of_paths == 1:
             v = points[1] - points[0]
             v = v / (v[0] ** 2 + v[1] ** 2) ** 0.5

@@ -333,7 +333,7 @@ def test_robustpath_transform(target):
     rp.rotate(-0.7)
     rp.scale(0.7)
     rp.translate(50, 30)
-    rp.transform((10, 0), numpy.pi/4, 1.5, True)
+    rp.transform((10, 0), numpy.pi / 4, 1.5, True)
     poly.rotate(-0.7)
     poly.scale(0.7)
     poly.translate(50, 30)

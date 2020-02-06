@@ -351,3 +351,45 @@ def test_rw_gds(tmpdir):
         lib2.read_gds(fin)
     assert lib2.name == "lib2"
     assert len(lib2.cells) == 4
+
+
+def test_properties(tmpdir):
+    lib = gdspy.GdsLibrary()
+    c1 = lib.new_cell("POLY")
+    rect = gdspy.Rectangle((0, 0), (2, 1))
+    rect.properties[1] = "test1"
+    rect.properties[126] = "test_126"
+    lbl = gdspy.Label("LABEL", (20, 20))
+    lbl.properties[2] = "test2"
+    lbl.properties[22] = "test22"
+    c1.add((rect, lbl))
+    c2 = lib.new_cell("REF")
+    ref = gdspy.CellReference(c1, (0, 0))
+    ref.properties[6] = "test6"
+    ref.properties[121] = "test_121"
+    c2.add(ref)
+    c3 = lib.new_cell("AREF")
+    aref = gdspy.CellArray(c1, 1, 2, (30, 40), (0, 0))
+    aref.properties[4] = "test4"
+    aref.properties[123] = "test_123"
+    c3.add(aref)
+    c4 = lib.new_cell("FP")
+    fp = gdspy.FlexPath([(0, 0), (0, 1), (1, 1)], 0.01, gdsii_path=True)
+    fp.properties[2] = "test2"
+    fp.properties[125] = "test_125"
+    c4.add(fp)
+    c5 = lib.new_cell("RP")
+    rp = gdspy.RobustPath((0, 0), [0.01, 0.01], 0.5, gdsii_path=True).segment((1, 1))
+    rp.properties[3] = "test3"
+    rp.properties[124] = "test_124"
+    c5.add(rp)
+    fname = str(tmpdir.join("test_properties.gds"))
+    lib.write_gds(fname)
+    lib1 = gdspy.GdsLibrary(infile=fname)
+    assert rect.properties == lib1.cells["POLY"].polygons[0].properties
+    assert lbl.properties == lib1.cells["POLY"].labels[0].properties
+    assert ref.properties == lib1.cells["REF"].references[0].properties
+    assert aref.properties == lib1.cells["AREF"].references[0].properties
+    assert fp.properties == lib1.cells["FP"].paths[0].properties
+    assert rp.properties == lib1.cells["RP"].paths[0].properties
+    assert rp.properties == lib1.cells["RP"].paths[1].properties

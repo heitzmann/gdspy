@@ -927,9 +927,35 @@ class CellReference(object):
     ignore_missing : bool
         If False a warning is issued when the referenced cell is not
         found.
+
+    Attributes
+    ----------
+    ref_cell : `Cell` or string
+        The referenced cell or its name.
+    origin : array-like[2]
+        Position where the reference is inserted.
+    rotation : number
+        Angle of rotation of the reference (in *degrees*).
+    magnification : number
+        Magnification factor for the reference.
+    x_reflection : bool
+        If True the reference is reflected parallel to the x
+        direction before being rotated.
+    ignore_missing : bool
+        If False a warning is issued when the referenced cell is not
+        found.
+    properties : {integer: string} dictionary
+        Properties for these elements.
     """
 
-    __slots__ = ("ref_cell", "origin", "rotation", "magnification", "x_reflection")
+    __slots__ = (
+        "ref_cell",
+        "origin",
+        "rotation",
+        "magnification",
+        "x_reflection",
+        "properties",
+    )
 
     def __init__(
         self,
@@ -945,6 +971,7 @@ class CellReference(object):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
+        self.properties = {}
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
                 "[GDSPY] Cell {0} not found; operations on this "
@@ -1014,15 +1041,31 @@ class CellReference(object):
             outfile.write(values)
         outfile.write(
             struct.pack(
-                ">2H2l2H",
+                ">2H2l",
                 12,
                 0x1003,
                 int(round(self.origin[0] * multiplier)),
                 int(round(self.origin[1] * multiplier)),
-                4,
-                0x1100,
             )
         )
+        if self.properties is not None and len(self.properties) > 0:
+            size = 0
+            for attr, value in self.properties.items():
+                if len(value) % 2 != 0:
+                    value = value + "\0"
+                outfile.write(
+                    struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                )
+                outfile.write(value.encode("ascii"))
+                size += len(value) + 2
+            if size > 128:
+                warnings.warn(
+                    "[GDSPY] Properties with size larger than 128 bytes are not "
+                    "officially supported by the GDSII specification.  This file "
+                    "might not be compatible with all readers.",
+                    stacklevel=4,
+                )
+        outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):
         """
@@ -1358,6 +1401,31 @@ class CellArray(object):
     ignore_missing : bool
         If False a warning is issued when the referenced cell is not
         found.
+
+    Attributes
+    ----------
+    ref_cell : `Cell` or string
+        The referenced cell or its name.
+    columns : positive integer
+        Number of columns in the array.
+    rows : positive integer
+        Number of columns in the array.
+    spacing : array-like[2]
+        distances between adjacent columns and adjacent rows.
+    origin : array-like[2]
+        Position where the cell is inserted.
+    rotation : number
+        Angle of rotation of the reference (in *degrees*).
+    magnification : number
+        Magnification factor for the reference.
+    x_reflection : bool
+        If True, the reference is reflected parallel to the x
+        direction before being rotated.
+    ignore_missing : bool
+        If False a warning is issued when the referenced cell is not
+        found.
+    properties : {integer: string} dictionary
+        Properties for these elements.
     """
 
     __slots__ = (
@@ -1369,6 +1437,7 @@ class CellArray(object):
         "columns",
         "rows",
         "spacing",
+        "properties",
     )
 
     def __init__(
@@ -1391,6 +1460,7 @@ class CellArray(object):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
+        self.properties = {}
         if not isinstance(self.ref_cell, Cell) and not ignore_missing:
             warnings.warn(
                 "[GDSPY] Cell {0} not found; operations on this "
@@ -1503,7 +1573,7 @@ class CellArray(object):
             outfile.write(values)
         outfile.write(
             struct.pack(
-                ">2H2h2H6l2H",
+                ">2H2h2H6l",
                 8,
                 0x1302,
                 self.columns,
@@ -1516,10 +1586,26 @@ class CellArray(object):
                 int(round(y2 * multiplier)),
                 int(round(x3 * multiplier)),
                 int(round(y3 * multiplier)),
-                4,
-                0x1100,
             )
         )
+        if self.properties is not None and len(self.properties) > 0:
+            size = 0
+            for attr, value in self.properties.items():
+                if len(value) % 2 != 0:
+                    value = value + "\0"
+                outfile.write(
+                    struct.pack(">5H", 6, 0x2B02, attr, 4 + len(value), 0x2C06)
+                )
+                outfile.write(value.encode("ascii"))
+                size += len(value) + 2
+            if size > 128:
+                warnings.warn(
+                    "[GDSPY] Properties with size larger than 128 bytes are not "
+                    "officially supported by the GDSII specification.  This file "
+                    "might not be compatible with all readers.",
+                    stacklevel=4,
+                )
+        outfile.write(struct.pack(">2H", 4, 0x1100))
 
     def to_svg(self, outfile, scaling):
         """
@@ -2269,6 +2355,8 @@ class GdsLibrary(object):
         create_element = None
         factor = 1
         cell = None
+        properties = {}
+        attr = -1
         for record in _record_reader(infile):
             # LAYER
             if record[0] == 0x0D:
@@ -2293,7 +2381,11 @@ class GdsLibrary(object):
             # ENDEL
             elif record[0] == 0x11:
                 if create_element is not None:
-                    cell.add(create_element(**kwargs))
+                    el = create_element(**kwargs)
+                    if len(properties) > 0:
+                        el.properties = properties
+                        properties = {}
+                    cell.add(el)
                     create_element = None
                 kwargs = {}
             # BOUNDARY
@@ -2398,6 +2490,12 @@ class GdsLibrary(object):
                 for ref in self._references:
                     if ref.ref_cell in self.cells:
                         ref.ref_cell = self.cells[ref.ref_cell]
+            # PROPATTR
+            elif record[0] == 0x2B:
+                attr = record[1][0]
+            # PROPVALUE
+            elif record[0] == 0x2C:
+                properties[attr] = record[1]
             # Not supported
             elif (
                 record[0] not in emitted_warnings
