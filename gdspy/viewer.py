@@ -585,7 +585,7 @@ class LayoutViewer(tkinter.Frame):
                             activewidth=2,
                             tag=("L" + str(i), "V" + str(pol.shape[0])),
                             state=state,
-                            dash=(8, 8),
+                            dash=(8, 8)
                         )
                         self.canvas.create_text(
                             pol[:, 0].mean() / self.scale,
@@ -606,7 +606,7 @@ class LayoutViewer(tkinter.Frame):
                             activeoutline=self.default_outline,
                             activewidth=2,
                             tag=("L" + str(i), "V" + str(pol.shape[0])),
-                            state=state,
+                            state=state
                         )
             if i in lbl_dict:
                 for label in lbl_dict[i]:
@@ -687,7 +687,7 @@ class LayoutViewer(tkinter.Frame):
                     s2.append("({} and {})".format(s1[0], s1[1]))
                 visible = eval("lambda l, d: " + " or ".join(s2))
                 self.hidden_layers = [
-                    ld for ld, *_ in self.l_canvas_info if not visible(ld[0], ld[1])
+                    ld for ld, _, __ in self.l_canvas_info if not visible(ld[0], ld[1])
                 ]
                 self._update_canvas()
             dlg.destroy()
