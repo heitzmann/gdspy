@@ -681,7 +681,7 @@ class LayoutViewer(tkinter.Frame):
                                 s0.append("{} <= {} <= {}".format(lo, var, hi))
                             else:
                                 y = int(spec)
-                                s0.append(f"{} == {}".format(var, y))
+                                s0.append("{} == {}".format(var, y))
                         var = "d"
                         s1.append("(" + " or ".join(s0) + ")")
                     s2.append("({} and {})".format(s1[0], s1[1]))
