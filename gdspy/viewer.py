@@ -678,10 +678,10 @@ class LayoutViewer(tkinter.Frame):
                                 a, b = spec.split("-")
                                 lo = int(a)
                                 hi = int(b)
-                                s0.append(f"{lo} <= {var} <= {hi}")
+                                s0.append("{} <= {} <= {}".format(lo, var, hi))
                             else:
                                 y = int(spec)
-                                s0.append(f"{var} == {y}")
+                                s0.append(f"{} == {}".format(var, y))
                         var = "d"
                         s1.append("(" + " or ".join(s0) + ")")
                     s2.append("({} and {})".format(s1[0], s1[1]))
