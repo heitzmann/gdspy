@@ -1048,7 +1048,7 @@ class CellReference(object):
                 int(round(self.origin[1] * multiplier)),
             )
         )
-        if len(self.properties) > 0:
+        if self.properties is not None and len(self.properties) > 0:
             size = 0
             for attr, value in self.properties.items():
                 if len(value) % 2 != 0:
@@ -1588,7 +1588,7 @@ class CellArray(object):
                 int(round(y3 * multiplier)),
             )
         )
-        if len(self.properties) > 0:
+        if self.properties is not None and len(self.properties) > 0:
             size = 0
             for attr, value in self.properties.items():
                 if len(value) % 2 != 0:

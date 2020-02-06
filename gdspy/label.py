@@ -247,7 +247,7 @@ class Label(object):
             )
         )
         outfile.write(text.encode("ascii"))
-        if len(self.properties) > 0:
+        if self.properties is not None and len(self.properties) > 0:
             size = 0
             for attr, value in self.properties.items():
                 if len(value) % 2 != 0:

@@ -1141,7 +1141,7 @@ class FlexPath(object):
             pol.layers.extend([k[0]] * len(v))
             pol.datatypes.extend([k[1]] * len(v))
             pol.polygons.extend(v)
-        if len(self.properties) > 0:
+        if self.properties is not None and len(self.properties) > 0:
             pol.properties.update(self.properties)
         return pol.fracture(self.max_points, self.precision)
 
@@ -1306,7 +1306,7 @@ class FlexPath(object):
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
                 outfile.write(points.tostring())
-            if len(self.properties) > 0:
+            if self.properties is not None and len(self.properties) > 0:
                 size = 0
                 for attr, value in self.properties.items():
                     if len(value) % 2 != 0:
@@ -2368,7 +2368,7 @@ class RobustPath(object):
             pol.layers.extend([k[0]] * len(v))
             pol.datatypes.extend([k[1]] * len(v))
             pol.polygons.extend(v)
-        if len(self.properties) > 0:
+        if self.properties is not None and len(self.properties) > 0:
             pol.properties.update(self.properties)
         return pol.fracture(self.max_points, self.precision)
 
@@ -2518,7 +2518,7 @@ class RobustPath(object):
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
                 outfile.write(points.tostring())
-            if len(self.properties) > 0:
+            if self.properties is not None and len(self.properties) > 0:
                 size = 0
                 for attr, value in self.properties.items():
                     if len(value) % 2 != 0:
