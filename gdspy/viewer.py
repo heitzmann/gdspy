@@ -36,6 +36,7 @@ else:
     basestring = str
 
 import os
+import re
 import colorsys
 import warnings
 import numpy
@@ -212,6 +213,9 @@ class LayoutViewer(tkinter.Frame):
         self.current_cell = tkinter.StringVar()
         self.current_cell.set(cell_names[0])
 
+        self.filter_str = tkinter.StringVar()
+        self.filter_str.set("(*/*)")
+
         self.depth = tkinter.IntVar()
         self.depth.set(depth)
 
@@ -302,12 +306,15 @@ class LayoutViewer(tkinter.Frame):
 
         # Layers
         self.l_canvas = tkinter.Canvas(self)
-        self.l_canvas.grid(row=0, column=2, rowspan=3, sticky="nsew")
+        self.l_canvas.grid(row=0, column=2, rowspan=2, sticky="nsew")
         self.l_scroll = tkinter.Scrollbar(
             self, orient=tkinter.VERTICAL, command=self.l_canvas.yview
         )
-        self.l_scroll.grid(row=0, column=3, rowspan=3, sticky="ns")
+        self.l_scroll.grid(row=0, column=3, rowspan=2, sticky="ns")
         self.l_canvas["yscrollcommand"] = self.l_scroll.set
+
+        self.filter = tkinter.Button(self, text="Filter...", command=self._filter)
+        self.filter.grid(row=2, column=2, columnspan=2, padx=2, pady=2, sticky="nsew")
 
         # Change current cell
         self.current_cell.trace_variable("w", self._update_canvas)
@@ -578,7 +585,7 @@ class LayoutViewer(tkinter.Frame):
                             activewidth=2,
                             tag=("L" + str(i), "V" + str(pol.shape[0])),
                             state=state,
-                            dash=(8, 8)
+                            dash=(8, 8),
                         )
                         self.canvas.create_text(
                             pol[:, 0].mean() / self.scale,
@@ -599,7 +606,7 @@ class LayoutViewer(tkinter.Frame):
                             activeoutline=self.default_outline,
                             activewidth=2,
                             tag=("L" + str(i), "V" + str(pol.shape[0])),
-                            state=state
+                            state=state,
                         )
             if i in lbl_dict:
                 for label in lbl_dict[i]:
@@ -622,6 +629,70 @@ class LayoutViewer(tkinter.Frame):
             scrollregion=(0, pos, 3 * hei + wid, 0),
             yscrollincrement=hei,
         )
+
+    def _filter(self):
+        dlg = tkinter.Toplevel()
+        dlg.title("Visibility filter")
+        dlg.resizable(False, False)
+        tkinter.Label(
+            dlg, text="Filter example: (1/2), (3-5, 8/0), (10/*)", anchor=tkinter.W
+        ).pack(fill=tkinter.X)
+        entry = tkinter.Entry(dlg, textvariable=self.filter_str)
+        entry.pack(fill=tkinter.X)
+        frame = tkinter.Frame(dlg)
+        frame.pack()
+        ok = self._set_filter(dlg)
+        tkinter.Button(frame, text="OK", command=ok).pack(side=tkinter.LEFT)
+        dlg.bind("<KeyPress-Return>", ok)
+        tkinter.Button(frame, text="Cancel", command=dlg.destroy).pack(
+            side=tkinter.LEFT
+        )
+        dlg.bind("<KeyPress-Escape>", lambda *args: dlg.destroy())
+        entry.select_range(0, tkinter.END)
+        entry.focus_set()
+        dlg.wait_visibility()
+        dlg.grab_set()
+        dlg.wait_window(dlg)
+
+    def _set_filter(self, dlg):
+        _m1 = r"(?:\*|[0-9]+(?:\s*-\s*[0-9]+)?)"
+        _m2 = r"{_m1}(?:\s*,\s*{_m1})*".format(_m1=_m1)
+        _m3 = r"\s*\(\s*{_m2}\s*/\s*{_m2}\s*\)\s*".format(_m2=_m2)
+        _m4 = r"{_m3}(?:,{_m3})*".format(_m3=_m3)
+        _spec_re = re.compile(_m3, flags=re.ASCII)
+        _filter_re = re.compile(_m4, flags=re.ASCII)
+
+        def func(*args):
+            vis_rule = self.filter_str.get()
+            if _filter_re.fullmatch(vis_rule):
+                s2 = []
+                for pair in _spec_re.findall(vis_rule):
+                    s1 = []
+                    var = "l"
+                    for spec_set in pair.strip()[1:-1].split("/"):
+                        s0 = []
+                        for spec in spec_set.strip().split(","):
+                            if "*" in spec:
+                                s0.append("True")
+                            elif "-" in spec:
+                                a, b = spec.split("-")
+                                lo = int(a)
+                                hi = int(b)
+                                s0.append(f"{lo} <= {var} <= {hi}")
+                            else:
+                                y = int(spec)
+                                s0.append(f"{var} == {y}")
+                        var = "d"
+                        s1.append("(" + " or ".join(s0) + ")")
+                    s2.append("({} and {})".format(s1[0], s1[1]))
+                visible = eval("lambda l, d: " + " or ".join(s2))
+                self.hidden_layers = [
+                    ld for ld, *_ in self.l_canvas_info if not visible(ld[0], ld[1])
+                ]
+                self._update_canvas()
+            dlg.destroy()
+
+        return func
 
     def _change_color(self, lbl, layer):
         def func(*args):
