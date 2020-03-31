@@ -362,8 +362,7 @@ class Curve(object):
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((4, 2))
-            ctrl[0, 0] = x0
-            ctrl[0, 1] = y0
+            ctrl[0] = self.points[-1]
             for j in range(1, 4):
                 if isinstance(xy[i], complex):
                     ctrl[j, 0] = x0 + xy[i].real
@@ -472,8 +471,7 @@ class Curve(object):
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((4, 2))
-            ctrl[0, 0] = x0
-            ctrl[0, 1] = y0
+            ctrl[0] = self.points[-1]
             ctrl[1] = 2 * ctrl[0] - self.last_c
             for j in range(2, 4):
                 if isinstance(xy[i], complex):
@@ -568,8 +566,7 @@ class Curve(object):
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((3, 2))
-            ctrl[0, 0] = x0
-            ctrl[0, 1] = y0
+            ctrl[0] = self.points[-1]
             for j in range(1, 3):
                 if isinstance(xy[i], complex):
                     ctrl[j, 0] = x0 + xy[i].real
@@ -673,8 +670,7 @@ class Curve(object):
         i = 0
         while i < len(xy):
             ctrl = numpy.empty((3, 2))
-            ctrl[0, 0] = x0
-            ctrl[0, 1] = y0
+            ctrl[0] = self.points[-1]
             ctrl[1] = 2 * ctrl[0] - self.last_q
             if isinstance(xy[i], complex):
                 ctrl[2, 0] = x0 + xy[i].real
