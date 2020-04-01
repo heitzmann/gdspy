@@ -220,3 +220,12 @@ def test_get_polygons3():
     assert len(c0.get_polygons()) == 0
     assert len(c0.get_polygons(True)) == 0
     assert len(c0.get_polygons(False, -1)) == 0
+
+def test_get_polygons4(tree):
+    c3, c2, c1 = tree
+    c3.add(gdspy.Rectangle((0, 0), (1, 1), 0, 0))
+    assert len(c3.get_polygons((0, 0))) == 7
+    assert len(c3.get_polygons((0, 0), 0)) == 1
+    assert len(c3.get_polygons((1, 1), 0)) == 0
+    assert len(c3.get_polygons((0, 0), 1)) == 1
+    assert len(c3.get_polygons((1, 1), 1)) == 6

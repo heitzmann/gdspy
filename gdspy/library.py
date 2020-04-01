@@ -502,9 +502,11 @@ class Cell(object):
 
         Parameters
         ----------
-        by_spec : bool
+        by_spec : bool or tuple
             If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
+            If set to a tuple of (layer, datatype), only polygons
+            with that specification are returned.
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
@@ -524,6 +526,8 @@ class Cell(object):
         the result by computing their polygonal boundary.
         """
         if depth is not None and depth < 0:
+            if not (by_spec is False or by_spec is True):
+                return []
             bb = self.get_bounding_box()
             if bb is None:
                 return {} if by_spec else []
@@ -539,7 +543,7 @@ class Cell(object):
             ]
             polygons = {self.name: pts} if by_spec else pts
         else:
-            if by_spec:
+            if by_spec is True:
                 polygons = {}
                 for polyset in self.polygons:
                     for ii in range(len(polyset.polygons)):
@@ -566,7 +570,7 @@ class Cell(object):
                             polygons[kk].extend(cell_polygons[kk])
                         else:
                             polygons[kk] = cell_polygons[kk]
-            else:
+            elif by_spec is False:
                 polygons = []
                 for polyset in self.polygons:
                     for points in polyset.polygons:
@@ -579,6 +583,27 @@ class Cell(object):
                     else:
                         next_depth = depth - 1
                     polygons.extend(reference.get_polygons(depth=next_depth))
+            else:
+                polygons = []
+                layer, datatype = by_spec
+                polygons.extend(
+                    numpy.array(polyset.polygons[ii])
+                    for polyset in self.polygons
+                    for ii in range(len(polyset.polygons))
+                    if polyset.layers[ii] == layer and polyset.datatypes[ii] == datatype
+                )
+
+                for path in self.paths:
+                    if any(ld == by_spec for ld in zip(path.layers, path.datatype)):
+                        path_polygons = path.get_polygons(True)
+                        if by_spec in path_polygons:
+                            polygons.extend(path_polygons[key])
+                for reference in self.references:
+                    if depth is None:
+                        next_depth = None
+                    else:
+                        next_depth = depth - 1
+                    polygons.extend(reference.get_polygons(by_spec, next_depth))
         return polygons
 
     def get_polygonsets(self, depth=None):
@@ -1133,9 +1158,11 @@ class CellReference(object):
 
         Parameters
         ----------
-        by_spec : bool
+        by_spec : bool or tuple
             If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
+            If set to a tuple of (layer, datatype), only polygons
+            with that specification are returned.
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
@@ -1165,8 +1192,8 @@ class CellReference(object):
             mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
-        if by_spec:
-            polygons = self.ref_cell.get_polygons(True, depth)
+        polygons = self.ref_cell.get_polygons(by_spec, depth)
+        if by_spec is True:
             for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
                     if self.x_reflection:
@@ -1180,7 +1207,6 @@ class CellReference(object):
                     if self.origin is not None:
                         polygons[kk][ii] = polygons[kk][ii] + orgn
         else:
-            polygons = self.ref_cell.get_polygons(depth=depth)
             for ii in range(len(polygons)):
                 if self.x_reflection:
                     polygons[ii] = polygons[ii] * xrefl
@@ -1682,9 +1708,11 @@ class CellArray(object):
 
         Parameters
         ----------
-        by_spec : bool
+        by_spec : bool or tuple
             If True, the return value is a dictionary with the
             polygons of each individual pair (layer, datatype).
+            If set to a tuple of (layer, datatype), only polygons
+            with that specification are returned.
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
@@ -1714,8 +1742,8 @@ class CellArray(object):
             orgn = numpy.array(self.origin)
         if self.x_reflection:
             xrefl = numpy.array((1, -1))
-        if by_spec:
-            cell_polygons = self.ref_cell.get_polygons(True, depth)
+        cell_polygons = self.ref_cell.get_polygons(by_spec, depth)
+        if by_spec is True:
             polygons = {}
             for kk in cell_polygons.keys():
                 polygons[kk] = []
@@ -1737,7 +1765,6 @@ class CellArray(object):
                             if self.origin is not None:
                                 polygons[kk][-1] = polygons[kk][-1] + orgn
         else:
-            cell_polygons = self.ref_cell.get_polygons(depth=depth)
             polygons = []
             for ii in range(self.columns):
                 for jj in range(self.rows):
@@ -2446,7 +2473,7 @@ class GdsLibrary(object):
                     name = rename[record[1]]
                 else:
                     name = rename_template.format(name=record[1])
-                cell = Cell(name, exclude_from_current = True)
+                cell = Cell(name, exclude_from_current=True)
                 self.cells[name] = cell
             # STRING
             elif record[0] == 0x19:

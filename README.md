@@ -71,6 +71,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcomming
 * Added support for element properties.
+* Layer/datatype filtering in `get_polygons` for `Cell`, `CellReference` and `CellArray`.
 * Layer/datatype filtering in `LayoutViewer`.
 
 ### Version 1.5.2 (Feb 01, 2020)
