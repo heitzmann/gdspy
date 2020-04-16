@@ -11,6 +11,7 @@ import pytest
 import gdspy
 import numpy
 import uuid
+import os
 
 gdspy.library.use_current_library = False
 
@@ -221,6 +222,7 @@ def test_get_polygons3():
     assert len(c0.get_polygons(True)) == 0
     assert len(c0.get_polygons(False, -1)) == 0
 
+
 def test_get_polygons4(tree):
     c3, c2, c1 = tree
     c3.add(gdspy.Rectangle((0, 0), (1, 1), 0, 0))
@@ -229,3 +231,20 @@ def test_get_polygons4(tree):
     assert len(c3.get_polygons((1, 1), 0)) == 0
     assert len(c3.get_polygons((0, 0), 1)) == 1
     assert len(c3.get_polygons((1, 1), 1)) == 6
+
+
+def test_write_svg(tree, tmpdir):
+    _, _, c1 = tree
+    fname = str(tmpdir.join("c1.svg"))
+    c1.write_svg(fname)
+    assert os.path.isfile(fname)
+    assert not os.stat(fname).st_size == 0
+
+
+def test_write_svg_with_style(tree, tmpdir):
+    _, _, c1 = tree
+    fname = str(tmpdir.join("c1.svg"))
+    style = {(0, 0): {"fill": "CC00FF"}}
+    c1.write_svg(fname, style=style)
+    assert os.path.isfile(fname)
+    assert not os.stat(fname).st_size == 0

@@ -879,10 +879,10 @@ class Cell(object):
         )
         ldkeys, ltkeys = self.get_svg_classes()
         for k in ldkeys:
+            l, d = k
             if k in style:
                 style_dict = style[k]
             else:
-                l, d = k
                 c = "rgb({}, {}, {})".format(
                     *[
                         int(255 * c + 0.5)
@@ -898,10 +898,10 @@ class Cell(object):
             outfile.write(" ".join("{}: {};".format(*x) for x in style_dict.items()))
             outfile.write("}\n")
         for k in ltkeys:
+            l, t = k
             if k in fontstyle:
                 style_dict = fontstyle[k]
             else:
-                l, t = k
                 c = "rgb({}, {}, {})".format(
                     *[
                         int(255 * c + 0.5)
