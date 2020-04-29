@@ -319,3 +319,12 @@ def test_missing_cr(tmpdir):
     out = str(tmpdir.join("test.gds"))
     now = datetime.datetime.today()
     lib.write_gds(out, timestamp=now)
+
+def test_missing_ca(tmpdir):
+    lib = gdspy.GdsLibrary()
+    c1 = gdspy.Cell("cell1")
+    c1.add(gdspy.CellArray("missing", (0, 0), -42, 2, True, ignore_missing=True))
+    lib.add(c1)
+    out = str(tmpdir.join("test.gds"))
+    now = datetime.datetime.today()
+    lib.write_gds(out, timestamp=now)
