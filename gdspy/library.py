@@ -982,7 +982,10 @@ class CellReference(object):
             A number that multiplies all dimensions written in the GDSII
             element.
         """
-        name = self.ref_cell.name
+        if isinstance(self.ref_cell, Cell):
+            name = self.ref_cell.name
+        else:
+            name = self.ref_cell
         if len(name) % 2 != 0:
             name = name + "\0"
         outfile.write(struct.pack(">4H", 4, 0x0A00, 4 + len(name), 0x1206))
@@ -1442,7 +1445,10 @@ class CellArray(object):
             A number that multiplies all dimensions written in the GDSII
             element.
         """
-        name = self.ref_cell.name
+        if isinstance(self.ref_cell, Cell):
+            name = self.ref_cell.name
+        else:
+            name = self.ref_cell
         if len(name) % 2 != 0:
             name = name + "\0"
         outfile.write(struct.pack(">4H", 4, 0x0B00, 4 + len(name), 0x1206))
