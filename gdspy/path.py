@@ -1422,11 +1422,16 @@ class FlexPath(object):
         -------
         out : `FlexPath`
             This object.
+
+        Notes
+        -----
+        If `width_transform` is False, the widths are not scaled.
         """
         self._polygon_dict = None
         c0 = numpy.array(center) * (1 - scale)
         self.points = self.points * scale + c0
-        self.widths = self.widths * scale
+        if self.width_transform or not self.gdsii_path:
+            self.widths = self.widths * scale
         self.offsets = self.offsets * scale
         for i, end in enumerate(self.ends):
             # CustomPlus created by bgnextn and endextn
@@ -2643,11 +2648,16 @@ class RobustPath(object):
         -------
         out : `RobustPath`
             This object.
+
+        Notes
+        -----
+        If `width_transform` is False, the widths are not scaled.
         """
         self._polygon_dict = None
         c0 = numpy.array(center) * (1 - scale)
         self.x = self.x * scale + c0
-        self.widths = [wid * scale for wid in self.widths]
+        if self.width_transform or not self.gdsii_path:
+            self.widths = [wid * scale for wid in self.widths]
         self.offsets = [off * scale for off in self.offsets]
         for path in self.paths:
             for sub in path:
@@ -2698,7 +2708,8 @@ class RobustPath(object):
                     sub.scale(1, -1)
         if scale is not None:
             self.x = self.x * scale
-            self.widths = [wid * scale for wid in self.widths]
+            if self.width_transform or not self.gdsii_path:
+                self.widths = [wid * scale for wid in self.widths]
             self.offsets = [off * scale for off in self.offsets]
             for path in self.paths:
                 for sub in path:

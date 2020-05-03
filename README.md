@@ -73,6 +73,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Added support for element properties.
 * Layer/datatype filtering in `get_polygons` for `Cell`, `CellReference` and `CellArray`.
 * Layer/datatype filtering in `LayoutViewer`.
+* Bug fixes (thanks Daniel Hwang for the contributions).
 
 ### Version 1.5.2 (Feb 01, 2020)
 * Added support for importing GDSII files containing BOX elements.
