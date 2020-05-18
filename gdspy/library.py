@@ -51,8 +51,6 @@ from gdspy.gdsiiformat import (
 
 _mpone = numpy.array((-1.0, 1.0))
 
-_bounding_boxes = {}
-
 use_current_library = True
 """
 Globally disable add newly-created cells to the current_library.
@@ -87,7 +85,15 @@ class Cell(object):
         List of cell references.
     """
 
-    __slots__ = "name", "polygons", "paths", "labels", "references", "_bb_valid"
+    __slots__ = (
+        "name",
+        "polygons",
+        "paths",
+        "labels",
+        "references",
+        "_bb_valid",
+        "_bounding_box",
+    )
 
     def __init__(self, name, exclude_from_current=False):
         self.name = name
@@ -96,6 +102,7 @@ class Cell(object):
         self.labels = []
         self.references = []
         self._bb_valid = False
+        self._bounding_box = None
         if use_current_library and not exclude_from_current:
             import gdspy
 
@@ -493,8 +500,8 @@ class Cell(object):
                 bb[1, 0] = max(bb[1, 0], all_points[0].max())
                 bb[1, 1] = max(bb[1, 1], all_points[1].max())
             self._bb_valid = True
-            _bounding_boxes[self] = bb
-        return _bounding_boxes[self]
+            self._bounding_box = bb
+        return numpy.array(self._bounding_box)
 
     def get_polygons(self, by_spec=False, depth=None):
         """
@@ -1343,40 +1350,24 @@ class CellReference(object):
         """
         if not isinstance(self.ref_cell, Cell):
             return None
-        if (
-            self.rotation is None
-            and self.magnification is None
-            and self.x_reflection is None
-        ):
-            key = self
-        else:
-            key = (self.ref_cell, self.rotation, self.magnification, self.x_reflection)
         deps = self.ref_cell.get_dependencies(True)
-        if not (
-            self.ref_cell._bb_valid
-            and all(ref._bb_valid for ref in deps)
-            and key in _bounding_boxes
-        ):
-            for ref in deps:
-                ref.get_bounding_box()
-            self.ref_cell.get_bounding_box()
-            tmp = self.origin
-            self.origin = None
-            polygons = self.get_polygons()
-            self.origin = tmp
-            if len(polygons) == 0:
-                bb = None
-            else:
-                all_points = numpy.concatenate(polygons).transpose()
-                bb = numpy.array(
-                    (
-                        (all_points[0].min(), all_points[1].min()),
-                        (all_points[0].max(), all_points[1].max()),
-                    )
-                )
-            _bounding_boxes[key] = bb
+        for ref in deps:
+            ref.get_bounding_box()
+        self.ref_cell.get_bounding_box()
+        tmp = self.origin
+        self.origin = None
+        polygons = self.get_polygons()
+        self.origin = tmp
+        if len(polygons) == 0:
+            bb = None
         else:
-            bb = _bounding_boxes[key]
+            all_points = numpy.concatenate(polygons).transpose()
+            bb = numpy.array(
+                (
+                    (all_points[0].min(), all_points[1].min()),
+                    (all_points[0].max(), all_points[1].max()),
+                )
+            )
         if self.origin is None or bb is None:
             return bb
         else:
@@ -1947,31 +1938,23 @@ class CellArray(object):
             self.spacing[1],
         )
         deps = self.ref_cell.get_dependencies(True)
-        if not (
-            self.ref_cell._bb_valid
-            and all(ref._bb_valid for ref in deps)
-            and key in _bounding_boxes
-        ):
-            for ref in deps:
-                ref.get_bounding_box()
-            self.ref_cell.get_bounding_box()
-            tmp = self.origin
-            self.origin = None
-            polygons = self.get_polygons()
-            self.origin = tmp
-            if len(polygons) == 0:
-                bb = None
-            else:
-                all_points = numpy.concatenate(polygons).transpose()
-                bb = numpy.array(
-                    (
-                        (all_points[0].min(), all_points[1].min()),
-                        (all_points[0].max(), all_points[1].max()),
-                    )
-                )
-            _bounding_boxes[key] = bb
+        for ref in deps:
+            ref.get_bounding_box()
+        self.ref_cell.get_bounding_box()
+        tmp = self.origin
+        self.origin = None
+        polygons = self.get_polygons()
+        self.origin = tmp
+        if len(polygons) == 0:
+            bb = None
         else:
-            bb = _bounding_boxes[key]
+            all_points = numpy.concatenate(polygons).transpose()
+            bb = numpy.array(
+                (
+                    (all_points[0].min(), all_points[1].min()),
+                    (all_points[0].max(), all_points[1].max()),
+                )
+            )
         if self.origin is None or bb is None:
             return bb
         else:

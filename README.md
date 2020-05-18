@@ -74,6 +74,7 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 * Layer/datatype filtering in `get_polygons` for `Cell`, `CellReference` and `CellArray`.
 * Layer/datatype filtering in `LayoutViewer`.
 * Bug fixes (thanks Daniel Hwang for the contributions).
+* Removed global cache `_bounding_boxes`.  Only cells cache their bounding boxes.
 
 ### Version 1.5.2 (Feb 01, 2020)
 * Added support for importing GDSII files containing BOX elements.
