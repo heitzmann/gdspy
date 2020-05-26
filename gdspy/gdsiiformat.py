@@ -189,7 +189,7 @@ def gdsii_hash(filename, engine=None):
 
     Parameters
     ----------
-    filename : string
+    filename : string or Path
         Full path to the GDSII file.
     engine : hashlib-like engine
         The engine that executes the hashing algorithm.  It must provide
@@ -201,6 +201,8 @@ def gdsii_hash(filename, engine=None):
     out : string
         The hash correponding to the library contents in hex format.
     """
+    if hasattr(filename, "__fspath__"):
+        filename = filename.__fspath__()
     with open(filename, "rb") as fin:
         data = fin.read()
     contents = []

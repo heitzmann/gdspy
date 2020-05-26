@@ -25,7 +25,13 @@ if sys.version_info.major < 3:
     from future import standard_library
 
     standard_library.install_aliases()
+
+    # Python 2 doesn't have the pathlib module.
+    Path = basestring
+
 else:
+    from pathlib import Path
+
     # Python 3 doesn't have basestring, as unicode is type string
     # Python 2 doesn't equate unicode to string, but both are basestring
     # Now isinstance(s, basestring) will be True for any python version
@@ -815,7 +821,7 @@ class Cell(object):
 
         Parameters
         ----------
-        outfile : file or string
+        outfile : file, string or Path
             The file (or path) where the GDSII stream will be written.
             It must be opened for writing operations in binary format.
         scaling : number
@@ -850,9 +856,11 @@ class Cell(object):
         bb = self.get_bounding_box()
         if bb is None:
             return
-        if isinstance(outfile, basestring):
+        close = True
+        if hasattr(outfile, "__fspath__"):
+            outfile = open(outfile.__fspath__(), "w")
+        elif isinstance(outfile, (basestring, Path)):
             outfile = open(outfile, "w")
-            close = True
         else:
             close = False
         if style is None:
@@ -2238,7 +2246,7 @@ class GdsLibrary(object):
 
         Parameters
         ----------
-        outfile : file or string
+        outfile : file, string or Path
             The file (or path) where the GDSII stream will be written.
             It must be opened for writing operations in binary format.
         cells : iterable
@@ -2256,9 +2264,11 @@ class GdsLibrary(object):
         Only the specified cells are written.  The user is responsible
         for ensuring all cell dependencies are satisfied.
         """
-        if isinstance(outfile, basestring):
+        close = True
+        if hasattr(outfile, "__fspath__"):
+            outfile = open(outfile.__fspath__(), "wb")
+        elif isinstance(outfile, (basestring, Path)):
             outfile = open(outfile, "wb")
-            close = True
         else:
             close = False
         now = datetime.datetime.today() if timestamp is None else timestamp
@@ -2321,7 +2331,7 @@ class GdsLibrary(object):
 
         Parameters
         ----------
-        infile : file or string
+        infile : file, string or Path
             GDSII stream file (or path) to be imported.  It must be
             opened for reading in binary format.
         units : {'convert', 'import', 'skip'}
@@ -2361,9 +2371,11 @@ class GdsLibrary(object):
         features are found in the imported file.
         """
         self._references = []
-        if isinstance(infile, basestring):
+        close = True
+        if hasattr(infile, "__fspath__"):
+            infile = open(infile.__fspath__(), "rb")
+        elif isinstance(infile, (basestring, Path)):
             infile = open(infile, "rb")
-            close = True
         else:
             close = False
         emitted_warnings = []
@@ -2738,7 +2750,7 @@ class GdsWriter(object):
 
     Parameters
     ----------
-    outfile : file or string
+    outfile : file, string or Path
         The file (or path) where the GDSII stream will be written.  It
         must be opened for writing operations in binary format.
     name : string
@@ -2778,9 +2790,11 @@ class GdsWriter(object):
     def __init__(
         self, outfile, name="library", unit=1.0e-6, precision=1.0e-9, timestamp=None
     ):
-        if isinstance(outfile, basestring):
+        self._close = True
+        if hasattr(outfile, "__fspath__"):
+            self._outfile = open(outfile.__fspath__(), "wb")
+        elif isinstance(outfile, (basestring, Path)):
             self._outfile = open(outfile, "wb")
-            self._close = True
         else:
             self._outfile = outfile
             self._close = False
@@ -2876,7 +2890,7 @@ def get_gds_units(infile):
 
     Parameters
     ----------
-    infile : file or string
+    infile : file, string or Path
         GDSII stream file to be queried.
 
     Returns
@@ -2884,9 +2898,11 @@ def get_gds_units(infile):
     out : 2-tuple
         Return ``(unit, precision)`` from the file.
     """
-    if isinstance(infile, basestring):
+    close = True
+    if hasattr(infile, "__fspath__"):
+        infile = open(infile.__fspath__(), "rb")
+    elif isinstance(infile, (basestring, Path)):
         infile = open(infile, "rb")
-        close = True
     else:
         close = False
     unit = precision = None
@@ -2909,7 +2925,7 @@ def get_binary_cells(infile):
 
     Parameters
     ----------
-    infile : file or string
+    infile : file, string, or Path
         GDSII stream file (or path) to be loaded.  It must be opened for
         reading in binary format.
 
@@ -2924,9 +2940,11 @@ def get_binary_cells(infile):
     are used in a new library, the new library must use compatible
     units.
     """
-    if isinstance(infile, basestring):
+    close = True
+    if hasattr(infile, "__fspath__"):
+        infile = open(infile.__fspath__(), "rb")
+    elif isinstance(infile, (basestring, Path)):
         infile = open(infile, "rb")
-        close = True
     else:
         close = False
     cells = {}
