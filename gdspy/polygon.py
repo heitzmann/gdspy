@@ -210,7 +210,7 @@ class PolygonSet(object):
                 while i0 < xy.shape[0]:
                     i1 = min(i0 + 8190, xy.shape[0])
                     outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    outfile.write(xy[i0:i1].tostring())
+                    outfile.write(xy[i0:i1].tobytes())
                     i0 = i1
             else:
                 outfile.write(
@@ -229,8 +229,8 @@ class PolygonSet(object):
                     )
                 )
                 xy = numpy.round(self.polygons[ii] * multiplier).astype(">i4")
-                outfile.write(xy.tostring())
-                outfile.write(xy[0].tostring())
+                outfile.write(xy.tobytes())
+                outfile.write(xy[0].tobytes())
             if self.properties is not None and len(self.properties) > 0:
                 size = 0
                 for attr, value in self.properties.items():

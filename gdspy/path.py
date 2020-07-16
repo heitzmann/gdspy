@@ -1301,11 +1301,11 @@ class FlexPath(object):
                 while i0 < points.shape[0]:
                     i1 = min(i0 + 8191, points.shape[0])
                     outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    outfile.write(points[i0:i1].tostring())
+                    outfile.write(points[i0:i1].tobytes())
                     i0 = i1
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
-                outfile.write(points.tostring())
+                outfile.write(points.tobytes())
             if self.properties is not None and len(self.properties) > 0:
                 size = 0
                 for attr, value in self.properties.items():
@@ -2518,11 +2518,11 @@ class RobustPath(object):
                 while i0 < points.shape[0]:
                     i1 = min(i0 + 8191, points.shape[0])
                     outfile.write(struct.pack(">2H", 4 + 8 * (i1 - i0), 0x1003))
-                    outfile.write(points[i0:i1].tostring())
+                    outfile.write(points[i0:i1].tobytes())
                     i0 = i1
             else:
                 outfile.write(struct.pack(">2H", 4 + 8 * points.shape[0], 0x1003))
-                outfile.write(points.tostring())
+                outfile.write(points.tobytes())
             if self.properties is not None and len(self.properties) > 0:
                 size = 0
                 for attr, value in self.properties.items():
