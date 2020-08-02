@@ -225,7 +225,11 @@ def _hobby(points, angles=None, curl_start=1, curl_end=1, t_in=1, t_out=1, cycle
                 m[2 * nn - 1, nn - 1] = 0
                 m[2 * nn - 1, 2 * nn - 1] = 1
             if nn > 1 or angles[i] is None or angles[j] is None:
+                # print("range:", i, j)
+                # print("A =", m)
+                # print("b =", coef)
                 sol = numpy.linalg.solve(m, coef)
+                # print("x =", sol)
                 theta[i:j] = sol[:nn]
                 phi[i:j] = sol[nn:]
             i = j
@@ -1453,7 +1457,7 @@ class FlexPath(object):
             Scaling factor.
         x_reflection : bool
             Reflection around the first axis.
-        array_trans : Numpy aray[2]
+        array_trans : Numpy array[2]
             Translation vector before rotation and reflection.
 
         Returns
@@ -2679,7 +2683,7 @@ class RobustPath(object):
             Scaling factor.
         x_reflection : bool
             Reflection around the first axis.
-        array_trans : Numpy aray[2]
+        array_trans : Numpy array[2]
             Translation vector before rotation and reflection.
 
         Returns

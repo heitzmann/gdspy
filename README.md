@@ -6,8 +6,8 @@
 [![Appveyor Status](https://ci.appveyor.com/api/projects/status/pr49a6bhxvbqwocy?svg=true)](https://ci.appveyor.com/project/heitzmann/gdspy)
 [![Downloads](https://img.shields.io/github/downloads/heitzmann/gdspy/total.svg)](https://github.com/heitzmann/gdspy/releases)
 
-Gdspy is a Python  module for creating/importing/merging GDSII stream files.
-It includes key libraries for creating complex CAD layouts:
+Gdspy is a Python module for creation and manipulation of GDSII stream files.
+Key features for the creation of complex CAD layouts are included:
 
 * Boolean operations on polygons (AND, OR, NOT, XOR) based on clipping algorithm
 * Polygon offset (inward and outward rescaling of polygons)
@@ -21,11 +21,11 @@ Typical applications of gdspy are in the fields of electronic chip design, plana
 
 ### Dependencies:
 
-* [Python](http://www.python.org/) (tested with versions 2.7, 3.5, 3.6, 3.7, and 3.8)
+* [Python](https://www.python.org/) (tested with versions 2.7, 3.5, 3.6, 3.7, and 3.8)
 * [Numpy](http://numpy.scipy.org/)
 * C compiler (needed only if built from source)
 * Tkinter (optional: needed for the `LayoutViewer` GUI)
-* [Sphinx](http://sphinx-doc.org/) (optional: to build the documentation)
+* [Sphinx](https://www.sphinx-doc.org/) (optional: to build the documentation)
 
 ### Linux / OS X
 
