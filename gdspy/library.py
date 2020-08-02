@@ -179,7 +179,7 @@ class Cell(object):
 
     def copy(self, name, deep_copy=False):
         """
-        Creates a copy of this cell.
+        Create a copy of this cell.
 
         Parameters
         ----------
@@ -210,6 +210,99 @@ class Cell(object):
             new_cell.labels = list(self.labels)
             new_cell.references = list(self.references)
         return new_cell
+
+    def transform(
+        self, translation=None, rotation=None, scale=None, x_reflection=False
+    ):
+        """
+        Transform this cell.
+
+        The transformation is aplied in the same order as in
+        `CellReference`.
+
+        Parameters
+        ----------
+        translation : Numpy array[2]
+            Amount ot translate the geometry.
+        rotation : number
+            Rotation angle (in *radians*).
+        scale : number
+            Scaling factor.
+        x_reflection : bool
+            Reflect the geometry accros the x axis.
+
+        Returns
+        -------
+        out : `Cell`
+            This cell.
+
+        Notes
+        -----
+        The existing cell elements are copied before the transformation
+        is applied.
+        """
+        r = -1 if x_reflection else 1
+        s = 1 if scale is None else scale
+        t = 0 if rotation is None else rotation
+        dx, dy = (0, 0) if translation is None else translation
+        ct = numpy.cos(t)
+        st = numpy.sin(t)
+
+        self.polygons = libcopy.deepcopy(self.polygons)
+        for poly in self.polygons:
+            if x_reflection:
+                poly.scale(1, -1)
+            if scale is not None:
+                poly.scale(scale)
+            if rotation is not None:
+                poly.rotate(rotation)
+            if translation is not None:
+                poly.translate(dx, dy)
+
+        self.paths = libcopy.deepcopy(self.paths)
+        for path in self.paths:
+            path.transform(translation, rotation, scale, x_reflection)
+
+        self.labels = libcopy.deepcopy(self.labels)
+        for lbl in self.labels:
+            r0 = -1 if lbl.x_reflection is None else 1
+            s0 = 1 if lbl.magnification is None else lbl.magnification
+            t0 = 0 if lbl.rotation is None else (lbl.rotation * numpy.pi / 180)
+            dx0, dy0 = lbl.position
+            lbl.position = (
+                dx + s * (dx0 * ct - r * dy0 * st),
+                dy + s * (dx0 * st + r * dy0 * ct),
+            )
+            lbl.rotation = (r * t0 + t) * 180 / numpy.pi
+            if lbl.rotation == 0:
+                lbl.rotation = None
+            lbl.magnification = s * s0
+            if lbl.magnification == 1:
+                lbl.magnification = None
+            lbl.x_reflection = (r * r0 < 0)
+
+        self.references = libcopy.deepcopy(self.references)
+        for ref in self.references:
+            r0 = -1 if ref.x_reflection is None else 1
+            s0 = 1 if ref.magnification is None else ref.magnification
+            t0 = 0 if ref.rotation is None else (ref.rotation * numpy.pi / 180)
+            dx0, dy0 = ref.origin
+            ref.origin = (
+                dx + s * (dx0 * ct - r * dy0 * st),
+                dy + s * (dx0 * st + r * dy0 * ct),
+            )
+            ref.rotation = (r * t0 + t) * 180 / numpy.pi
+            if ref.rotation == 0:
+                ref.rotation = None
+            ref.magnification = s * s0
+            if ref.magnification == 1:
+                ref.magnification = None
+            ref.x_reflection = (r * r0 < 0)
+
+        for ref in self.get_dependencies(True):
+            if ref._bb_valid:
+                ref._bb_valid = False
+        return self
 
     def add(self, element):
         """
