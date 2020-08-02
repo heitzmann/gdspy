@@ -538,9 +538,11 @@ class FlexPath(object):
                 self.n = 1
                 self.offsets = [offset]
             self.widths = [width] * self.n
+        self.points = numpy.array(points)
+        if self.points.shape == (2,):
+            self.points.resize((1, 2))
         self.widths = numpy.tile(self.widths, (len(points), 1))
         self.offsets = numpy.tile(self.offsets, (len(points), 1))
-        self.points = numpy.array(points)
         if isinstance(ends, list):
             self.ends = [ends[i % len(ends)] for i in range(self.n)]
         else:
