@@ -200,10 +200,7 @@ class Cell(object):
             new_cell.polygons = libcopy.deepcopy(self.polygons)
             new_cell.paths = libcopy.deepcopy(self.paths)
             new_cell.labels = libcopy.deepcopy(self.labels)
-            new_cell.references = libcopy.deepcopy(self.references)
-            for ref in new_cell.get_dependencies(True):
-                if ref._bb_valid:
-                    ref._bb_valid = False
+            new_cell.references = [libcopy.copy(ref) for ref in self.references]
         else:
             new_cell.polygons = list(self.polygons)
             new_cell.paths = list(self.paths)
@@ -279,9 +276,9 @@ class Cell(object):
             lbl.magnification = s * s0
             if lbl.magnification == 1:
                 lbl.magnification = None
-            lbl.x_reflection = (r * r0 < 0)
+            lbl.x_reflection = r * r0 < 0
 
-        self.references = libcopy.deepcopy(self.references)
+        self.references = [libcopy.copy(ref) for ref in self.references]
         for ref in self.references:
             r0 = -1 if ref.x_reflection is None else 1
             s0 = 1 if ref.magnification is None else ref.magnification
@@ -297,11 +294,7 @@ class Cell(object):
             ref.magnification = s * s0
             if ref.magnification == 1:
                 ref.magnification = None
-            ref.x_reflection = (r * r0 < 0)
-
-        for ref in self.get_dependencies(True):
-            if ref._bb_valid:
-                ref._bb_valid = False
+            ref.x_reflection = r * r0 < 0
         return self
 
     def add(self, element):
