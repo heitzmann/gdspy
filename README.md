@@ -71,10 +71,12 @@ Help support gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ### Upcomming
 * Added support for element properties.
+* Added `Cell.transform` to transform the whole geometry of a cell.
 * Layer/datatype filtering in `get_polygons` for `Cell`, `CellReference` and `CellArray`.
 * Layer/datatype filtering in `LayoutViewer`.
 * Bug fixes (thanks Daniel Hwang for the contributions).
 * Removed global cache `_bounding_boxes`.  Only cells cache their bounding boxes.
+* Bug fix in `Cell.copy` where the whole dependency tree would be copied on a deep copy creation.
 
 ### Version 1.5.2 (Feb 01, 2020)
 * Added support for importing GDSII files containing BOX elements.
