@@ -15,7 +15,8 @@ In the case of curves, they must be approximated by a polygon.
 The number of points in the polygonal approximation can be increased to better approximate the original curve up to some acceptable error.
 
 The original GDSII format limits the number of vertices in a polygon to 199.
-Most modern software disregards this limit and allows an arbitrary number of points per polygon.
+This limit seems arbitrary, as the maximal number of vertices that can be stored in a GDSII record is 8190.
+Nonetheless, most modern software disregard both limits and allow an arbitrary number of points per polygon.
 Gdspy follows the modern version of GDSII, but this is an important issue to keep in mind if the generated file is to be used in older systems.
 
 The units used to represent shapes in the GDSII format are defined by the user.
@@ -52,8 +53,7 @@ Let's create our first GDSII file:
    gdspy.LayoutViewer()
 
 
-After importing the gdspy module, we create a :class:`gdspy.Rectangle` with opposing corners at positions (0, 0) and (2, 1).
-
+After importing the `gdspy` module, we create a library `lib` to hold the design.
 Then a :class:`gdspy.Cell` is created and the rectangle is added to the cell.
 All shapes in the GDSII format exist inside cells.
 A cell can be imagined as a piece of paper where the layout will be defined.
