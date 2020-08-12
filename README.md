@@ -15,7 +15,18 @@ Key features for the creation of complex CAD layouts are included:
 
 Gdspy also includes a simple layout viewer.
 
-Typical applications of gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.
+Typical applications of Gdspy are in the fields of electronic chip design, planar lightwave circuit design, and mechanical engineering.
+
+
+## Future of Gdspy
+
+In trying to improve the performance of Gdspy for large layouts, we ended up concluding that the best way to reach our goal was to rewrite the critical parts of the library as a C extension.
+It turns out that beside obvious functions, method calling has a big impact in performance due to the overhead it introduces.
+The best solution was to re-design the whole project as a C++ library with a thin Python wrapper: thus was born [Gdstk, the GDSII Tool Kit](https://github.com/heitzmann/gdstk).
+
+Therefore, version 1.6 will be the last major release of Gdspy, with development focused only on bug fixes.
+Users are encouraged to move from Gdspy to Gdstk: although their API is not 100% compatible, the new module should be familiar enough to allow a quick transition.
+
 
 ## Installation
 
@@ -47,24 +58,17 @@ The preferred option is to install pre-compiled binaries from [here](https://git
 
 Installation via `pip` and building from source as above are also possible, but an appropriate [build environment](https://wiki.python.org/moin/WindowsCompilers) is required for compilation of the C extension modules.
 
+
 ## Documentation
 
 The complete documentation is available [here](http://gdspy.readthedocs.io/).
 
 The source files can be found in the `docs` directory.
 
+
 ## Support
 
-Help support gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
-
-
-## Changes planned for version 2.0
-* Gdspy no longer maintains a global library; the user is responsible for creating a library and adding cells to it.
-* Deprecated member `GdsLibrary.extract` removed.
-* Deprecated classes `PolyPath` and `L1Path` removed: use `FlexPath` and `RobustPath`.
-* Deprecated function `fast_boolean` removed: use `boolean`.
-* Deprecated function `write_gds` removed: use `GdsLibrary.write_gds`.
-* Deprecated attribute `current_library` removed.
+Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
 
 
 ## History of changes
