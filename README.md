@@ -73,7 +73,7 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Upcomming
+### Version 1.6 (Aug 12, 2020)
 * Added support for element properties.
 * Added transformation support to `Cell.copy`.
 * Layer/datatype filtering in `get_polygons` for `Cell`, `CellReference` and `CellArray`.
