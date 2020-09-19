@@ -288,10 +288,11 @@ class Label(object):
             transform += " scale({})".format(self.magnification)
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
+        text = self.text.translate({38: "&amp;", 60: "&lt;", 62: "&gt;"})
         outfile.write(
             '<text class="l{}t{}" text-anchor="{}" dominant-baseline="{}" '
             'transform="{}">{}</text>\n'.format(
-                self.layer, self.texttype, ta, da, transform, self.text
+                self.layer, self.texttype, ta, da, transform, text
             )
         )
 
