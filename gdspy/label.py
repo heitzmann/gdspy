@@ -288,7 +288,14 @@ class Label(object):
             transform += " scale({})".format(self.magnification)
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
-        text = self.text.translate({38: "&amp;", 60: "&lt;", 62: "&gt;"})
+        if sys.version_info.major < 3:
+            text = (
+                self.text.decode("utf8")
+                .translate({38: "&amp;", 60: "&lt;", 62: "&gt;"})
+                .encode("utf8")
+            )
+        else:
+            text = self.text.translate({38: "&amp;", 60: "&lt;", 62: "&gt;"})
         outfile.write(
             '<text class="l{}t{}" text-anchor="{}" dominant-baseline="{}" '
             'transform="{}">{}</text>\n'.format(
