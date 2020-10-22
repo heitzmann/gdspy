@@ -2633,7 +2633,7 @@ class GdsLibrary(object):
         kwargs["gdsii_path"] = True
         return FlexPath(**kwargs)
 
-    def _create_label(self, xy, width=None, ends=None, **kwargs):
+    def _create_label(self, xy, width=None, width_transform=None, ends=None, **kwargs):
         kwargs["position"] = xy
         return Label(**kwargs)
 

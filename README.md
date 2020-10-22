@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Upcoming
+* Fix Label creation bug.
+
 ### Version 1.6.1 (Oct 22, 2020)
 * Fix SVG output when `Label` contains special characters.
 
