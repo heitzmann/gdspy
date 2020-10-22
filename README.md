@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.1 (Oct 22, 2020)
+* Fix SVG output when `Label` contains special characters.
+
 ### Version 1.6 (Aug 12, 2020)
 * Added support for element properties.
 * Added transformation support to `Cell.copy`.
