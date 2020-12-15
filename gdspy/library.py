@@ -1472,15 +1472,9 @@ class CellReference(object):
         """
         if not isinstance(self.ref_cell, Cell):
             return None
-        deps = self.ref_cell.get_dependencies(True)
-        for ref in deps:
-            ref.get_bounding_box()
         cell_bbox = self.ref_cell.get_bounding_box()
         polygons = [cell_bbox]
         self._transform_polygons(polygons)
-        tmp = self.origin
-        self.origin = None
-        self.origin = tmp
         if len(polygons) == 0:
             bb = None
         else:
@@ -1491,12 +1485,7 @@ class CellReference(object):
                     (all_points[0].max(), all_points[1].max()),
                 )
             )
-        if self.origin is None or bb is None:
-            return bb
-        else:
-            return bb + numpy.array(
-                ((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1]))
-            )
+        return bb
 
     def translate(self, dx, dy):
         """
