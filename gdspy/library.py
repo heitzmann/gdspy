@@ -1252,7 +1252,7 @@ class CellReference(object):
             else:
                 return self.ref_cell.area() * self.magnification ** 2
 
-    def get_polygons(self, by_spec=False, depth=None):
+    def _transform_polygons(self, polygons, by_spec=False):
         """
         Return the list of polygons created by this reference.
 
@@ -1292,7 +1292,6 @@ class CellReference(object):
             mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
-        polygons = self.ref_cell.get_polygons(by_spec, depth)
         if by_spec is True:
             for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
@@ -1316,6 +1315,39 @@ class CellReference(object):
                     polygons[ii] = polygons[ii] * ct + polygons[ii][:, ::-1] * st
                 if self.origin is not None:
                     polygons[ii] = polygons[ii] + orgn
+        return polygons
+
+    def get_polygons(self, by_spec=False, depth=None):
+        """
+        Return the list of polygons created by this reference.
+
+        Parameters
+        ----------
+        by_spec : bool or tuple
+            If True, the return value is a dictionary with the
+            polygons of each individual pair (layer, datatype).
+            If set to a tuple of (layer, datatype), only polygons
+            with that specification are returned.
+        depth : integer or None
+            If not None, defines from how many reference levels to
+            retrieve polygons.  References below this level will result
+            in a bounding box.  If `by_spec` is True the key will be the
+            name of the referenced cell.
+
+        Returns
+        -------
+        out : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary with the list of polygons (if
+            `by_spec` is True).
+
+        Note
+        ----
+        Instances of `FlexPath` and `RobustPath` are also included in
+        the result by computing their polygonal boundary.
+        """
+        polygons = self.ref_cell.get_polygons(by_spec, depth)
+        self._transform_polygons(polygons, by_spec=by_spec)
         return polygons
 
     def get_polygonsets(self, depth=None):
@@ -1443,10 +1475,11 @@ class CellReference(object):
         deps = self.ref_cell.get_dependencies(True)
         for ref in deps:
             ref.get_bounding_box()
-        self.ref_cell.get_bounding_box()
+        cell_bbox = self.ref_cell.get_bounding_box()
+        polygons = [cell_bbox]
+        self._transform_polygons(polygons)
         tmp = self.origin
         self.origin = None
-        polygons = self.get_polygons()
         self.origin = tmp
         if len(polygons) == 0:
             bb = None
