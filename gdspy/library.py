@@ -1468,6 +1468,8 @@ class CellReference(object):
         if not isinstance(self.ref_cell, Cell):
             return None
         cell_bbox = self.ref_cell.get_bounding_box()
+        if cell_bbox is None:
+            return None
         polygons = [cell_bbox]
         self._transform_polygons(polygons)
         if len(polygons) == 0:
