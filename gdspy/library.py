@@ -1254,7 +1254,7 @@ class CellReference(object):
 
     def _transform_polygons(self, polygons, by_spec=False):
         """
-        Return the list of polygons created by this reference.
+        Transforms a set of polygons based on the CellReference's applied transformations.
 
         Parameters
         ----------
@@ -1263,11 +1263,6 @@ class CellReference(object):
             polygons of each individual pair (layer, datatype).
             If set to a tuple of (layer, datatype), only polygons
             with that specification are returned.
-        depth : integer or None
-            If not None, defines from how many reference levels to
-            retrieve polygons.  References below this level will result
-            in a bounding box.  If `by_spec` is True the key will be the
-            name of the referenced cell.
 
         Returns
         -------
