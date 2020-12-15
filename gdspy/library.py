@@ -1276,8 +1276,6 @@ class CellReference(object):
         Instances of `FlexPath` and `RobustPath` are also included in
         the result by computing their polygonal boundary.
         """
-        if not isinstance(self.ref_cell, Cell):
-            return dict() if by_spec else []
         if self.rotation is not None:
             ct = numpy.cos(self.rotation * numpy.pi / 180.0)
             st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
@@ -1341,6 +1339,8 @@ class CellReference(object):
         Instances of `FlexPath` and `RobustPath` are also included in
         the result by computing their polygonal boundary.
         """
+        if not isinstance(self.ref_cell, Cell):
+            return dict() if by_spec else []
         polygons = self.ref_cell.get_polygons(by_spec, depth)
         self._transform_polygons(polygons, by_spec=by_spec)
         return polygons
