@@ -248,3 +248,45 @@ def test_write_svg_with_style(tree, tmpdir):
     c1.write_svg(fname, style=style)
     assert os.path.isfile(fname)
     assert not os.stat(fname).st_size == 0
+
+
+def assert_bb(bb1, bb2):
+    assert all(abs(c1 - c2) < 1e-12 for p1, p2 in zip(bb1, bb2) for c1, c2 in zip(p1, p2))
+
+
+def test_bounding_box():
+    cell1 = gdspy.Cell("1")
+    cell1.add(gdspy.Rectangle((0, 0), (1, 1)))
+
+    # Cell1: plain 1x1 um square, with bottom-left corner at 0,0
+    assert_bb(cell1.get_bounding_box(), ((0, 0), (1, 1)))
+
+    # Cell2: place and rotate Cell1 45deg about origin
+    cell2 = gdspy.Cell("2")
+    cell2.add(gdspy.CellReference(cell1, rotation=45))
+
+    assert_bb(cell2.get_bounding_box(), ((-0.5 ** 0.5, 0), (0.5 ** 0.5, 2 ** 0.5)))
+
+    # Cell3: place and rotate Cell2 an additional 45deg about origin (Cell1 is now rotated total 90deg)
+    cell3 = gdspy.Cell("3")
+    cell3.add(gdspy.CellReference(cell2, rotation=45))
+
+    assert_bb(cell3.get_bounding_box(), ((-1, 0), (0, 1)))
+
+    # Cell4: nest Cell2 one level deeper with no transform (geometric equivalent to Cell2)
+    cell4 = gdspy.Cell("4")
+    cell4.add(gdspy.CellReference(cell2))
+
+    assert_bb(cell4.get_bounding_box(), ((-0.5 ** 0.5, 0), (0.5 ** 0.5, 2 ** 0.5)))
+
+    # Cell5: rotate Cell4 an addition 45 degrees (geometric equivalent to Cell3)
+    cell5 = gdspy.Cell("5")
+    cell5.add(gdspy.CellReference(cell4, rotation=45))
+
+    assert_bb(cell5.get_bounding_box(), ((-1, 0), (0, 1)))
+
+    # Cell6: translate Cell1 by 2um east
+    cell6 = gdspy.Cell("6")
+    cell6.add(gdspy.CellReference(cell1, origin=(2, 0)))
+
+    assert_bb(cell6.get_bounding_box(), ((2, 0), (3, 1)))
