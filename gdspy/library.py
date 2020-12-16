@@ -1467,11 +1467,17 @@ class CellReference(object):
         """
         if not isinstance(self.ref_cell, Cell):
             return None
+
         cell_bbox = self.ref_cell.get_bounding_box()
         if cell_bbox is None:
             return None
-        polygons = [cell_bbox]
-        self._transform_polygons(polygons)
+
+        if self.rotation is None or self.rotation % 90 == 0:
+            polygons = [cell_bbox]
+            self._transform_polygons(polygons)
+        else:
+            # for non-cardinal rotations of a reference, we must use the flattened polygons for the reference
+            polygons = self.get_polygons()
         if len(polygons) == 0:
             bb = None
         else:
