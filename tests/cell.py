@@ -251,7 +251,7 @@ def test_write_svg_with_style(tree, tmpdir):
 
 
 def assert_bb(bb1, bb2):
-    assert all(abs(c1 - c2) < 1e-12 for p1, p2 in zip(bb1, bb2) for c1, c2 in zip(p1, p2))
+    assert all([abs(c1 - c2) < 1e-12 for p1, p2 in zip(bb1, bb2) for c1, c2 in zip(p1, p2)])
 
 
 def test_bounding_box():
