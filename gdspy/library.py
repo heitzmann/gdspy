@@ -1252,24 +1252,21 @@ class CellReference(object):
             else:
                 return self.ref_cell.area() * self.magnification ** 2
 
-    def _transform_polygons(self, polygons, by_spec=False):
+    def _transform_polygons(self, polygons):
         """
         Transforms a set of polygons based on the CellReference's applied transformations.
 
         Parameters
         ----------
-        by_spec : bool or tuple
-            If True, the return value is a dictionary with the
-            polygons of each individual pair (layer, datatype).
-            If set to a tuple of (layer, datatype), only polygons
-            with that specification are returned.
+        polygons : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary of lists of polygons.
 
         Returns
         -------
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons (if
-            `by_spec` is True).
+            polygon, or dictionary of lists of polygons (matches format of input polygons).
 
         Note
         ----
@@ -1285,7 +1282,7 @@ class CellReference(object):
             mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
-        if by_spec is True:
+        if isinstance(polygons, dict):
             for kk in polygons.keys():
                 for ii in range(len(polygons[kk])):
                     if self.x_reflection:
@@ -1342,7 +1339,7 @@ class CellReference(object):
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
         polygons = self.ref_cell.get_polygons(by_spec, depth)
-        self._transform_polygons(polygons, by_spec=by_spec)
+        self._transform_polygons(polygons)
         return polygons
 
     def get_polygonsets(self, depth=None):
