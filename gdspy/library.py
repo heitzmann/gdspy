@@ -1252,6 +1252,61 @@ class CellReference(object):
             else:
                 return self.ref_cell.area() * self.magnification ** 2
 
+    def _transform_polygons(self, polygons):
+        """
+        Transforms a set of polygons based on the CellReference's applied transformations.
+
+        Parameters
+        ----------
+        polygons : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary of lists of polygons.
+
+        Returns
+        -------
+        out : list of array-like[N][2] or dictionary
+            List containing the coordinates of the vertices of each
+            polygon, or dictionary of lists of polygons (matches format of input polygons).
+
+        Note
+        ----
+        Instances of `FlexPath` and `RobustPath` are also included in
+        the result by computing their polygonal boundary.
+        """
+        if self.rotation is not None:
+            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
+            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
+        if self.x_reflection:
+            xrefl = numpy.array((1, -1))
+        if self.magnification is not None:
+            mag = numpy.array((self.magnification, self.magnification), dtype=float)
+        if self.origin is not None:
+            orgn = numpy.array(self.origin)
+        if isinstance(polygons, dict):
+            for kk in polygons.keys():
+                for ii in range(len(polygons[kk])):
+                    if self.x_reflection:
+                        polygons[kk][ii] = polygons[kk][ii] * xrefl
+                    if self.magnification is not None:
+                        polygons[kk][ii] = polygons[kk][ii] * mag
+                    if self.rotation is not None:
+                        polygons[kk][ii] = (
+                            polygons[kk][ii] * ct + polygons[kk][ii][:, ::-1] * st
+                        )
+                    if self.origin is not None:
+                        polygons[kk][ii] = polygons[kk][ii] + orgn
+        else:
+            for ii in range(len(polygons)):
+                if self.x_reflection:
+                    polygons[ii] = polygons[ii] * xrefl
+                if self.magnification is not None:
+                    polygons[ii] = polygons[ii] * mag
+                if self.rotation is not None:
+                    polygons[ii] = polygons[ii] * ct + polygons[ii][:, ::-1] * st
+                if self.origin is not None:
+                    polygons[ii] = polygons[ii] + orgn
+        return polygons
+
     def get_polygons(self, by_spec=False, depth=None):
         """
         Return the list of polygons created by this reference.
@@ -1283,39 +1338,8 @@ class CellReference(object):
         """
         if not isinstance(self.ref_cell, Cell):
             return dict() if by_spec else []
-        if self.rotation is not None:
-            ct = numpy.cos(self.rotation * numpy.pi / 180.0)
-            st = numpy.sin(self.rotation * numpy.pi / 180.0) * _mpone
-        if self.x_reflection:
-            xrefl = numpy.array((1, -1))
-        if self.magnification is not None:
-            mag = numpy.array((self.magnification, self.magnification), dtype=float)
-        if self.origin is not None:
-            orgn = numpy.array(self.origin)
         polygons = self.ref_cell.get_polygons(by_spec, depth)
-        if by_spec is True:
-            for kk in polygons.keys():
-                for ii in range(len(polygons[kk])):
-                    if self.x_reflection:
-                        polygons[kk][ii] = polygons[kk][ii] * xrefl
-                    if self.magnification is not None:
-                        polygons[kk][ii] = polygons[kk][ii] * mag
-                    if self.rotation is not None:
-                        polygons[kk][ii] = (
-                            polygons[kk][ii] * ct + polygons[kk][ii][:, ::-1] * st
-                        )
-                    if self.origin is not None:
-                        polygons[kk][ii] = polygons[kk][ii] + orgn
-        else:
-            for ii in range(len(polygons)):
-                if self.x_reflection:
-                    polygons[ii] = polygons[ii] * xrefl
-                if self.magnification is not None:
-                    polygons[ii] = polygons[ii] * mag
-                if self.rotation is not None:
-                    polygons[ii] = polygons[ii] * ct + polygons[ii][:, ::-1] * st
-                if self.origin is not None:
-                    polygons[ii] = polygons[ii] + orgn
+        self._transform_polygons(polygons)
         return polygons
 
     def get_polygonsets(self, depth=None):
@@ -1440,14 +1464,16 @@ class CellReference(object):
         """
         if not isinstance(self.ref_cell, Cell):
             return None
-        deps = self.ref_cell.get_dependencies(True)
-        for ref in deps:
-            ref.get_bounding_box()
-        self.ref_cell.get_bounding_box()
-        tmp = self.origin
-        self.origin = None
-        polygons = self.get_polygons()
-        self.origin = tmp
+
+        if self.rotation is None or self.rotation % 90 == 0:
+            cell_bbox = self.ref_cell.get_bounding_box()
+            if cell_bbox is None:
+                return None
+            polygons = [cell_bbox]
+            self._transform_polygons(polygons)
+        else:
+            # for non-cardinal rotations of a reference, we must use the flattened polygons for the reference
+            polygons = self.get_polygons()
         if len(polygons) == 0:
             bb = None
         else:
@@ -1458,12 +1484,7 @@ class CellReference(object):
                     (all_points[0].max(), all_points[1].max()),
                 )
             )
-        if self.origin is None or bb is None:
-            return bb
-        else:
-            return bb + numpy.array(
-                ((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1]))
-            )
+        return bb
 
     def translate(self, dx, dy):
         """
