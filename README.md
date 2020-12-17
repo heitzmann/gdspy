@@ -74,6 +74,7 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Upcoming
+* More efficient bounding box calculation.
 * Fix Label creation bug.
 
 ### Version 1.6.1 (Oct 22, 2020)
