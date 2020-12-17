@@ -63,7 +63,7 @@ setup(
     tests_require=["pytest"],
     platforms="OS Independent",
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Intended Audience :: Manufacturing",

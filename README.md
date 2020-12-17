@@ -32,7 +32,7 @@ Users are encouraged to move from Gdspy to Gdstk: although their API is not 100%
 
 ### Dependencies:
 
-* [Python](https://www.python.org/) (tested with versions 2.7, 3.5, 3.6, 3.7, and 3.8)
+* [Python](https://www.python.org/) (tested with versions 2.7, 3.6, 3.7, and 3.8)
 * [Numpy](http://numpy.scipy.org/)
 * C compiler (needed only if built from source)
 * Tkinter (optional: needed for the `LayoutViewer` GUI)
@@ -74,7 +74,7 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Upcoming
-* More efficient bounding box calculation.
+* More efficient bounding box calculation (thanks to Troy Tamas for the contribution).
 * Fix Label creation bug.
 
 ### Version 1.6.1 (Oct 22, 2020)
