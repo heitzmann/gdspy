@@ -267,7 +267,7 @@ def test_bounding_box():
     cell2 = gdspy.Cell("2")
     cell2.add(gdspy.CellReference(cell1, rotation=45))
 
-    assert_bb(cell2.get_bounding_box(), ((-0.5 ** 0.5, 0), (0.5 ** 0.5, 2 ** 0.5)))
+    assert_bb(cell2.get_bounding_box(), ((-(0.5 ** 0.5), 0), (0.5 ** 0.5, 2 ** 0.5)))
 
     # Cell3: place and rotate Cell2 an additional 45deg about origin (Cell1 is now rotated total 90deg)
     cell3 = gdspy.Cell("3")
@@ -279,7 +279,7 @@ def test_bounding_box():
     cell4 = gdspy.Cell("4")
     cell4.add(gdspy.CellReference(cell2))
 
-    assert_bb(cell4.get_bounding_box(), ((-0.5 ** 0.5, 0), (0.5 ** 0.5, 2 ** 0.5)))
+    assert_bb(cell4.get_bounding_box(), ((-(0.5 ** 0.5), 0), (0.5 ** 0.5, 2 ** 0.5)))
 
     # Cell5: rotate Cell4 an addition 45 degrees (geometric equivalent to Cell3)
     cell5 = gdspy.Cell("5")
@@ -290,5 +290,46 @@ def test_bounding_box():
     # Cell6: translate Cell1 by 2um east
     cell6 = gdspy.Cell("6")
     cell6.add(gdspy.CellReference(cell1, origin=(2, 0)))
+
+    assert_bb(cell6.get_bounding_box(), ((2, 0), (3, 1)))
+
+
+def test_bounding_box2():
+    cell0 = gdspy.Cell("0")
+    cell0.add(gdspy.Rectangle((0, 0), (0.5, 0.25)))
+
+    cell1 = gdspy.Cell("1")
+    cell1.add(gdspy.CellArray(cell0, 2, 4, (0.5, 0.25)))
+
+    # Cell1: plain 1x1 um square, with bottom-left corner at 0,0
+    assert_bb(cell1.get_bounding_box(), ((0, 0), (1, 1)))
+
+    # Cell2: place and rotate Cell1 45deg about origin
+    cell2 = gdspy.Cell("2")
+    cell2.add(gdspy.CellReference(cell1, rotation=45))
+
+    assert_bb(cell2.get_bounding_box(), ((-(0.5 ** 0.5), 0), (0.5 ** 0.5, 2 ** 0.5)))
+
+    # Cell3: place and rotate Cell2 an additional 45deg about origin (Cell1 is now rotated total 90deg)
+    cell3 = gdspy.Cell("3")
+    cell3.add(gdspy.CellReference(cell2, rotation=45))
+
+    assert_bb(cell3.get_bounding_box(), ((-1, 0), (0, 1)))
+
+    # Cell4: nest Cell2 one level deeper with no transform (geometric equivalent to Cell2)
+    cell4 = gdspy.Cell("4")
+    cell4.add(gdspy.CellArray(cell2, 1, 1, (1, 1)))
+
+    assert_bb(cell4.get_bounding_box(), ((-(0.5 ** 0.5), 0), (0.5 ** 0.5, 2 ** 0.5)))
+
+    # Cell5: rotate Cell4 an addition 45 degrees (geometric equivalent to Cell3)
+    cell5 = gdspy.Cell("5")
+    cell5.add(gdspy.CellArray(cell4, 1, 1, (1, 1), rotation=45))
+
+    assert_bb(cell5.get_bounding_box(), ((-1, 0), (0, 1)))
+
+    # Cell6: translate Cell1 by 2um east
+    cell6 = gdspy.Cell("6")
+    cell6.add(gdspy.CellArray(cell1, 1, 1, (1, 1), origin=(2, 0)))
 
     assert_bb(cell6.get_bounding_box(), ((2, 0), (3, 1)))
