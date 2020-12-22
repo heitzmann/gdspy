@@ -577,16 +577,15 @@ class Cell(object):
             for reference in self.references:
                 reference_bb = reference.get_bounding_box()
                 if reference_bb is not None:
-                    bb[0, 0] = min(bb[0, 0], reference_bb[0, 0])
-                    bb[0, 1] = min(bb[0, 1], reference_bb[0, 1])
-                    bb[1, 0] = max(bb[1, 0], reference_bb[1, 0])
-                    bb[1, 1] = max(bb[1, 1], reference_bb[1, 1])
+                    all_polygons.extend([reference_bb])
             if len(all_polygons) > 0:
                 all_points = numpy.concatenate(all_polygons).transpose()
                 bb[0, 0] = min(bb[0, 0], all_points[0].min())
                 bb[0, 1] = min(bb[0, 1], all_points[1].min())
                 bb[1, 0] = max(bb[1, 0], all_points[0].max())
                 bb[1, 1] = max(bb[1, 1], all_points[1].max())
+            else:
+                return None
             self._bb_valid = True
             self._bounding_box = bb
         return numpy.array(self._bounding_box)
