@@ -293,6 +293,26 @@ def test_bounding_box():
 
     assert_bb(cell6.get_bounding_box(), ((2, 0), (3, 1)))
 
+    cell7a = gdspy.Cell("7a")
+
+    assert cell7a.get_bounding_box() is None
+
+    cell7b = gdspy.Cell("7b")
+    cell7b.add(gdspy.CellReference(cell7a, rotation=90))
+
+    assert cell7b.get_bounding_box() is None
+
+    cell7c = gdspy.Cell("7c")
+    cell7c.add(gdspy.CellReference(cell7b))
+
+    assert cell7c.get_bounding_box() is None
+
+    cell7 = gdspy.Cell("7")
+    cell7.add(cell1)
+    cell7.add(cell7c)
+
+    assert_bb(cell7.get_bounding_box(), ((0, 0), (1, 1)))
+
 
 def test_bounding_box2():
     cell0 = gdspy.Cell("0")
