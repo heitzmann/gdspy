@@ -559,15 +559,9 @@ class Cell(object):
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]],
             or None if the cell is empty.
         """
-        if (
-            len(self.polygons) == 0
-            and len(self.paths) == 0
-            and len(self.references) == 0
-        ):
-            return None
-        if not (
-            self._bb_valid and all(ref._bb_valid for ref in self.get_dependencies(True))
-        ):
+        deps_still_valid = all(ref._bb_valid for ref in self.get_dependencies(True))
+        cached_bbox_still_valid = self._bb_valid and deps_still_valid
+        if not cached_bbox_still_valid:
             bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
             all_polygons = []
             for polygon in self.polygons:
@@ -577,7 +571,7 @@ class Cell(object):
             for reference in self.references:
                 reference_bb = reference.get_bounding_box()
                 if reference_bb is not None:
-                    all_polygons.extend([reference_bb])
+                    all_polygons.append(reference_bb)
             if len(all_polygons) > 0:
                 all_points = numpy.concatenate(all_polygons).transpose()
                 bb[0, 0] = min(bb[0, 0], all_points[0].min())
