@@ -578,11 +578,11 @@ class Cell(object):
                 bb[0, 1] = min(bb[0, 1], all_points[1].min())
                 bb[1, 0] = max(bb[1, 0], all_points[0].max())
                 bb[1, 1] = max(bb[1, 1], all_points[1].max())
+                self._bounding_box = numpy.asarray(bb)
             else:
-                return None
+                self._bounding_box = None
             self._bb_valid = True
-            self._bounding_box = bb
-        return numpy.array(self._bounding_box)
+        return self._bounding_box
 
     def get_polygons(self, by_spec=False, depth=None):
         """
