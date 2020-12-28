@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.3 (Dec 28, 2020)
+* Fix bounding box edge case (thanks Troy Tamas for the fix).
+
 ### Version 1.6.2 (Dec 18, 2020)
 * More efficient bounding box calculation (thanks to Troy Tamas for the contribution).
 * Fix Label creation bug.

@@ -14,10 +14,13 @@ if ! grep "### Version $CURR_VER (" README.md > /dev/null 2>&1; then
 fi
 
 echo "Release version $CURR_VER [y/n]?"
+echo "This will commit and tag all changes, but will NOT add them."
 read -r GOON
 
 if [ "$GOON" = 'y' ] ; then
     git commit -m "Release v$CURR_VER"
     git tag -am "Release v$CURR_VER" "v$CURR_VER"
-    echo "Review the status and 'git push' to finish release. Do not forget to upload to PYPI either."
+    echo "Review the status and 'git push' to finish release."
+    echo "Do not forget to upload to PYPI:"
+    echo "python setup.py sdist && twine upload -s dist/gdspy-$CURR_VER.zip"
 fi

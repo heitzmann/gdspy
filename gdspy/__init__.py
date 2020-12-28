@@ -1,6 +1,6 @@
 ######################################################################
 #                                                                    #
-#  Copyright 2009-2020 Lucas Heitzmann Gabrielli.                    #
+#  Copyright 2009 Lucas Heitzmann Gabrielli.                         #
 #  This file is part of gdspy, distributed under the terms of the    #
 #  Boost Software License - Version 1.0.  See the accompanying       #
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
@@ -19,7 +19,7 @@ GDSII format references:
 - http://www.buchanan1.net/stream_description.html
 """
 
-__version__ = "1.6.2"
+__version__ = "1.6.3"
 
 import warnings
 
