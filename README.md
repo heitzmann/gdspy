@@ -43,7 +43,7 @@ Users are encouraged to move from Gdspy to Gdstk: although their API is not 100%
 Option 1: using [pip](https://docs.python.org/3/installing/):
 
 ```sh
-pip install gdspy
+python -m pip install --user gdspy
 ```
 
 Option 2: download the source from [github](https://github.com/heitzmann/gdspy) and build/install with:
