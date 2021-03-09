@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import sys
+import warnings
 
 if sys.version_info.major < 3:
     from builtins import zip
