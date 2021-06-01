@@ -213,6 +213,8 @@ def gdsii_hash(filename, engine=None):
             start = pos + 28
         elif rec == 0x0700:
             contents.append(data[start:pos])
+        elif size == 0:
+            break
         pos += size
     h = hashlib.sha1() if engine is None else engine
     for x in sorted(contents):
