@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import sys
+import warnings
 
 if sys.version_info.major < 3:
     from builtins import zip
@@ -214,6 +215,11 @@ def gdsii_hash(filename, engine=None):
         elif rec == 0x0700:
             contents.append(data[start:pos])
         elif size == 0:
+            warnings.warn(
+                "[GDSPY] Zero-length record found in {0} at position {1}. "
+                "Skipping the remaining of the file contents.".format(filename, pos),
+                stacklevel=2,
+            )
             break
         pos += size
     h = hashlib.sha1() if engine is None else engine
