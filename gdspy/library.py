@@ -2411,7 +2411,7 @@ class GdsLibrary(object):
         if len(cells) == 0:
             warnings.warn("[GDSPY] Creating a GDSII file without any cells.")
         for cell in cells:
-            cell.to_gds(outfile, self.unit / self.precision)
+            cell.to_gds(outfile, self.unit / self.precision, timestamp=timestamp)
         if binary_cells is not None:
             for bc in binary_cells:
                 outfile.write(bc)
