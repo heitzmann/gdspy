@@ -372,8 +372,8 @@ def hash_file(filepath):
 def test_time_changes_gds_hash():
     fn1 = tmpdir / 'nofreeze1.gds'
     fn2 = tmpdir / 'nofreeze2.gds'
-    date1 = datetime.datetime.fromisocalendar(1988, 1, 1)
-    date2 = datetime.datetime.fromisocalendar(2021, 1, 1)
+    date1 = datetime.datetime(1988, 8, 28)
+    date2 = datetime.datetime(2020, 12, 25)
     lib = gdspy.GdsLibrary(name='speedy')
     lib.write_gds(fn1, timestamp=date1)
     hash1 = hash_file(fn1)
@@ -386,7 +386,7 @@ def test_time_changes_gds_hash():
 def test_frozen_gds_has_constant_hash():
     fn1 = tmpdir / 'freeze1.gds'
     fn2 = tmpdir / 'freeze2.gds'
-    frozen_date = datetime.datetime.fromisocalendar(1988, 1, 1)
+    frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     lib.write_gds(fn1, timestamp=frozen_date)
     hash1 = hash_file(fn1)
@@ -399,7 +399,7 @@ def test_frozen_gds_has_constant_hash():
 def test_frozen_gds_with_cell_has_constant_hash():
     fn1 = tmpdir / 'freezec1.gds'
     fn2 = tmpdir / 'freezec2.gds'
-    frozen_date = datetime.datetime.fromisocalendar(1988, 1, 1)
+    frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     cell = gdspy.Cell(name='Anna')
     cell.add(gdspy.Rectangle((0, 0), (100, 1000)))
@@ -415,7 +415,7 @@ def test_frozen_gds_with_cell_has_constant_hash():
 def test_frozen_gds_with_cell_array_has_constant_hash():
     fn1 = tmpdir / 'freezea1.gds'
     fn2 = tmpdir / 'freezea2.gds'
-    frozen_date = datetime.datetime.fromisocalendar(1988, 1, 1)
+    frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     cell = gdspy.Cell(name='Anna')
     cell.add(gdspy.Rectangle((0, 0), (100, 1000)))
