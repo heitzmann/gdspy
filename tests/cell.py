@@ -6,9 +6,6 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
-import datetime
-import hashlib
-import pathlib
 
 import pytest
 import gdspy
@@ -356,74 +353,3 @@ def test_bounding_box2():
     cell6.add(gdspy.CellArray(cell1, 1, 1, (1, 1), origin=(2, 0)))
 
     assert_bb(cell6.get_bounding_box(), ((2, 0), (3, 1)))
-
-
-def hash_file(filepath):
-    filepath = pathlib.Path(filepath)
-    md5 = hashlib.md5()
-    md5.update(filepath.read_bytes())
-    return md5.hexdigest()
-
-
-def test_time_changes_gds_hash(tmpdir):
-    fn1 = str(tmpdir.join('nofreeze1.gds'))
-    fn2 = str(tmpdir.join('nofreeze2.gds'))
-    date1 = datetime.datetime(1988, 8, 28)
-    date2 = datetime.datetime(2020, 12, 25)
-    lib = gdspy.GdsLibrary(name='speedy')
-    lib.write_gds(fn1, timestamp=date1)
-    hash1 = hash_file(fn1)
-    lib.write_gds(fn2, timestamp=date2)
-    hash2 = hash_file(fn2)
-
-    assert hash1 != hash2
-
-
-def test_frozen_gds_has_constant_hash(tmpdir):
-    fn1 = str(tmpdir.join('freeze1.gds'))
-    fn2 = str(tmpdir.join('freeze2.gds'))
-    frozen_date = datetime.datetime(1988, 8, 28)
-    lib = gdspy.GdsLibrary(name='Elsa')
-    lib.write_gds(fn1, timestamp=frozen_date)
-    hash1 = hash_file(fn1)
-    lib.write_gds(fn2, timestamp=frozen_date)
-    hash2 = hash_file(fn2)
-
-    assert hash1 == hash2
-
-
-def test_frozen_gds_with_cell_has_constant_hash(tmpdir):
-    fn1 = str(tmpdir.join('freezec1.gds'))
-    fn2 = str(tmpdir.join('freezec2.gds'))
-    frozen_date = datetime.datetime(1988, 8, 28)
-    lib = gdspy.GdsLibrary(name='Elsa')
-    cell = gdspy.Cell(name='Anna')
-    cell.add(gdspy.Rectangle((0, 0), (100, 1000)))
-    lib.add(cell)
-    lib.write_gds(fn1, timestamp=frozen_date)
-    hash1 = hash_file(fn1)
-    lib.write_gds(fn2, timestamp=frozen_date)
-    hash2 = hash_file(fn2)
-
-    assert hash1 == hash2
-
-
-def test_frozen_gds_with_cell_array_has_constant_hash(tmpdir):
-    fn1 = str(tmpdir.join('freezea1.gds'))
-    fn2 = str(tmpdir.join('freezea2.gds'))
-    frozen_date = datetime.datetime(1988, 8, 28)
-    lib = gdspy.GdsLibrary(name='Elsa')
-    cell = gdspy.Cell(name='Anna')
-    cell.add(gdspy.Rectangle((0, 0), (100, 1000)))
-    cell2 = gdspy.Cell(name='Olaf')
-    cell2.add(gdspy.Rectangle((0, 0), (50, 100)))
-
-    cell_array = gdspy.CellArray(ref_cell=cell2, columns=5, rows=2, spacing=(60, 120), origin=(1000, 0))
-    cell.add(cell_array)
-    lib.add(cell)
-    lib.write_gds(fn1, timestamp=frozen_date)
-    hash1 = hash_file(fn1)
-    lib.write_gds(fn2, timestamp=frozen_date)
-    hash2 = hash_file(fn2)
-
-    assert hash1 == hash2
