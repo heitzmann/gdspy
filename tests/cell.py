@@ -18,10 +18,6 @@ import os
 
 gdspy.library.use_current_library = False
 
-tmpdir = pathlib.Path(__file__).parent / 'tmp'
-if not tmpdir.is_dir():
-    tmpdir.mkdir()
-
 
 def unique():
     return str(uuid.uuid4())
@@ -369,9 +365,9 @@ def hash_file(filepath):
     return md5.hexdigest()
 
 
-def test_time_changes_gds_hash():
-    fn1 = tmpdir / 'nofreeze1.gds'
-    fn2 = tmpdir / 'nofreeze2.gds'
+def test_time_changes_gds_hash(tmpdir):
+    fn1 = str(tmpdir.join('nofreeze1.gds'))
+    fn2 = str(tmpdir.join('nofreeze2.gds'))
     date1 = datetime.datetime(1988, 8, 28)
     date2 = datetime.datetime(2020, 12, 25)
     lib = gdspy.GdsLibrary(name='speedy')
@@ -383,9 +379,9 @@ def test_time_changes_gds_hash():
     assert hash1 != hash2
 
 
-def test_frozen_gds_has_constant_hash():
-    fn1 = tmpdir / 'freeze1.gds'
-    fn2 = tmpdir / 'freeze2.gds'
+def test_frozen_gds_has_constant_hash(tmpdir):
+    fn1 = str(tmpdir.join('freeze1.gds'))
+    fn2 = str(tmpdir.join('freeze2.gds'))
     frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     lib.write_gds(fn1, timestamp=frozen_date)
@@ -396,9 +392,9 @@ def test_frozen_gds_has_constant_hash():
     assert hash1 == hash2
 
 
-def test_frozen_gds_with_cell_has_constant_hash():
-    fn1 = tmpdir / 'freezec1.gds'
-    fn2 = tmpdir / 'freezec2.gds'
+def test_frozen_gds_with_cell_has_constant_hash(tmpdir):
+    fn1 = str(tmpdir.join('freezec1.gds'))
+    fn2 = str(tmpdir.join('freezec2.gds'))
     frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     cell = gdspy.Cell(name='Anna')
@@ -412,9 +408,9 @@ def test_frozen_gds_with_cell_has_constant_hash():
     assert hash1 == hash2
 
 
-def test_frozen_gds_with_cell_array_has_constant_hash():
-    fn1 = tmpdir / 'freezea1.gds'
-    fn2 = tmpdir / 'freezea2.gds'
+def test_frozen_gds_with_cell_array_has_constant_hash(tmpdir):
+    fn1 = str(tmpdir.join('freezea1.gds'))
+    fn2 = str(tmpdir.join('freezea2.gds'))
     frozen_date = datetime.datetime(1988, 8, 28)
     lib = gdspy.GdsLibrary(name='Elsa')
     cell = gdspy.Cell(name='Anna')
