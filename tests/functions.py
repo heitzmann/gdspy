@@ -337,6 +337,7 @@ def test_update_timestamp(tmpdir):
     date1 = datetime.datetime(1988, 8, 28)
     date2 = datetime.datetime(2020, 12, 25)
     lib = gdspy.GdsLibrary(name='speedy')
+    lib.new_cell("empty")
     lib.write_gds(fn1, timestamp=date1)
     hash1 = hash_file(fn1)
     lib.write_gds(fn2, timestamp=date2)
