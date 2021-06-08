@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import sys
 import warnings
+from datetime import datetime
 
 if sys.version_info.major < 3:
     from builtins import zip
@@ -226,3 +227,51 @@ def gdsii_hash(filename, engine=None):
     for x in sorted(contents):
         h.update(x)
     return h.hexdigest()
+
+
+def set_gdsii_timestamp(filename, timestamp):
+    """
+    Sets all timestamps in a given GDS file to the given timestamp value.
+    Useful for creating GDS files with identical binary contents, i.e. for regression testing.
+
+    Parameters
+    ----------
+    filename : string or Path
+        Path to the GDSII file
+    timestamp : datetime
+        The new timestamp to set in the gds file binary contents.
+    Returns
+    -------
+    None
+    """
+    ts = struct.pack(
+        ">12h",
+        timestamp.year,
+        timestamp.month,
+        timestamp.day,
+        timestamp.hour,
+        timestamp.minute,
+        timestamp.second,
+        timestamp.year,
+        timestamp.month,
+        timestamp.day,
+        timestamp.hour,
+        timestamp.minute,
+        timestamp.second,
+    )
+    # For compatibility
+    if hasattr(filename, "__fspath__"):
+        filename = filename.__fspath__()
+    with open(filename, "r+b") as fio:
+        while True:
+            data = fio.read(4)
+            if len(data) < 4:
+                if len(data) > 0:
+                    warnings.warn("Possibly corrupted file", stacklevel=2)
+                return
+            size, rec_type = struct.unpack(">HH", data)
+            if rec_type == 0x0102 or rec_type == 0x0502:
+                assert size == 28
+                fio.write(ts)
+            elif size > 4:
+                fio.seek(size - 4, 1)
