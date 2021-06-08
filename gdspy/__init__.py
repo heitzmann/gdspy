@@ -45,7 +45,7 @@ from gdspy.polygon import (
     PolyPath,
     L1Path,
 )
-from gdspy.gdsiiformat import gdsii_hash
+from gdspy.gdsiiformat import gdsii_hash, set_gdsii_timestamp
 from gdspy.operation import slice, offset, boolean, inside, copy
 
 try:

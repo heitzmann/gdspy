@@ -12,6 +12,7 @@ import io
 import datetime
 import numpy
 import gdspy
+from tutils import hash_file
 
 gdspy.library.use_current_library = False
 
@@ -328,3 +329,22 @@ def test_missing_ca(tmpdir):
     out = str(tmpdir.join("test.gds"))
     now = datetime.datetime.today()
     lib.write_gds(out, timestamp=now)
+
+
+def test_update_timestamp(tmpdir):
+    fn1 = str(tmpdir.join('nofreeze1.gds'))
+    fn2 = str(tmpdir.join('nofreeze2.gds'))
+    date1 = datetime.datetime(1988, 8, 28)
+    date2 = datetime.datetime(2020, 12, 25)
+    lib = gdspy.GdsLibrary(name='speedy')
+    lib.write_gds(fn1, timestamp=date1)
+    hash1 = hash_file(fn1)
+    lib.write_gds(fn2, timestamp=date2)
+    hash2 = hash_file(fn2)
+
+    assert hash1 != hash2
+
+    gdspy.set_gdsii_timestamp(filename=fn2, timestamp=date1)
+    hash3 = hash_file(fn2)
+
+    assert hash1 == hash3

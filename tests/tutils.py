@@ -10,6 +10,7 @@
 import os
 import pytest
 import gdspy
+import hashlib
 
 gdspy.library.use_current_library = False
 
@@ -56,3 +57,11 @@ def assertsame(c1, c2, tolerance=1e-6):
             assert r2 is None
         else:
             assert result is None
+
+
+def hash_file(filepath):
+    md5 = hashlib.md5()
+    with open(filepath, mode='rb') as f:
+        content = f.read()
+        md5.update(content)
+    return md5.hexdigest()
