@@ -250,7 +250,7 @@ class PolygonSet(object):
                     )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -260,10 +260,26 @@ class PolygonSet(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         for p, l, d in zip(self.polygons, self.layers, self.datatypes):
             outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
-            outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
+            outfile.write(
+                " ".join(
+                    ",".join(
+                        (
+                            numpy.format_float_positional(
+                                pt[0], trim="0", precision=precision
+                            ),
+                            numpy.format_float_positional(
+                                pt[1], trim="0", precision=precision
+                            ),
+                        )
+                    )
+                    for pt in scaling * p
+                )
+            )
             outfile.write('"/>\n')
 
     def area(self, by_spec=False):

@@ -7,7 +7,7 @@ def draw(cell, name=None):
     scaling = 400 / (1.1 * (bb[1, 0] - bb[0, 0]))
     name = "docs/_static/" + (name or cell.name) + ".svg"
     print(f"Saving {name} (scaling {scaling})")
-    cell.write_svg(name, scaling=scaling, background="none", pad="5%")
+    cell.write_svg(name, scaling=scaling, precision=2, background="none", pad="5%")
 
 
 if __name__ == "__main__":

@@ -267,7 +267,7 @@ class Label(object):
                 )
         outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -277,16 +277,31 @@ class Label(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         transform = "scale(1 -1) translate({} {})".format(
-            scaling * self.position[0], -scaling * self.position[1]
+            numpy.format_float_positional(
+                scaling * self.position[0], trim="0", precision=precision
+            ),
+            numpy.format_float_positional(
+                -scaling * self.position[1], trim="0", precision=precision
+            ),
         )
         if self.rotation is not None:
-            transform += " rotate({})".format(-self.rotation)
+            transform += " rotate({})".format(
+                numpy.format_float_positional(
+                    -self.rotation, trim="0", precision=precision
+                )
+            )
         if self.x_reflection:
             transform += " scale(1 -1)"
         if self.magnification is not None:
-            transform += " scale({})".format(self.magnification)
+            transform += " scale({})".format(
+                numpy.format_float_positional(
+                    self.magnification, trim="0", precision=precision
+                )
+            )
         ta = ["start", "middle", "end"][self.anchor % 4]
         da = ["text-before-edge", "central", "text-after-edge"][self.anchor // 4]
         if sys.version_info.major < 3:

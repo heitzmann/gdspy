@@ -851,7 +851,7 @@ class Cell(object):
         self.references = []
         return self
 
-    def to_svg(self, outfile, scaling, attributes=""):
+    def to_svg(self, outfile, scaling, precision, attributes):
         """
         Write an SVG fragment representation of this object.
 
@@ -861,6 +861,8 @@ class Cell(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         attributes : string
             Additional attributes to set for the cell group.
         """
@@ -870,13 +872,13 @@ class Cell(object):
         outfile.write(attributes)
         outfile.write(">\n")
         for polygon in self.polygons:
-            polygon.to_svg(outfile, scaling)
+            polygon.to_svg(outfile, scaling, precision)
         for path in self.paths:
-            path.to_svg(outfile, scaling)
+            path.to_svg(outfile, scaling, precision)
         for label in self.labels:
-            label.to_svg(outfile, scaling)
+            label.to_svg(outfile, scaling, precision)
         for reference in self.references:
-            reference.to_svg(outfile, scaling)
+            reference.to_svg(outfile, scaling, precision)
         outfile.write("</g>\n")
 
     def write_svg(
@@ -887,6 +889,7 @@ class Cell(object):
         fontstyle=None,
         background="#222",
         pad="5%",
+        precision=None,
     ):
         """
         Export this cell to an SVG file.
@@ -923,6 +926,8 @@ class Cell(object):
             Background margin around the cell bounding box.  It can
             be specified as a percentage of the width or height,
             whichever is the largest.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
 
         Examples
         --------
@@ -969,7 +974,12 @@ class Cell(object):
 <defs>
 <style type="text/css">
 """.format(
-                w, h, x, y, w, h
+                numpy.format_float_positional(w, trim="0", precision=precision),
+                numpy.format_float_positional(h, trim="0", precision=precision),
+                numpy.format_float_positional(x, trim="0", precision=precision),
+                numpy.format_float_positional(y, trim="0", precision=precision),
+                numpy.format_float_positional(w, trim="0", precision=precision),
+                numpy.format_float_positional(h, trim="0", precision=precision),
             )
         )
         ldkeys, ltkeys = self.get_svg_classes()
@@ -1013,15 +1023,19 @@ class Cell(object):
             outfile.write("}\n")
         outfile.write("</style>\n")
         for cell in self.get_dependencies(True):
-            cell.to_svg(outfile, scaling)
-        outfile.write("</defs>")
+            cell.to_svg(outfile, scaling, precision, "")
+        outfile.write("</defs>\n")
         if background is not None:
             outfile.write(
                 '<rect x="{}" y="{}" width="{}" height="{}" fill="{}" stroke="none"/>\n'.format(
-                    x, y, w, h, background
+                    numpy.format_float_positional(x, trim="0", precision=precision),
+                    numpy.format_float_positional(y, trim="0", precision=precision),
+                    numpy.format_float_positional(w, trim="0", precision=precision),
+                    numpy.format_float_positional(h, trim="0", precision=precision),
+                    background,
                 )
             )
-        self.to_svg(outfile, scaling, 'transform="scale(1 -1)"')
+        self.to_svg(outfile, scaling, precision, 'transform="scale(1 -1)"')
         outfile.write("</svg>")
         if close:
             outfile.close()
@@ -1190,7 +1204,7 @@ class CellReference(object):
                 )
         outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -1200,20 +1214,35 @@ class CellReference(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
         transform = "translate({} {})".format(
-            scaling * self.origin[0], scaling * self.origin[1]
+            numpy.format_float_positional(
+                scaling * self.origin[0], trim="0", precision=precision
+            ),
+            numpy.format_float_positional(
+                scaling * self.origin[1], trim="0", precision=precision
+            ),
         )
         if self.rotation is not None:
-            transform += " rotate({})".format(self.rotation)
+            transform += " rotate({})".format(
+                numpy.format_float_positional(
+                    self.rotation, trim="0", precision=precision
+                )
+            )
         if self.x_reflection:
             transform += " scale(1 -1)"
         if self.magnification is not None:
-            transform += " scale({})".format(self.magnification)
+            transform += " scale({})".format(
+                numpy.format_float_positional(
+                    self.magnification, trim="0", precision=precision
+                )
+            )
         outfile.write('<use transform="')
         outfile.write(transform)
         outfile.write('" xlink:href="#')
@@ -1735,7 +1764,7 @@ class CellArray(object):
                 )
         outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -1745,22 +1774,37 @@ class CellArray(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
         transform = "translate({} {})".format(
-            scaling * self.origin[0], scaling * self.origin[1]
+            numpy.format_float_positional(
+                scaling * self.origin[0], trim="0", precision=precision
+            ),
+            numpy.format_float_positional(
+                scaling * self.origin[1], trim="0", precision=precision
+            ),
         )
         if self.rotation is not None:
-            transform += " rotate({})".format(self.rotation)
+            transform += " rotate({})".format(
+                numpy.format_float_positional(
+                    self.rotation, trim="0", precision=precision
+                )
+            )
         if self.x_reflection:
             transform += " scale(1 -1)"
         mag = (
             ""
             if self.magnification is None
-            else " scale({})".format(self.magnification)
+            else " scale({})".format(
+                numpy.format_float_positional(
+                    self.magnification, trim="0", precision=precision
+                )
+            )
         )
         for ii in range(self.columns):
             dx = scaling * self.spacing[0] * ii
@@ -1768,7 +1812,16 @@ class CellArray(object):
                 dy = scaling * self.spacing[1] * jj
                 outfile.write('<use transform="')
                 outfile.write(transform)
-                outfile.write(" translate({} {})".format(dx, dy))
+                outfile.write(
+                    " translate({} {})".format(
+                        numpy.format_float_positional(
+                            dx, trim="0", precision=precision
+                        ),
+                        numpy.format_float_positional(
+                            dy, trim="0", precision=precision
+                        ),
+                    )
+                )
                 outfile.write(mag)
                 outfile.write('" xlink:href="#')
                 outfile.write(name.replace("#", "_"))

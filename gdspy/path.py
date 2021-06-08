@@ -398,7 +398,8 @@ class _SubPath(object):
         c = numpy.cos(angle)
         s = numpy.sin(angle)
         self.transform = numpy.matmul(
-            numpy.array(((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0))), self.transform,
+            numpy.array(((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0))),
+            self.transform,
         )
         return self
 
@@ -1331,7 +1332,7 @@ class FlexPath(object):
                     )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -1341,11 +1342,27 @@ class FlexPath(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
                 outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
-                outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
+                outfile.write(
+                    " ".join(
+                        ",".join(
+                            (
+                                numpy.format_float_positional(
+                                    pt[0], trim="0", precision=precision
+                                ),
+                                numpy.format_float_positional(
+                                    pt[1], trim="0", precision=precision
+                                ),
+                            )
+                        )
+                        for pt in scaling * p
+                    )
+                )
                 outfile.write('"/>\n')
 
     def area(self, by_spec=False):
@@ -2068,8 +2085,10 @@ class RobustPath(object):
                 self.n, self.x[0], self.x[1], len(self), self.layers, self.datatypes
             )
         else:
-            return "RobustPath (end at ({}, {}), length {}, layer {}, datatype {})".format(
-                self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0]
+            return (
+                "RobustPath (end at ({}, {}), length {}, layer {}, datatype {})".format(
+                    self.x[0], self.x[1], len(self), self.layers[0], self.datatypes[0]
+                )
             )
 
     def __len__(self):
@@ -2548,7 +2567,7 @@ class RobustPath(object):
                     )
             outfile.write(struct.pack(">2H", 4, 0x1100))
 
-    def to_svg(self, outfile, scaling):
+    def to_svg(self, outfile, scaling, precision):
         """
         Write an SVG fragment representation of this object.
 
@@ -2558,11 +2577,27 @@ class RobustPath(object):
             Output to write the SVG representation.
         scaling : number
             Scaling factor for the geometry.
+        precision : positive integer or `None`
+            Maximal number of digits for coordinates after scaling.
         """
         for (l, d), polygons in self.get_polygons(True).items():
             for p in polygons:
                 outfile.write('<polygon class="l{}d{}" points="'.format(l, d))
-                outfile.write(" ".join("{},{}".format(*pt) for pt in scaling * p))
+                outfile.write(
+                    " ".join(
+                        ",".join(
+                            (
+                                numpy.format_float_positional(
+                                    pt[0], trim="0", precision=precision
+                                ),
+                                numpy.format_float_positional(
+                                    pt[1], trim="0", precision=precision
+                                ),
+                            )
+                        )
+                        for pt in scaling * p
+                    )
+                )
                 outfile.write('"/>\n')
 
     def area(self, by_spec=False):
