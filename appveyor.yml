@@ -29,7 +29,7 @@ deploy:
   tag: $(appveyor_repo_tag_name)
   description: Release $(appveyor_repo_tag_name)
   auth_token:
-    secure: "TLjVTXLw+HfQYTJczXQ3SEGTE4sxkQNJ6gDJ0GGLDQQ5RItLcpGgkzs5Qq5WvFOF"
+    secure: "DuFxvYSfog6WmwBDcTvPeslLuPHj4Lt7snxk5vSvjmGIEvY+cz5T37ng07Z9aR1b"
   artifact: /gdspy.*\.whl/
   prerelease: false
   draft: true
