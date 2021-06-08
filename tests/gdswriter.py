@@ -6,6 +6,7 @@
 #  LICENSE file or <http://www.boost.org/LICENSE_1_0.txt>            #
 #                                                                    #
 ######################################################################
+
 import gdspy
 
 gdspy.library.use_current_library = False
@@ -93,4 +94,3 @@ def test_writer_gds(tmpdir):
         lib2.read_gds(fin)
     assert lib2.name == "lib2"
     assert len(lib2.cells) == 4
-

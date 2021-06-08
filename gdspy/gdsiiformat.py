@@ -192,7 +192,7 @@ def gdsii_hash(filename, engine=None):
     Parameters
     ----------
     filename : string or Path
-        Full path to the GDSII file.
+        Path to the GDSII file.
     engine : hashlib-like engine
         The engine that executes the hashing algorithm.  It must provide
         the methods `update` and `hexdigest` as defined in the hashlib
@@ -231,18 +231,28 @@ def gdsii_hash(filename, engine=None):
 
 def set_gdsii_timestamp(filename, timestamp):
     """
-    Sets all timestamps in a given GDS file to the given timestamp value.
-    Useful for creating GDS files with identical binary contents, i.e. for regression testing.
+    Set all timestamps in a given GDSII file.
+
+    The GDSII format includes creation timestamps for the whole library
+    and each cell in the contents of the GDSII file.  Those timestamps
+    are overwritten by the value passed to this function, which is
+    useful for creating GDSII files with identical binary contents,
+    i.e., for regression testing.
 
     Parameters
     ----------
     filename : string or Path
-        Path to the GDSII file
+        Path to the GDSII file.
     timestamp : datetime
-        The new timestamp to set in the gds file binary contents.
-    Returns
-    -------
-    None
+        The new timestamp to set in the GDSII file binary content.
+
+    Notes
+    -----
+    This function modifies the *contents* of the file.  The creation,
+    modification and access timestamps of the file itself are modified
+    according to the file system rules in place for reading and
+    writing.
+
     """
     ts = struct.pack(
         ">12h",
