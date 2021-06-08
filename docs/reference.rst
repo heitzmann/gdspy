@@ -225,3 +225,9 @@ get_gds_units
 =============
 
 .. autofunction:: gdspy.get_gds_units
+
+
+set_gdsii_timestamp
+===================
+
+.. autofunction:: gdspy.set_gdsii_timestamp
