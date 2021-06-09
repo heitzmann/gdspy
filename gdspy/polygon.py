@@ -37,6 +37,7 @@ import warnings
 import numpy
 
 from gdspy import clipper
+from gdspy.hobby import _hobby
 
 _directions_dict = {"+x": 0, "+y": 0.5, "-x": 1, "-y": -0.5}
 _directions_list = ["+x", "+y", "-x", "-y"]
