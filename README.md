@@ -73,6 +73,10 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.6 (Jun 09, 2021)
+* Fix error in `Path.smooth` not finding `_hobby` function.
+* Allow precision specification in SVG output.
+
 ### Version 1.6.5 (Jun 08, 2021)
 * Support GDSII files with 0-padding at the end.
 * Allow fixing and modifying GDSII file timestamps.
