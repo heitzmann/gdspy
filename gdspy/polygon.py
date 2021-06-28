@@ -427,8 +427,8 @@ class PolygonSet(object):
                         if len(r) != p.shape[0]:
                             raise ValueError(
                                 "[GDSPY] Wrong length in fillet radius list.  "
-                                "Expected lengths are {} or {}; got {}.".format(
-                                    len(self.polygons), total, len(radius)
+                                "Found {} radii for polygon with {} vertices.".format(
+                                    len(r), len(p.shape[0])
                                 )
                             )
                         radii.append(r)
