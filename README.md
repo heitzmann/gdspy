@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Unreleased
+* Fix an edge case in `boolean` where holes generated wrong results.
+
 ### Version 1.6.6 (Jun 09, 2021)
 * Fix error in `Path.smooth` not finding `_hobby` function.
 * Allow precision specification in SVG output.
