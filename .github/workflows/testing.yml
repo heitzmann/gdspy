@@ -1,4 +1,4 @@
-name: Tests Runner
+name: tests
 on: push
 jobs:
   linux-test:
