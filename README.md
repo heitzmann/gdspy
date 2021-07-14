@@ -2,7 +2,7 @@
 
 [![Boost Software License - Version 1.0](https://img.shields.io/github/license/heitzmann/gdspy.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Documentation Status](https://readthedocs.org/projects/gdspy/badge/?version=stable)](https://gdspy.readthedocs.io/en/stable/?badge=stable)
-[![Tests](https://github.com/heitzmann/gdstk/workflows/tests/badge.svg)](https://github.com/heitzmann/gdspy/actions)
+[![tests](https://github.com/heitzmann/gdspy/actions/workflows/testing.yml/badge.svg)](https://github.com/heitzmann/gdspy/actions/workflows/testing.yml)
 [![Appveyor Status](https://ci.appveyor.com/api/projects/status/pr49a6bhxvbqwocy?svg=true)](https://ci.appveyor.com/project/heitzmann/gdspy)
 [![Downloads](https://img.shields.io/github/downloads/heitzmann/gdspy/total.svg)](https://github.com/heitzmann/gdspy/releases)
 
@@ -73,8 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Unreleased
-* Fix an edge case in `boolean` where holes generated wrong results.
+### Version 1.6.7 (Jul 14, 2021)
+* Fixes in `boolean` for bugs with self-intersecting holes and holes horizontal edges.
+* Fix bug in warning message.
 
 ### Version 1.6.6 (Jun 09, 2021)
 * Fix error in `Path.smooth` not finding `_hobby` function.
