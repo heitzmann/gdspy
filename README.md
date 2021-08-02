@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.8 (Unreleased)
+* Fix in `boolean` for complex geometries that freeze the operation.
+
 ### Version 1.6.7 (Jul 14, 2021)
 * Fixes in `boolean` for bugs with self-intersecting holes and holes horizontal edges.
 * Fix bug in warning message.

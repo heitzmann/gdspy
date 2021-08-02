@@ -4909,7 +4909,7 @@ static PyObject* clip(PyObject *self, PyObject *args)
   Paths subj, clip, result;
   PolyTree solution;
   ClipType oper;
-  Clipper clpr(ioStrictlySimple);
+  Clipper clpr;
 
   if (!PyArg_ParseTuple(args, "OOsd:clip", &polyA, &polyB, &operation, &scaling)) return NULL;
 
@@ -5144,7 +5144,7 @@ static PyObject* chop(PyObject *self, PyObject *args)
   Paths subj(1);
   Paths clip(1, Path(4));
   PolyTree solution;
-  Clipper clpr(ioStrictlySimple);
+  Clipper clpr;
   cInt bb[4];
   cInt pos;
   long num_cuts;
