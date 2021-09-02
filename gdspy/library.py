@@ -2631,6 +2631,8 @@ class GdsLibrary(object):
                 else:
                     name = rename_template.format(name=record[1])
                 cell = Cell(name, exclude_from_current=True)
+                if name in self.cells:
+                    raise ValueError(f"Multiple cells with name: {name} in GDS file")
                 self.cells[name] = cell
             # STRING
             elif record[0] == 0x19:
