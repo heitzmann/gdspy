@@ -73,8 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
-### Version 1.6.8 (Aug 2, 2021)
+### Version 1.6.9 (Sep 23, 2021)
 * Fix in `Cell.get_polygons` with specified layer and datatype.
+* Raise error for duplicate cells when reading a GDSII file.
 
 ### Version 1.6.8 (Aug 2, 2021)
 * Fix in `boolean` for complex geometries that freeze the operation.
