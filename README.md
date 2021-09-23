@@ -74,6 +74,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 ## History of changes
 
 ### Version 1.6.8 (Aug 2, 2021)
+* Fix in `Cell.get_polygons` with specified layer and datatype.
+
+### Version 1.6.8 (Aug 2, 2021)
 * Fix in `boolean` for complex geometries that freeze the operation.
 
 ### Version 1.6.7 (Jul 14, 2021)

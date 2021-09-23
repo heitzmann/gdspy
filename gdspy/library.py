@@ -687,7 +687,7 @@ class Cell(object):
                 )
 
                 for path in self.paths:
-                    if any(ld == by_spec for ld in zip(path.layers, path.datatype)):
+                    if any(ld == by_spec for ld in zip(path.layers, path.datatypes)):
                         path_polygons = path.get_polygons(True)
                         if by_spec in path_polygons:
                             polygons.extend(path_polygons[key])
