@@ -690,7 +690,7 @@ class Cell(object):
                     if any(ld == by_spec for ld in zip(path.layers, path.datatypes)):
                         path_polygons = path.get_polygons(True)
                         if by_spec in path_polygons:
-                            polygons.extend(path_polygons[key])
+                            polygons.extend(path_polygons[by_spec])
                 for reference in self.references:
                     if depth is None:
                         next_depth = None
