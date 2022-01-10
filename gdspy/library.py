@@ -367,22 +367,19 @@ class Cell(object):
         >>> cell.remove_polygons(lambda pts, layer, datatype:
         ...                      any(pts[:, 0] < 0))
         """
-        empty = []
+        filtered_polys = []
         for element in self.polygons:
-            ii = 0
-            while ii < len(element.polygons):
-                if test(
-                    element.polygons[ii], element.layers[ii], element.datatypes[ii]
-                ):
-                    element.polygons.pop(ii)
-                    element.layers.pop(ii)
-                    element.datatypes.pop(ii)
-                else:
-                    ii += 1
-            if len(element.polygons) == 0:
-                empty.append(element)
-        for element in empty:
-            self.polygons.remove(element)
+            pld = [(poly, l, dt) for poly, l, dt in zip(element.polygons, element.layers, element.datatypes)
+                   if not test(poly, l, dt)]
+            if len(pld) == 0:
+                pass  # we don't need no empty polygons!
+            else:
+                polys, layers, dts = zip(*pld)
+                element.polygons = polys
+                element.layers = layers
+                element.datatypes = dts
+                filtered_polys.append(element)
+        self.polygons = filtered_polys
         return self
 
     def remove_paths(self, test):
