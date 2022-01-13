@@ -6,7 +6,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, 3.10]
+        python-version: ["2.7", "3.6", "3.7", "3.8", "3.9", "3.10"]
     name: Linux test for ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, 3.10]
+        python-version: ["2.7", "3.6", "3.7", "3.8", "3.9", "3.10"]
     name: MacOS test for ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2

@@ -233,7 +233,7 @@ def test_flexpath4(target):
         width=0.2,
     )
     cell.add(fp)
-    assertsame(target["FlexPath4"], cell, 2e-6)
+    assertsame(target["FlexPath4"], cell, 5e-6)
 
 
 def test_flexpath_gdsiipath():
