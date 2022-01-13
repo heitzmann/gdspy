@@ -541,9 +541,11 @@ class Cell(object):
         for label in self.labels:
             lt.add((label.layer, label.texttype))
         for reference in self.references:
-            ref = reference.ref_cell.get_svg_classes()
-            ld.update(ref[0])
-            lt.update(ref[1])
+            ref_cell = reference.ref_cell
+            if isinstance(ref_cell, Cell):
+                ref = ref_cell.get_svg_classes()
+                ld.update(ref[0])
+                lt.update(ref[1])
         return ld, lt
 
     def get_bounding_box(self):
