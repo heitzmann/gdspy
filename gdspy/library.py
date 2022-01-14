@@ -596,9 +596,9 @@ class Cell(object):
         ----------
         by_spec : bool or tuple
             If True, the return value is a dictionary with the
-            polygons of each individual pair (layer, datatype).
-            If set to a tuple of (layer, datatype), only polygons
-            with that specification are returned.
+            polygons of each individual pair (layer, datatype), which
+            are used as keys.  If set to a tuple of (layer, datatype),
+            only polygons with that specification are returned.
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve polygons.  References below this level will result
@@ -609,7 +609,7 @@ class Cell(object):
         -------
         out : list of array-like[N][2] or dictionary
             List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons (if
+            polygon, or dictionary with with the list of polygons (if
             `by_spec` is True).
 
         Note
