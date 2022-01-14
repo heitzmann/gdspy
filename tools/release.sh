@@ -13,6 +13,7 @@ if ! grep "### Version $CURR_VER (" README.md > /dev/null 2>&1; then
     exit 1
 fi
 
+git status
 echo "Release version $CURR_VER [y/n]?"
 echo "This will commit and tag all changes, but will NOT add them."
 read -r GOON
