@@ -776,7 +776,7 @@ class Cell(object):
 
     def get_dependencies(self, recursive=False):
         """
-        Return a list of the cells included in this cell as references.
+        Return a set of the cells included in this cell as references.
 
         Parameters
         ----------
@@ -786,7 +786,7 @@ class Cell(object):
         Returns
         -------
         out : set of `Cell`
-            List of the cells referenced by this cell.
+            Set of the cells referenced by this cell.
         """
         dependencies = set()
         for reference in self.references:
