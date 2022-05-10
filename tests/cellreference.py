@@ -60,3 +60,14 @@ def test_notempty():
     assert len(d.keys()) == 1
     r = gdspy.boolean(d[(2, 3)], gdspy.Rectangle((0, 0), (4, 2)), "xor", 1e-6, 0)
     assert r is None
+
+
+def test_label_transform():
+    c1 = gdspy.Cell("child")
+    label = gdspy.Label("label", (0, 0))
+    c1.add(label)
+    rotation = 45
+    c2 = gdspy.Cell("parent")
+    ref = gdspy.CellReference(ref_cell=c1, rotation=rotation)
+    c2.add(ref)
+    assert c2.get_labels(set_transform=True)[0].rotation == rotation

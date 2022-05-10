@@ -749,7 +749,7 @@ class Cell(object):
                 paths.extend(reference.get_paths(next_depth))
         return paths
 
-    def get_labels(self, depth=None):
+    def get_labels(self, depth=None, set_transform=False):
         """
         Return a list with a copy of the labels in this cell.
 
@@ -758,6 +758,9 @@ class Cell(object):
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve labels from.
+        set_transform : bool
+            If True, labels will include the transformations from
+            the references they are from.
 
         Returns
         -------
@@ -771,7 +774,7 @@ class Cell(object):
                     next_depth = None
                 else:
                     next_depth = depth - 1
-                labels.extend(reference.get_labels(next_depth))
+                labels.extend(reference.get_labels(next_depth, set_transform))
         return labels
 
     def get_dependencies(self, recursive=False):
@@ -1436,7 +1439,7 @@ class CellReference(object):
             for p in self.ref_cell.get_paths(depth=depth)
         ]
 
-    def get_labels(self, depth=None):
+    def get_labels(self, depth=None, set_transform=False):
         """
         Return the list of labels created by this reference.
 
@@ -1445,6 +1448,9 @@ class CellReference(object):
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve labels from.
+        set_transform : bool
+            If True, labels will include the transformations from
+            the reference.
 
         Returns
         -------
@@ -1462,7 +1468,7 @@ class CellReference(object):
             mag = numpy.array((self.magnification, self.magnification), dtype=float)
         if self.origin is not None:
             orgn = numpy.array(self.origin)
-        labels = self.ref_cell.get_labels(depth=depth)
+        labels = self.ref_cell.get_labels(depth=depth, set_transform=set_transform)
         for lbl in labels:
             if self.x_reflection:
                 lbl.position = lbl.position * xrefl
@@ -1472,6 +1478,22 @@ class CellReference(object):
                 lbl.position = lbl.position * ct + lbl.position[::-1] * st
             if self.origin is not None:
                 lbl.position = lbl.position + orgn
+            if set_transform:
+                if self.magnification is not None:
+                    if lbl.magnification is not None:
+                        lbl.magnification *= self.magnification
+                    else:
+                        lbl.magnification = self.magnification
+                if self.x_reflection:
+                    lbl.x_reflection = not lbl.x_reflection
+                if self.rotation is not None:
+                    if lbl.rotation is not None:
+                        if self.x_reflection:
+                            lbl.rotation = self.rotation - rotation
+                        else:
+                            lbl.rotation += self.rotation
+                    else:
+                        lbl.rotation = self.rotation
         return labels
 
     def get_bounding_box(self):
@@ -2046,7 +2068,7 @@ class CellArray(object):
                     )
         return array
 
-    def get_labels(self, depth=None):
+    def get_labels(self, depth=None, set_transform=False):
         """
         Return the list of labels created by this reference.
 
@@ -2055,6 +2077,9 @@ class CellArray(object):
         depth : integer or None
             If not None, defines from how many reference levels to
             retrieve labels from.
+        set_transform : bool
+            If True, labels will include the transformations from
+            the reference.
 
         Returns
         -------
@@ -2072,14 +2097,14 @@ class CellArray(object):
             orgn = numpy.array(self.origin)
         if self.x_reflection:
             xrefl = numpy.array((1, -1))
-        cell_labels = self.ref_cell.get_labels(depth=depth)
+        cell_labels = self.ref_cell.get_labels(depth=depth, set_transform=set_transform)
         labels = []
         for ii in range(self.columns):
             for jj in range(self.rows):
                 spc = numpy.array([self.spacing[0] * ii, self.spacing[1] * jj])
                 for clbl in cell_labels:
                     lbl = libcopy.deepcopy(clbl)
-                    if self.magnification:
+                    if self.magnification is not None:
                         lbl.position = lbl.position * mag + spc
                     else:
                         lbl.position = lbl.position + spc
@@ -2089,6 +2114,22 @@ class CellArray(object):
                         lbl.position = lbl.position * ct + lbl.position[::-1] * st
                     if self.origin is not None:
                         lbl.position = lbl.position + orgn
+                    if set_transform:
+                        if self.magnification is not None:
+                            if lbl.magnification is not None:
+                                lbl.magnification *= self.magnification
+                            else:
+                                lbl.magnification = self.magnification
+                        if self.x_reflection:
+                            lbl.x_reflection = not lbl.x_reflection
+                        if self.rotation is not None:
+                            if lbl.rotation is not None:
+                                if self.x_reflection:
+                                    lbl.rotation = self.rotation - rotation
+                                else:
+                                    lbl.rotation += self.rotation
+                            else:
+                                lbl.rotation = self.rotation
                     labels.append(lbl)
         return labels
 
