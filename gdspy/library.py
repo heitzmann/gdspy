@@ -1484,14 +1484,11 @@ class CellReference(object):
                         lbl.magnification *= self.magnification
                     else:
                         lbl.magnification = self.magnification
-                if self.x_reflection:
+                if self.x_reflection is not None:
                     lbl.x_reflection = not lbl.x_reflection
                 if self.rotation is not None:
                     if lbl.rotation is not None:
-                        if self.x_reflection:
-                            lbl.rotation -= self.rotation
-                        else:
-                            lbl.rotation += self.rotation
+                        lbl.rotation += self.rotation
                     else:
                         lbl.rotation = self.rotation
         return labels
@@ -2120,14 +2117,11 @@ class CellArray(object):
                                 lbl.magnification *= self.magnification
                             else:
                                 lbl.magnification = self.magnification
-                        if self.x_reflection:
+                        if self.x_reflection is not None:
                             lbl.x_reflection = not lbl.x_reflection
                         if self.rotation is not None:
                             if lbl.rotation is not None:
-                                if self.x_reflection:
-                                    lbl.rotation = self.rotation - rotation
-                                else:
-                                    lbl.rotation += self.rotation
+                                lbl.rotation += self.rotation
                             else:
                                 lbl.rotation = self.rotation
                     labels.append(lbl)
