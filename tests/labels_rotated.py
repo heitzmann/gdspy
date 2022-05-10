@@ -33,8 +33,8 @@ def test_add_label_rotation_x_reflection():
     label_rotation = label2.rotation
     label_x_reflection = label2.x_reflection
 
-    assert label_rotation == rotation, f"{label_rotation} != {rotation}"
-    assert label_x_reflection == True, f"{label_x_reflection} needs to be True"
+    assert label_rotation == rotation, [label_rotation, rotation]
+    assert label_x_reflection == True, label_x_reflection
     assert label2.position[0] == dx
     assert label2.position[1] == dy
 
@@ -54,7 +54,7 @@ def test_add_label_rotation():
     c2.add(c1ref)
 
     label_rotation = c2.get_labels(set_transform=True)[0].rotation
-    assert label_rotation == rotation, f"{label_rotation} != {rotation}"
+    assert label_rotation == rotation, [label_rotation, rotation]
 
 
 if __name__ == "__main__":
@@ -78,8 +78,8 @@ if __name__ == "__main__":
     label_rotation = label2.rotation
     label_x_reflection = label2.x_reflection
 
-    assert label_rotation == rotation, f"{label_rotation} != {rotation}"
-    assert label_x_reflection == True, f"{label_x_reflection} needs to be True"
+    assert label_rotation == rotation, [label_rotation, rotation]
+    assert label_x_reflection == True, label_x_reflection
     assert label2.position[0] == dx
     assert label2.position[1] == dy
 
