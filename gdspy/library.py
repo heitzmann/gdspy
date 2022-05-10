@@ -1489,7 +1489,7 @@ class CellReference(object):
                 if self.rotation is not None:
                     if lbl.rotation is not None:
                         if self.x_reflection:
-                            lbl.rotation = self.rotation - rotation
+                            lbl.rotation = self.rotation - self.rotation
                         else:
                             lbl.rotation += self.rotation
                     else:
