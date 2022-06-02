@@ -518,10 +518,10 @@ class Cell(object):
         """
         texttypes = set()
         for reference in self.references:
-            textypes.update(reference.ref_cell.get_textypes())
+            texttypes.update(reference.ref_cell.get_textypes())
         for label in self.labels:
-            textypes.add(label.texttype)
-        return textypes
+            texttypes.add(label.texttype)
+        return texttypes
 
     def get_svg_classes(self):
         """
