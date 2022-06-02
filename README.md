@@ -73,6 +73,10 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.12 (Jun 2, 2022)
+* Fix in `Cell.get_texttypes`.
+* Allow labels to inherit transforms through `get_labels`.
+
 ### Version 1.6.11 (Jan 14, 2022)
 * Fix in `Cell.write_svg` when missing references.
 * Speed improvements in `Cell.remove_polygons` (thanks Troy for the contribution).
