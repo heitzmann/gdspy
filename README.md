@@ -68,7 +68,7 @@ The source files can be found in the `docs` directory.
 
 ## Support
 
-Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ)
+Help support Gdspy development by [donating via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JD2EUE2WPPBQQ) or [sponsoring me on GitHub](https://github.com/sponsors/heitzmann)
 
 
 ## History of changes
