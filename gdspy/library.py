@@ -2273,7 +2273,9 @@ class GdsLibrary(object):
         "LIBSECUR",
     )
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
-    _import_anchors = ["nw", "n", "ne", None, "w", "o", "e", None, "sw", "s", "se"]
+    _import_anchors = [
+        "nw", "n", "ne", "o", "w", "o", "e", "o", "sw", "s", "se", "o", "o", "o", "o", "o"
+    ]
     _pathtype_dict = {0: "flush", 1: "round", 2: "extended"}
 
     __slots__ = "name", "cells", "unit", "precision", "_references"
