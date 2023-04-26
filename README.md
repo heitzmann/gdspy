@@ -73,6 +73,9 @@ Help support Gdspy development by [donating via PayPal](https://www.paypal.com/c
 
 ## History of changes
 
+### Version 1.6.13 (Apr 26, 2023)
+* Allow ill-formed GDSII label anchors to be correctly loaded.
+
 ### Version 1.6.12 (Jun 2, 2022)
 * Fix in `Cell.get_texttypes`.
 * Allow labels to inherit transforms through `get_labels`.
