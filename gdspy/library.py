@@ -2517,6 +2517,7 @@ class GdsLibrary(object):
         layers={},
         datatypes={},
         texttypes={},
+        max_points=None,
     ):
         """
         Read a GDSII file into this library.
@@ -2550,6 +2551,10 @@ class GdsLibrary(object):
         texttypes : dictionary
             Dictionary used to convert the text types in the imported
             cells.  Keys and values must be integers.
+        max_points : int (optional)
+            Maximum number of points for each path read in, or None to
+            use the FlexPath default. Paths with more points than
+            max_points are split into sub-paths.
 
         Returns
         -------
@@ -2614,6 +2619,8 @@ class GdsLibrary(object):
             # PATH
             elif record[0] == 0x09:
                 create_element = self._create_path
+                if max_points is not None:
+                  kwargs['max_points'] = max_points
             # BOX
             elif record[0] == 0x2D:
                 create_element = self._create_polygon
